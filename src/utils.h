@@ -29,7 +29,6 @@ void debug(const char *s,...);
 void syserror(const char *s,...);
 void error(const char *s,...);
 
-void utils_audio_set(int val);
 void utils_start_ringing(const gchar *dial);
 void utils_stop_ringing(const gchar *dial);
 int utils_ringing_status();
@@ -54,22 +53,6 @@ GdkPixbuf *utils_get_icon(const gchar *name);
 #define UTILS_CONF_ATTR_EXTERNAL_SMS_INCOMING "sms.incoming"
 #define UTILS_CONF_ATTR_EXTERNAL_INCALL_START "incall.start"
 #define UTILS_CONF_ATTR_EXTERNAL_INCALL_STOP "incall.stop"
-
-#define UTILS_CONF_GROUP_ACTION_VIBRATE "action.vibrate"
-#define UTILS_CONF_ATTR_ACTION_VIBRATE_PATH "path"
-#define UTILS_CONF_ATTR_ACTION_VIBRATE_VALUE_ON "on.value"
-#define UTILS_CONF_ATTR_ACTION_VIBRATE_VALUE_OFF "off.value"
-
-#define UTILS_CONF_GROUP_ACTION_AUDIO "action.audio"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_PATH "path"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_VALUE_ON "on.value"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_VALUE_OFF "off.value"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_DEVICE "alsa.device"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_NAME "alsa.route.control.name"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_RINGING "alsa.route.control.ringing"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_INCALL "alsa.route.control.incall"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_SPEAKER "alsa.route.control.speaker"
-#define UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_HANDSET "alsa.route.control.handset"
 
 #define UTILS_CONF_GROUP_NOTIFICATIONS "notifications"
 #define UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_ENABLE "sound.enable"
@@ -99,6 +82,5 @@ enum {
 };
 int utils_audio_route_set(int route);
 int utils_audio_route_get();
-int utils_audio_route_check(int route);
 
 #endif
