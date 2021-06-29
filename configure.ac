@@ -1,7 +1,4 @@
-dnl Process this file with autoconf to produce a configure script.
-dnl Created by Anjuta application wizard.
-
-AC_INIT(sphone, 0.05)
+AC_INIT(sphone, 0.06)
 
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION)
 AC_CONFIG_HEADERS([config.h])
@@ -16,7 +13,7 @@ AC_HEADER_STDC
 
 
 dnl ***************************************************************************
-dnl Internatinalization
+dnl Internationalisation
 dnl ***************************************************************************
 GETTEXT_PACKAGE=sphone
 AC_SUBST(GETTEXT_PACKAGE)
