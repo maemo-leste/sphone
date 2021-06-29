@@ -1,0 +1,16 @@
+Source: sphone
+Priority: optional
+Maintainer: Merlijn Wajer <merlijn@wizzup.org>
+Build-Depends: debhelper (>> 10), autotools-dev,
+  libgtk2.0-dev, libdbus-glib-1-dev, libunique-dev, libsqlite3-dev,
+  libgstreamer1.0-dev, libasound2-dev
+Section: comm
+Standards-Version: 4.3.0
+
+Package: sphone
+Section: comm
+Architecture: any
+Multi-Arch: same
+Depends: ofono, ${shlibs:Depends}
+Description: Maemo Leste phone framework and GUI
+ Maemo Leste phone framework and GUI
