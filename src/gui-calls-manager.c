@@ -170,7 +170,7 @@ static void gui_calls_check_voice(void)
 	else
 		gui_calls_voice_status=0;
 	
-	utils_audio_set(gui_calls_voice_status);
+	//TODO: do routing somehow utils_audio_set(gui_calls_voice_status);
 }
 
 static void gui_calls_update_global_status()
@@ -182,12 +182,12 @@ static void gui_calls_update_global_status()
 
 	if(gui_calls_voice_status){
 		int route=utils_audio_route_get();
-		if(route==UTILS_AUDIO_ROUTE_SPEAKER || !utils_audio_route_check(UTILS_AUDIO_ROUTE_SPEAKER))
+		if(route==UTILS_AUDIO_ROUTE_SPEAKER)
 			gtk_widget_hide(g_calls_manager.speaker_button);
 		else
 			gtk_widget_show(g_calls_manager.speaker_button);
 
-		if(route==UTILS_AUDIO_ROUTE_HANDSET || !utils_audio_route_check(UTILS_AUDIO_ROUTE_HANDSET))
+		if(route==UTILS_AUDIO_ROUTE_HANDSET)
 			gtk_widget_hide(g_calls_manager.handset_button);
 		else
 			gtk_widget_show(g_calls_manager.handset_button);
@@ -212,7 +212,7 @@ static void gui_calls_call_status_callback(SphoneCall *call)
 	if(!g_strcmp0 (state,"disconnected")){
 		gui_calls_utils_delete_dial(dial);
 		if(answer_status==STORE_INTERACTION_CALL_STATUS_MISSED && direction==STORE_INTERACTION_DIRECTION_INCOMING){
-			notification_add("missed_call.png",gui_history_calls);
+			//TODO: replace notification_add("missed_call.png",gui_history_calls);
 		}
 	}else
 		gui_calls_utils_update_dial(dial,state);

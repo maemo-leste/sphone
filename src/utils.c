@@ -77,77 +77,13 @@ void syserror(const char *s,...)
 }
 
 static int utils_audio_status=0;	// 1: incall
-/*
- 	Enable incall audio
- 	Set audio routing
- 	Execute extrenal application handler at active call start and end
- */
-void utils_audio_set(int status) {
-	debug(" utils_audio_set %d\n",status);
-
-	if(status==utils_audio_status)
-		return;
-	utils_audio_status=status;
-	
-	if(status)
-		utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_INCALL_START, NULL);
-		
-	char *path=utils_conf_get_string(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_PATH);
-	if(path){
-		int val;
-		if(status)
-			val=utils_conf_get_int(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_VALUE_ON);
-		else
-			val=utils_conf_get_int(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_VALUE_OFF);
-		debug("utils_audio_set: write value %d to path %s\n",val,path);
-
-		FILE *fout;
-		fout=fopen(path,"w");
-		g_free(path);
-		if(!fout) {
-			error("Error opening audio file\n");
-		}else{
-			fprintf(fout,"%d",val);
-			fclose(fout);
-		}
-	}
-	
-	// Set audio routing
-	if(status){
-		utils_audio_route_save();
-		utils_audio_route_set_incall();
-	}else{
-		utils_audio_route_restore();
-	}
-	
-	if(!status)
-		utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_INCALL_STOP, NULL);
-}
 
 /*
  Start/stop vibration
  */
 static void utils_vibrate(int val) {
 	debug(" utils_vibrate %d\n",val);
-	FILE *fout;
-	char *path=utils_conf_get_string(UTILS_CONF_GROUP_ACTION_VIBRATE,UTILS_CONF_ATTR_ACTION_VIBRATE_PATH);
-	if(!path)
-		return;
-		
-	if(val)
-		val=utils_conf_get_int(UTILS_CONF_GROUP_ACTION_VIBRATE,UTILS_CONF_ATTR_ACTION_VIBRATE_VALUE_ON);
-	else
-		val=utils_conf_get_int(UTILS_CONF_GROUP_ACTION_VIBRATE,UTILS_CONF_ATTR_ACTION_VIBRATE_VALUE_OFF);
-	debug("utils_vibrate: write value %d to path %s\n",val,path);
-
-	fout=fopen(path,"w");
-	g_free(path);
-	if(!fout) {
-		error("Error opening vibrate file\n");
-		return;
-	}
-	fprintf(fout,"%d",val);
-	fclose(fout);
+	//TODO: kick mce evdevvirbrator here
 }
 
 guint ring_timeout=0;
@@ -156,6 +92,7 @@ static int _utils_ring_stop_callback(gpointer data)
 	utils_vibrate(0);
 	return FALSE;
 }
+
 static int _utils_ring_callback(gpointer data)
 {
 	utils_vibrate(1);
@@ -544,199 +481,23 @@ int utils_media_play_repeat(gchar *path)
 }
 
 /****************************************************
- 	ALSA audio routing routines
+ 	Audio playback routines using gstreamer
  ****************************************************/
-snd_hctl_t *utils_alsa_hctl=NULL;
-snd_hctl_elem_t *utils_alsa_route_elem=NULL;
-snd_ctl_elem_id_t *utils_alsa_route_elem_id=NULL;
-unsigned int utils_alsa_route_play=-1;
-unsigned int utils_alsa_route_incall=-1;
 
-unsigned int utils_alsa_routes[UTILS_AUDIO_ROUTE_COUNT];
-
-/*
- Init the ALSA library:
- - Open the configured device, if none, use default device.
- - Search for the routing control
- - Search for the ringing and incall routes values
- */
-static int utils_alsa_init()
+static int utils_audio_route_set_play()
 {
-	if(utils_alsa_hctl)
-		return 0;
-	debug("utils_alsa_init: start\n");
-
-	int i;
-
-	for(i=0;i<UTILS_AUDIO_ROUTE_COUNT;i++)utils_alsa_routes[i]=-1;
-	
-	char *alsa_control=utils_conf_get_string(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_NAME);
-	char *alsa_route_play=utils_conf_get_string(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_RINGING);
-	char *alsa_route_incall=utils_conf_get_string(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_INCALL);
-	char *alsa_route_speaker=utils_conf_get_string(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_SPEAKER);
-	char *alsa_route_handset=utils_conf_get_string(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_CONTROL_HANDSET);
-	if(!alsa_control)
-		return 0;
-
-	char *alsa_device=utils_conf_get_string(UTILS_CONF_GROUP_ACTION_AUDIO,UTILS_CONF_ATTR_ACTION_AUDIO_ALSA_ROUTE_DEVICE);
-	int ret=0;
-
-	if(alsa_device)
-		ret = snd_hctl_open(&utils_alsa_hctl, alsa_device, 0);
-	else
-		ret = snd_hctl_open(&utils_alsa_hctl, "default", 0);
-	if(ret){
-		error("utils_alsa_init: Alsa control device open failed: %s\n", snd_strerror(ret));
-		goto done;
-	}
-	
-	ret = snd_hctl_load(utils_alsa_hctl);
-	if(ret){
-		error("utils_alsa_init: Alsa control device load failed\n");
-		goto done;
-	}
-
-	snd_hctl_elem_t *elem=snd_hctl_first_elem(utils_alsa_hctl);
-	snd_ctl_elem_info_t *info;
-	snd_ctl_elem_info_alloca(&info);
-	while(elem){
-		const char *name=snd_hctl_elem_get_name(elem);
-		ret=snd_hctl_elem_info(elem, info);
-		if(ret){
-			error("utils_alsa_init: snd_hctl_elem_info for ctrl %s error %s\n", name, snd_strerror(ret));
-			continue;
-		}
-		
-		if(!strcmp(name, alsa_control)){
-			debug("utils_alsa_init: Found element %s\n", name);
-
-			// Find the values
-			for(i=0; i<snd_ctl_elem_info_get_items(info); i++){
-				snd_ctl_elem_info_set_item(info, i);
-				snd_hctl_elem_info(elem, info);
-				const char *s=snd_ctl_elem_info_get_item_name(info);
-				debug("utils_alsa_init: check control value %s:%s\n", name, s);
-
-				if(alsa_route_play && !strcmp(alsa_route_play, s)){
-					debug("utils_alsa_init: utils_alsa_route_play=%ud\n", i);
-					utils_alsa_route_play=i;
-				}
-				if(alsa_route_incall && !strcmp(alsa_route_incall, s)){
-					debug("utils_alsa_init: utils_alsa_route_incall=%ud\n", i);
-					utils_alsa_route_incall=i;
-				}
-				if(alsa_route_speaker && !strcmp(alsa_route_speaker, s)){
-					debug("utils_alsa_init: alsa_route_speaker=%ud\n", i);
-					utils_alsa_routes[UTILS_AUDIO_ROUTE_SPEAKER]=i;
-				}
-				if(alsa_route_handset && !strcmp(alsa_route_handset, s)){
-					debug("utils_alsa_init: alsa_route_handset=%ud\n", i);
-					utils_alsa_routes[UTILS_AUDIO_ROUTE_HANDSET]=i;
-				}
-			}
-
-			snd_ctl_elem_id_malloc(&utils_alsa_route_elem_id);
-			snd_ctl_elem_info_get_id(info, utils_alsa_route_elem_id);
-			utils_alsa_route_elem=elem;
-		}
-		elem=snd_hctl_elem_next(elem);
-	}
-
-	if(utils_alsa_route_play==-1)
-		utils_alsa_route_play=utils_alsa_routes[UTILS_AUDIO_ROUTE_SPEAKER];
-	if(utils_alsa_route_incall==-1)
-		utils_alsa_route_incall=utils_alsa_routes[UTILS_AUDIO_ROUTE_HANDSET];
-	
-	debug("utils_alsa_init: ok\n");
-done:
-	g_free(alsa_device);
-	return ret;
-}
-
-static unsigned int utils_alsa_route_from_alsa(unsigned int route)
-{
-	int ret=-1;
-	int i;
-
-	for(i=0;i<UTILS_AUDIO_ROUTE_COUNT;i++)
-	    if(utils_alsa_routes[i]==route)
-			ret=i;
-
-	return ret;
-}
-
-/*
- Get the current value of the routing control
- */
-static unsigned int utils_alsa_get_route()
-{
-	int err;
-	snd_ctl_elem_value_t *control;
-	
-	if(utils_alsa_init() || !utils_alsa_route_elem || !utils_alsa_route_elem_id)
-		return -1;
-	debug("utils_alsa_get_route: start ...\n");
-
-	snd_ctl_elem_value_alloca(&control);
-	snd_ctl_elem_value_set_id(control, utils_alsa_route_elem_id);  
-
-	if((err=snd_hctl_elem_read(utils_alsa_route_elem, control))){
-		error("utils_alsa_get_route: read failed: %s\n", snd_strerror(err));
-		return -1;
-	}
-	
-	unsigned int v=snd_ctl_elem_value_get_enumerated(control, 0);
-	debug("utils_alsa_get_route: read value=%ud\n", v);
-
-	return v;
-}
-
-/*
- Change the value of the routing control
- */
-static int utils_alsa_set_route(unsigned int value)
-{
-	if(utils_alsa_init() || !utils_alsa_route_elem || !utils_alsa_route_elem_id)
-		return 1;
-
-	debug("utils_alsa_set_control_enum: value=%ud\n", value);
-
-	snd_ctl_elem_value_t *control;
-	snd_ctl_elem_value_alloca(&control);
-	snd_ctl_elem_value_set_id(control, utils_alsa_route_elem_id);
-	snd_ctl_elem_value_set_enumerated(control, 0, value);
-
-	int err=snd_hctl_elem_write(utils_alsa_route_elem, control);
-	if(err<0){
-		error("utils_alsa_set_control_enum: write failed: %s\n", snd_strerror(err));
-		return 1;
-	}{
-		debug("utils_alsa_set_control_enum: success\n");
-	}
-
 	return 0;
 }
 
-/*
- Change sound routing to ringtone play value
- */
-static int utils_audio_route_set_play()
+
+static int utils_audio_route_save()
 {
-	utils_alsa_init();
-	
-	if(utils_alsa_route_play==-1)
-		return 0;
+	return 0;
+}
 
-	if(utils_audio_status)
-		return 0;						// Don't change to play while incall
-	
-	debug("utils_audio_route_set_play\n");
-	int ret=utils_alsa_set_route(utils_alsa_route_play);
-
-	if(ret)
-		error("utils_audio_route_set_play: failed\n");
-	
-	return ret;
+static int utils_audio_route_restore()
+{
+	return 0;
 }
 
 /*
@@ -744,50 +505,17 @@ static int utils_audio_route_set_play()
  */
 static int utils_audio_route_set_incall()
 {
-	utils_alsa_init();
-	
-	if(utils_alsa_route_incall==-1)
-		return 0;
-	
-	debug("utils_alsa_route_incall\n");
-	int ret=utils_alsa_set_route(utils_alsa_route_incall);
-
-	if(ret)
-		error("utils_alsa_route_incall: failed\n");
-	
-	return ret;
-}
-
-/*
- Check if the route applicable
- */
-int utils_audio_route_check(int route)
-{
-	utils_alsa_init();
-	
-	if(utils_alsa_routes[route]==-1)
-		return 0;
-	
-	return 1;
+	//TODO kick mce into call mode
+	return 0;
 }
 
 /*
  Change sound routing
  */
 int utils_audio_route_set(int route)
-{
-	utils_alsa_init();
-	
-	if(utils_alsa_routes[route]==-1)
-		return 0;
-	
-	debug("utils_audio_route_set: %d\n", route);
-	int ret=utils_alsa_set_route(utils_alsa_routes[route]);
-
-	if(ret)
-		error("utils_audio_route_set: failed\n");
-	
-	return ret;
+{	
+	//TODO
+	return 0;
 }
 
 /*
@@ -795,56 +523,6 @@ int utils_audio_route_set(int route)
  */
 int utils_audio_route_get()
 {
-	int route=utils_alsa_get_route();
-	
-	if(route==-1)
-		return UTILS_AUDIO_ROUTE_UNKNOWN;
-	
-	return utils_alsa_route_from_alsa(route);
-}
-
-static unsigned int utils_alsa_route_saved=-1;
-int utils_alsa_route_level=0;
-
-/*
- Save the current routing control value so it can be restored after terminating the call or stoping the ringtone
- Only the first call is considered, the nuber of calls to utils_audio_route_restore should be equivalent to 
- the calls to utils_audio_route_save to restore the route value.
- */
-static int utils_audio_route_save()
-{
-	utils_alsa_route_level++;
-	if(utils_alsa_route_level>1)
-		return 0;							// Already saved
-	
-	utils_alsa_route_saved=utils_alsa_get_route();
-	debug("utils_audio_route_save: saved value %u\n", utils_alsa_route_saved);
-
-	return 0;
-}
-
-static int utils_audio_route_restore()
-{
-	utils_alsa_route_level--;
-	if(utils_alsa_route_level<0){
-		error("utils_audio_route_restore: utils_alsa_route_level underrun\n");
-		utils_alsa_route_level=0;
-	}
-	
-	if(utils_alsa_route_level){
-		return 0;
-	}
-	
-	if(utils_alsa_route_play==-1 && utils_alsa_route_incall==-1)
-		return 0;
-	
-	if(utils_alsa_route_saved==-1){
-		error("utils_audio_route_restore: with no saved route\n");
-		return 1;
-	}
-
-	int ret=utils_alsa_set_route(utils_alsa_route_saved);
-	utils_alsa_route_saved=-1;
-
-	return ret;
+	//TODO
+	return UTILS_AUDIO_ROUTE_UNKNOWN;
 }

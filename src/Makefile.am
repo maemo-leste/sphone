@@ -25,8 +25,6 @@ sphone_SOURCES = \
 	sphone-call.c \
 	sphone-manager.h \
 	sphone-manager.c \
-	notification.c \
-	notification.h \
 	dbus-marshalers.c \
 	dbus-marshalers.h \
 	gui-calls-manager.c \
@@ -47,8 +45,6 @@ sphone_SOURCES = \
 	gui-contact-view.h \
 	book-import.c \
 	book-import.h \
-	proximity.c \
-	proximity.h \
 	gui-options.c \
 	gui-options.h
 

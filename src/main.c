@@ -55,21 +55,23 @@
 
 #include "callbacks.h"
 #include "sphone-manager.h"
-#include "notification.h"
 #include "gui-calls-manager.h"
 #include "gui-dialer.h"
+#include "gui-options.h"
 #include "utils.h"
 #include "gui-sms.h"
 #include "store.h"
 #include "book-import.h"
 #include "gui-contact-view.h"
 
-enum {
+typedef enum {
 	SPHONE_CMD_DIALER_OPEN=1,
 	SPHONE_CMD_SMS_NEW,
 	SPHONE_CMD_HISTORY_CALLS,
 	SPHONE_CMD_HISTORY_SMS,
-};
+	SPHONE_CMD_OPTIONS,
+	SPHONE_CMD_NONE,
+} sphone_cmd;
 
 static UniqueResponse  main_message_received_callback(UniqueApp *app,gint command, UniqueMessageData *message_data, guint time_,gpointer user_data)
 {
@@ -85,6 +87,9 @@ static UniqueResponse  main_message_received_callback(UniqueApp *app,gint comman
 			break;
 		case SPHONE_CMD_HISTORY_SMS:
 			gui_history_sms();
+			break;
+		case SPHONE_CMD_OPTIONS:
+			gui_options_open();
 			break;
 		default:
 			error("Invalid command: %d\n",command);
@@ -107,10 +112,7 @@ int main (int argc, char *argv[])
 	gtk_init(&argc, &argv);
 	utils_gst_init(&argc, &argv);
 
-	gboolean is_cmd_dialer_open=0;
-	gboolean is_cmd_sms_new=0;
-	gboolean is_cmd_history_sms=0;
-	gboolean is_cmd_history_calls=0;
+	sphone_cmd command = SPHONE_CMD_NONE;
 	gboolean is_done=FALSE;
 	guint c;
 	
@@ -121,18 +123,20 @@ int main (int argc, char *argv[])
 				error("SPhone \n%s [hvc] \n"
 				      "   h\tDisplay this help\n"
 				      "   v\tEnable debug\n"
-				      "   c [cmd]\tExecute command. Accepted commands are: dialer-open, sms-new, history-calls, history-sms\n"
+				      "   c [cmd]\tExecute command. Accepted commands are: dialer-open, sms-new, history-calls, history-sms, options\n"
 				      "   i [file]\timport contacts XML\n",argv[0]);
 				return 0;
 			case 'c':
 				if(!g_strcmp0(optarg,"dialer-open"))
-					is_cmd_dialer_open=1;
-				if(!g_strcmp0(optarg,"sms-new"))
-					is_cmd_sms_new=1;
-				if(!g_strcmp0(optarg,"history-sms"))
-					is_cmd_history_sms=1;
-				if(!g_strcmp0(optarg,"history-calls"))
-					is_cmd_history_calls=1;
+					command = SPHONE_CMD_DIALER_OPEN;
+				else if(!g_strcmp0(optarg,"sms-new"))
+					command = SPHONE_CMD_SMS_NEW;
+				else if(!g_strcmp0(optarg,"history-sms"))
+					command = SPHONE_CMD_HISTORY_SMS;
+				else if(!g_strcmp0(optarg,"history-calls"))
+					command = SPHONE_CMD_HISTORY_CALLS;
+				else if(!g_strcmp0(optarg,"options"))
+					command = SPHONE_CMD_OPTIONS;
 				break;
 			case 'i':
 				store_init();
@@ -144,45 +148,50 @@ int main (int argc, char *argv[])
 				break;
        }
 
-	UniqueApp *unique=unique_app_new_with_commands("com.xda-developers.forums.sphone",NULL
-	                                               ,"dialer-open",SPHONE_CMD_DIALER_OPEN
-	                                               ,"history-sms",SPHONE_CMD_HISTORY_SMS
-	                                               ,"history-calls",SPHONE_CMD_HISTORY_CALLS
-	                                               ,"sms-new",SPHONE_CMD_SMS_NEW,NULL);
+	UniqueApp *unique = unique_app_new_with_commands("org.maemo.sphone", NULL
+	                                               ,"dialer-open", SPHONE_CMD_DIALER_OPEN
+	                                               ,"history-sms", SPHONE_CMD_HISTORY_SMS
+	                                               ,"history-calls", SPHONE_CMD_HISTORY_CALLS
+	                                               ,"sms-new", SPHONE_CMD_SMS_NEW
+	                                               ,"options", SPHONE_CMD_OPTIONS, NULL);
 
-	if(is_done);
-	else if(!unique_app_is_running(unique)){
+	if (!is_done && !unique_app_is_running(unique)) {
 		debug("Staring new instance\n");
 		SphoneManager *manager=g_object_new(sphone_manager_get_type(),NULL);
 		store_init();
-		notification_init(manager);
 		gui_calls_manager_init(manager);
 		gui_dialer_init(manager);
 		gui_sms_init(manager);
 		sphone_manager_populate(manager);
-
-		if(is_cmd_dialer_open)
-			gui_dialer_show(NULL);
-		if(is_cmd_sms_new)
-			gui_sms_send_show(NULL,NULL);
-		if(is_cmd_history_sms)
-			gui_history_sms();
-		if(is_cmd_history_calls)
-			gui_history_calls();
+		
+		switch (command) {
+			case SPHONE_CMD_DIALER_OPEN:
+				gui_dialer_show(NULL);
+				break;
+			case SPHONE_CMD_SMS_NEW:
+				gui_sms_send_show(NULL,NULL);
+				break;
+			case SPHONE_CMD_HISTORY_CALLS:
+				gui_history_calls();
+				break;
+			case SPHONE_CMD_HISTORY_SMS:
+				gui_history_calls();
+				break;
+			case SPHONE_CMD_OPTIONS:
+				gui_options_open();
+				break;
+			case SPHONE_CMD_NONE:
+			default:
+				break;
+		}
 
 		g_signal_connect(G_OBJECT(unique), "message-received", G_CALLBACK(main_message_received_callback), NULL);
 		
 		gtk_main ();
 	}else{
 		debug("Instance is already running, sending commands ...\n");
-		if(is_cmd_dialer_open)
-			unique_app_send_message(unique,SPHONE_CMD_DIALER_OPEN,NULL);
-		if(is_cmd_sms_new)
-			unique_app_send_message(unique,SPHONE_CMD_SMS_NEW,NULL);
-		if(is_cmd_history_sms)
-			unique_app_send_message(unique,SPHONE_CMD_HISTORY_SMS,NULL);
-		if(is_cmd_history_calls)
-			unique_app_send_message(unique,SPHONE_CMD_HISTORY_CALLS,NULL);
+		if(command != SPHONE_CMD_NONE)
+			unique_app_send_message(unique, command, NULL);
 	}
 	
 	return 0;
