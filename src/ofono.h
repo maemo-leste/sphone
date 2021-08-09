@@ -27,31 +27,33 @@ typedef struct _OfonoNetworkProperties{
 }OfonoNetworkProperties;
 
 typedef struct _OfonoCallProperties{
+	gchar *path;
 	gchar *line_identifier;
 	gchar *state;
 	gchar *start_time;
+	gboolean emergency;
 }OfonoCallProperties;
 
-extern int ofono_init();
-extern int ofono_read_network_properties(OfonoNetworkProperties *properties);
-extern void ofono_network_properties_free(OfonoNetworkProperties *properties);
-extern int ofono_network_properties_add_handler(gpointer handler, gpointer data);
-extern int ofono_network_properties_remove_handler(gpointer handler, gpointer data);
+int ofono_init();
+int ofono_read_network_properties(OfonoNetworkProperties *properties);
+void ofono_network_properties_free(OfonoNetworkProperties *properties);
+int ofono_network_properties_add_handler(gpointer handler, gpointer data);
+int ofono_network_properties_remove_handler(gpointer handler, gpointer data);
 
-extern int ofono_voice_call_manager_properties_add_handler(gpointer handler, gpointer data);
-extern int ofono_voice_call_manager_properties_remove_handler(gpointer handler, gpointer data);
+int ofono_voice_call_add_handler(gpointer handler, gpointer data);
+int ofono_voice_call_remove_handler(gpointer handler, gpointer data);
+int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count);
 
-extern int ofono_call_properties_read(OfonoCallProperties *properties, gchar *path);
-extern void ofono_call_properties_free(OfonoCallProperties *properties);
-extern int ofono_voice_call_properties_add_handler(gchar *path, gpointer handler, gpointer data);
-extern int ofono_voice_call_properties_remove_handler(gchar *path, gpointer handler, gpointer data);
-extern int ofono_call_answer(gchar *path);
-extern int ofono_call_hangup(gchar *path);
-extern int ofono_call_hold_and_answer();
-extern int ofono_call_swap();
-extern int ofono_dial(const gchar *dial);
-extern int ofono_sms_send(const gchar *to, const gchar *text);
-extern int ofono_sms_incoming_add_handler(gpointer handler, gpointer data);
-extern int ofono_voice_call_manager_get_calls(GValue **v);
+int ofono_call_properties_read(OfonoCallProperties *properties, gchar *path);
+void ofono_call_properties_free(OfonoCallProperties *properties);
+int ofono_voice_call_properties_add_handler(gchar *path, gpointer handler, gpointer data);
+int ofono_voice_call_properties_remove_handler(gchar *path, gpointer handler, gpointer data);
+int ofono_call_answer(gchar *path);
+int ofono_call_hangup(gchar *path);
+int ofono_call_hold_and_answer();
+int ofono_call_swap();
+int ofono_dial(const gchar *dial);
+int ofono_sms_send(const gchar *to, const gchar *text);
+int ofono_sms_incoming_add_handler(gpointer handler, gpointer data);
 
 #endif

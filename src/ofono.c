@@ -20,500 +20,322 @@
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-gtype-specialized.h>
 #include <dbus/dbus-protocol.h>
+#include <gio/gio.h>
+#include "ofono-dbus-names.h"
 #include "ofono.h"
 #include "dbus-marshalers.h"
 #include "utils.h"
 
 struct{
-	DBusGConnection *connection;
-	gchar *modem;					// The active modem path
-	DBusGProxy *proxy_modem;
-	DBusGProxy *proxy_network;
-	DBusGProxy *proxy_manager;
-	DBusGProxy *proxy_voice_call_manager;
-	DBusGProxy *proxy_sms_manager;
-	GHashTable *proxies_call;
-}g_ofono;
+	GDBusConnection *s_bus_conn;
+	gchar *modem;
+} ofono_if_priv;
 
-DBusGProxy *ofono_proxy_modem_get()
+struct str_list {
+  char **data;
+  int count;
+};
+
+
+static GDBusConnection *get_dbus_connection()
 {
-	if(!g_ofono.proxy_modem){
-		g_ofono.proxy_modem = dbus_g_proxy_new_for_name (g_ofono.connection,"org.ofono",g_ofono.modem,"org.ofono.Modem");
+	GError *error = NULL;
+	char *addr;
+	
+	GDBusConnection *s_bus_conn;
+
+	#if !GLIB_CHECK_VERSION(2,35,0)
+	g_type_init();
+	#endif
+
+	addr = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+	if (addr == NULL) {
+		g_error("fail to get dbus addr: %s\n", error->message);
+		g_free(error);
+		return NULL;
 	}
-	return g_ofono.proxy_modem;
-}
 
-DBusGProxy *ofono_proxy_voice_call_manager_get()
-{
-	if(!g_ofono.proxy_voice_call_manager){
-		g_ofono.proxy_voice_call_manager = dbus_g_proxy_new_for_name (g_ofono.connection,"org.ofono",g_ofono.modem,"org.ofono.VoiceCallManager");
+	s_bus_conn = g_dbus_connection_new_for_address_sync(addr,
+			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
+			G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
+			NULL, NULL, &error);
+
+	if (s_bus_conn == NULL) {
+		g_error("fail to create dbus connection: %s\n", error->message);
+		g_free(error);
 	}
-	return g_ofono.proxy_voice_call_manager;
+
+	return s_bus_conn;
 }
 
-DBusGProxy *ofono_proxy_sms_manager_get()
-{
-	if(!g_ofono.proxy_sms_manager){
-		g_ofono.proxy_sms_manager = dbus_g_proxy_new_for_name (g_ofono.connection,"org.ofono",g_ofono.modem,"org.ofono.SmsManager");
-	}
-	return g_ofono.proxy_sms_manager;
-}
-
-DBusGProxy *ofono_proxy_manager_get()
-{
-	if(!g_ofono.proxy_manager){
-		g_ofono.proxy_manager = dbus_g_proxy_new_for_name (g_ofono.connection,"org.ofono","/","org.ofono.Manager");
-	}
-	return g_ofono.proxy_manager;
-}
-
-DBusGProxy *ofono_proxy_network_get()
-{
-	if(!g_ofono.proxy_network){
-		g_ofono.proxy_network = dbus_g_proxy_new_for_name (g_ofono.connection,"org.ofono", g_ofono.modem,"org.ofono.NetworkRegistration");
-	}
-	return g_ofono.proxy_network;
-}
-
-DBusGProxy *ofono_proxy_call_get(gchar *path)
-{
-	DBusGProxy *proxy=g_hash_table_lookup(g_ofono.proxies_call,path);
-	if(!proxy){
-		proxy = dbus_g_proxy_new_for_name (g_ofono.connection,"org.ofono",path,"org.ofono.VoiceCall");
-		g_hash_table_insert(g_ofono.proxies_call,g_strdup(path),proxy);
-	}
-	return proxy;
-}
-
-gchar *ofono_error=NULL;
-gchar *ofono_get_error(void)
-{
-	return ofono_error;
-}
 
 // Print the dbus error message and free the error object
-void error_dbus(GError *error, gchar *domain){
+void error_dbus(GError *error)
+{
 	if(!error)
 		return;
 	
-	if (error->domain == DBUS_GERROR && error->code == DBUS_GERROR_REMOTE_EXCEPTION)
-		g_printerr ("%s: Caught remote method exception %s: %s\n",
-		    	domain,
-				dbus_g_error_get_name (error),
-				error->message);
-	else
-		g_printerr ("%s: Error: %s\n", domain, error->message);
-
-	if(ofono_error)
-		g_free(ofono_error);
-	ofono_error=g_strdup(error->message);
-	
+	g_printerr ("Error: %s\n", error->message);
 	g_error_free (error);
 }
 
-int ofono_init()
+static struct str_list *ofono_get_modems(GDBusConnection *s_bus_conn)
 {
-	GError *error;
-	GHashTable *props=NULL;
-	int ret=0;
+	struct str_list *modems;
+	GError *error = NULL;
+	GVariant *var_resp, *var_val;
+	GVariantIter *iter;
+	char *path;
+	int i = 0;
 
-	error = NULL;
-	g_ofono.proxy_modem=NULL;
-	g_ofono.proxy_network=NULL;
-	g_ofono.proxy_manager=NULL;
-	g_ofono.connection=NULL;
-	g_ofono.connection = dbus_g_bus_get(DBUS_BUS_SYSTEM,&error);
-	if (g_ofono.connection == NULL)	{
-		error_dbus(error,"dbus_g_bus_get");
-		ret=-1;
-		goto error;
+	modems = g_malloc(sizeof(struct str_list));
+	modems->count = 0;
+	modems->data = NULL;
+
+	var_resp = g_dbus_connection_call_sync(s_bus_conn,
+			OFONO_SERVICE, OFONO_MANAGER_PATH,
+			OFONO_MANAGER_IFACE, "GetModems", NULL, NULL,
+			G_DBUS_SEND_MESSAGE_FLAGS_NONE, -1, NULL, &error);
+
+	if (var_resp == NULL) {
+		g_error("dbus call failed (%s)", error->message);
+		g_error_free(error);
+		return modems;
 	}
 
-	// get default modem
-	if (!dbus_g_proxy_call (ofono_proxy_manager_get(), "GetProperties", &error, G_TYPE_INVALID,
-         dbus_g_type_get_map ("GHashTable", G_TYPE_STRING,G_TYPE_VALUE), &props, G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.Manager->GetProperties");
-		ret=-1;
-		goto error;
-    }
-	GValue *v=g_hash_table_lookup(props,"Modems");
-	GPtrArray *a=g_value_get_boxed(v);
-	gpointer o=g_ptr_array_index(a,0);
-	g_ofono.modem=g_strdup(o);
+	g_variant_get(var_resp, "(a(oa{sv}))", &iter);
+	modems->count = g_variant_iter_n_children(iter);
+	modems->data = g_malloc(sizeof(char *) * modems->count);
+	while (g_variant_iter_next(iter, "(o@a{sv})", &path, &var_val)) {
+		modems->data[i++] = path;
+		g_variant_unref(var_val);
+	}
 
-	// Activate default modem
-	GValue gvalue_true={0};
-	g_value_init(&gvalue_true, G_TYPE_BOOLEAN);
-	g_value_set_boolean(&gvalue_true, TRUE);
-	if (!dbus_g_proxy_call (ofono_proxy_modem_get(), "SetProperty", &error, G_TYPE_STRING, "Powered", G_TYPE_VALUE, &gvalue_true, G_TYPE_INVALID,
-         G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.Modem->SetProperty");
-		ret=-1;
-		goto error;
-    }
-	g_value_unset(&gvalue_true);
+	g_variant_iter_free(iter);
+	g_variant_unref(var_resp);
 
-	dbus_g_object_register_marshaller(g_cclosure_user_marshal_VOID__STRING_VALUE,G_TYPE_NONE, G_TYPE_STRING, G_TYPE_VALUE, G_TYPE_INVALID);
-	dbus_g_object_register_marshaller(g_cclosure_user_marshal_VOID__STRING_VALUE,G_TYPE_NONE, G_TYPE_STRING, dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE), G_TYPE_INVALID);
+	return modems;
+}
 
-	g_ofono.proxies_call=g_hash_table_new(g_str_hash,g_str_equal);
+int ofono_init()
+{	
+	ofono_if_priv.s_bus_conn = get_dbus_connection();
 	
-	debug("Ofono init done\n");
+	if(!ofono_if_priv.s_bus_conn)
+		return -1;
+	
+	struct str_list *modems = ofono_get_modems(ofono_if_priv.s_bus_conn);
 
-error:
-	if(props)g_hash_table_destroy(props);
-	return ret;
+	if (modems->count <= 0) {
+		g_warning("There is no modem");
+		return -1;
+	}
+
+	if (ofono_if_priv.s_bus_conn == NULL) {
+		g_error("Fail to get dbus connection");
+		return -1;
+	}
+	
+	ofono_if_priv.modem = g_strdup(modems->data[0]);
+	
+	g_debug("Using modem: %s", ofono_if_priv.modem);
+	
+	g_free(modems);
+	
+	return 0;
 }
 
 void ofono_clear()
 {
-	if(g_ofono.proxy_manager)g_object_unref(g_ofono.proxy_manager);
-	if(g_ofono.proxy_modem)g_object_unref(g_ofono.proxy_modem);
-	if(g_ofono.proxy_network)g_object_unref(g_ofono.proxy_network);
-	if(g_ofono.proxy_voice_call_manager)g_object_unref(g_ofono.proxy_voice_call_manager);
+	g_free(ofono_if_priv.modem);
+	g_dbus_connection_close_sync(ofono_if_priv.s_bus_conn, NULL, NULL);
 }
 
 int ofono_read_network_properties(OfonoNetworkProperties *properties)
 {
-	GError *error=NULL;
-	GHashTable *props=NULL;
-	int ret=0;
-
-	if(properties==NULL){
-		g_printerr("ofono_read_network_properties==NULL");
-		goto error;
-	}
-	
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
-	}
-
-	// Read network properties
-	if (!dbus_g_proxy_call (ofono_proxy_network_get(), "GetProperties", &error, G_TYPE_INVALID,
-         dbus_g_type_get_map ("GHashTable", G_TYPE_STRING,G_TYPE_VALUE), &props, G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.NetworkRegistration->GetProperties");
-		ret=-1;
-		goto error;
-    }
-	GValue *v=g_hash_table_lookup(props,"Status");
-	properties->status=g_value_dup_string(v);
-	v=g_hash_table_lookup(props,"Technology");
-	properties->technology=g_value_dup_string(v);
-	v=g_hash_table_lookup(props,"Name");
-	properties->noperator=g_value_dup_string(v);
-	v=g_hash_table_lookup(props,"Strength");
-	properties->strength=g_value_get_uint(v);
-
-	debug("Status=%s, Technology=%s, Operator=%s, Strength=%u\n",properties->status, properties->technology, properties->noperator, (guint)properties->strength);
-
-error:
-	if(props)g_hash_table_destroy(props);
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
-void ofono_network_properties_free(OfonoNetworkProperties *properties){
-	if(!properties)
-		return;
-
-	if(properties->status)
-		g_free(properties->status);
-	if(properties->technology)
-		g_free(properties->technology);
-	if(properties->noperator)
-		g_free(properties->noperator);
+void ofono_network_properties_free(OfonoNetworkProperties *properties)
+{
+	g_debug("%s", __func__);
 }
 
 int ofono_network_properties_add_handler(gpointer handler, gpointer data)
 {
-	int ret=0;
-
-	dbus_g_proxy_add_signal(ofono_proxy_network_get(),"PropertyChanged", G_TYPE_STRING, G_TYPE_VALUE, G_TYPE_INVALID);
-	dbus_g_proxy_connect_signal(ofono_proxy_network_get(),"PropertyChanged",G_CALLBACK(handler),data,NULL);
-
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_network_properties_remove_handler(gpointer handler, gpointer data)
 {
-	int ret=0;
-
-	dbus_g_proxy_disconnect_signal(ofono_proxy_network_get(),"PropertyChanged",G_CALLBACK(handler),data);
-
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_voice_call_manager_properties_add_handler(gpointer handler, gpointer data)
 {
-	int ret=0;
-
-	dbus_g_proxy_add_signal(ofono_proxy_voice_call_manager_get(),"PropertyChanged", G_TYPE_STRING, G_TYPE_VALUE, G_TYPE_INVALID);
-	dbus_g_proxy_connect_signal(ofono_proxy_voice_call_manager_get(),"PropertyChanged",G_CALLBACK(handler),data,NULL);
-
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_voice_call_manager_properties_remove_handler(gpointer handler, gpointer data)
 {
-	int ret=0;
-
-	dbus_g_proxy_disconnect_signal(ofono_proxy_voice_call_manager_get(),"PropertyChanged",G_CALLBACK(handler),data);
-
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
-int ofono_voice_call_manager_get_calls(GValue **v)
+int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count)
 {
-	GError *error=NULL;
-	GHashTable *props=NULL;
-	int ret=0;
+	g_debug("%s", __func__);
+	GError *error = NULL;
+	GVariant *result;
+	char *path, *key;
 
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
+	result = g_dbus_connection_call_sync(ofono_if_priv.s_bus_conn, OFONO_SERVICE,
+		ofono_if_priv.modem, OFONO_VOICECALL_MANAGER_IFACE, "GetCalls",
+		NULL, NULL, G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+
+	if(error) {
+		error_dbus(error);
+		return -1;
 	}
 
-	// Read network properties
-	if (!dbus_g_proxy_call (ofono_proxy_voice_call_manager_get(), "GetProperties", &error, G_TYPE_INVALID,
-         dbus_g_type_get_map ("GHashTable", G_TYPE_STRING,G_TYPE_VALUE), &props, G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.VoiceCallManager->GetProperties");
-		ret=-1;
-		goto error;
-    }
-	*v=g_hash_table_lookup(props,"Calls");
+	GVariantIter *iter;
+	g_variant_get(result, "(a(oa{sv}))", &iter);
 
-error:
-	//if(props)g_hash_table_destroy(props);
-	return ret;
+	*count = g_variant_iter_n_children(iter);
+	if (*count == 0) {
+		*calls = NULL;
+		g_debug("No call");
+		g_variant_iter_free(iter);
+		g_variant_unref(result);
+		return 0;
+	}
+	
+	*calls = g_malloc0(sizeof(OfonoCallProperties)*(*count));
+
+	int i = 0;
+	GVariantIter *iter_val;
+	GVariant *val;
+	while (g_variant_iter_loop(iter, "(oa{sv})", &path, &iter_val)) {
+		(*calls)[i].path = path;
+
+		while (g_variant_iter_loop(iter_val, "{sv}", &key, &val)) {
+			if (g_strcmp0(key, "LineIdentification") == 0)
+				(*calls)[i].line_identifier = g_variant_dup_string(val, NULL);
+			else if (g_strcmp0(key, "State") == 0)
+				(*calls)[i].state = g_variant_dup_string(val, NULL);
+			else if (g_strcmp0(key, "Emergency") == 0)
+				g_variant_get(val, "b", &(*calls)[i].emergency);
+		}
+
+		g_debug("call: %s, state: %s, line identification %s, emergency: %i", 
+				(*calls)[i].path, (*calls)[i].state, (*calls)[i].line_identifier, (*calls)[i].emergency);
+
+		++i;
+	}
+	g_variant_iter_free(iter);
+	g_variant_unref(result);
+	
+	return 0;
 }
 
 int ofono_call_properties_read(OfonoCallProperties *properties, gchar *path)
 {
-	GError *error=NULL;
-	GHashTable *props=NULL;
-	int ret=0;
-
-	if(properties==NULL){
-		g_printerr("ofono_call_properties==NULL");
-		goto error;
-	}
-	
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
-	}
-
-	// Read network properties
-	if (!dbus_g_proxy_call (ofono_proxy_call_get(path), "GetProperties", &error, G_TYPE_INVALID,
-         dbus_g_type_get_map ("GHashTable", G_TYPE_STRING,G_TYPE_VALUE), &props, G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.VoiceCall->GetProperties");
-		ret=-1;
-		goto error;
-    }
-	GValue *v=g_hash_table_lookup(props,"State");
-	properties->state=g_value_dup_string(v);
-	v=g_hash_table_lookup(props,"LineIdentification");
-	properties->line_identifier=g_value_dup_string(v);
-	v=g_hash_table_lookup(props,"StartTime");
-	properties->start_time=g_value_dup_string(v);
-
-error:
-	if(props)g_hash_table_destroy(props);
-	return ret;
+	properties = g_malloc(sizeof(*properties));
+	g_debug("%s: %s", __func__, path);	
+	return 0;
 }
 
-void ofono_call_properties_free(OfonoCallProperties *properties){
-	if(!properties)
-		return;
-
-	if(properties->state)
-		g_free(properties->state);
-	if(properties->line_identifier)
-		g_free(properties->line_identifier);
-	if(properties->start_time)
-		g_free(properties->start_time);
+void ofono_call_properties_free(OfonoCallProperties *properties)
+{
+	g_free(properties);
 }
 
 int ofono_voice_call_properties_add_handler(gchar *path, gpointer handler, gpointer data)
 {
-	int ret=0;
-
-	dbus_g_proxy_add_signal(ofono_proxy_call_get(path),"PropertyChanged", G_TYPE_STRING, G_TYPE_VALUE, G_TYPE_INVALID);
-	dbus_g_proxy_connect_signal(ofono_proxy_call_get(path),"PropertyChanged",G_CALLBACK(handler),data,NULL);
-
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_voice_call_properties_remove_handler(gchar *path, gpointer handler, gpointer data)
 {
-	int ret=0;
-
-	dbus_g_proxy_disconnect_signal(ofono_proxy_call_get(path),"PropertyChanged",G_CALLBACK(handler),data);
-
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_call_answer(gchar *path)
 {
-	GError *error=NULL;
-	int ret=0;
-
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
-	}
-
-	// Read network properties
-	if (!dbus_g_proxy_call (ofono_proxy_call_get(path), "Answer", &error, G_TYPE_INVALID,
-         G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.VoiceCall->Answer");
-		ret=-1;
-		goto error;
-    }
-
-	debug("Call answer done\n");
-
-error:
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_call_hangup(gchar *path)
 {
-	GError *error=NULL;
-	int ret=0;
-
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
-	}
-
-	// Read network properties
-	if (!dbus_g_proxy_call (ofono_proxy_call_get(path), "Hangup", &error, G_TYPE_INVALID,
-         G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.VoiceCall->Hangup");
-		ret=-1;
-		goto error;
-    }
-
-	debug("Call hangup done\n");
-
-error:
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_call_hold_and_answer()
 {
-	GError *error=NULL;
-	int ret=0;
-
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
-	}
-
-	// Read network properties
-	if (!dbus_g_proxy_call (ofono_proxy_voice_call_manager_get(), "HoldAndAnswer", &error, G_TYPE_INVALID,
-         G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.VoiceCall->HoldAndAnswer");
-		ret=-1;
-		goto error;
-    }
-
-	debug("Call HoldAndAnswer done\n");
-
-error:
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_call_swap()
 {
-	GError *error=NULL;
-	int ret=0;
-
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
-	}
-
-	if (!dbus_g_proxy_call (ofono_proxy_voice_call_manager_get(), "SwapCalls", &error, G_TYPE_INVALID,
-         G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.VoiceCall->HoldAndAnswer");
-		ret=-1;
-		goto error;
-    }
-
-	debug("Call HoldAndAnswer done\n");
-
-error:
-	return ret;
+	g_debug("%s", __func__);
+	return 0;
 }
 
 int ofono_dial(const gchar *dial)
 {
-	GError *error=NULL;
-	int ret=0;
+	GVariant *val;
+	GVariant *result;
+	GError *error = NULL;
 
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
+	g_debug("Dialing number: %s", dial);
+
+	val = g_variant_new("(ss)", dial, "enabled");
+	result = g_dbus_connection_call_sync(ofono_if_priv.s_bus_conn, OFONO_SERVICE, ofono_if_priv.modem,
+		OFONO_VOICECALL_MANAGER_IFACE, "Dial", val, NULL,
+		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+	
+	if(error) {
+		error_dbus(error);
+		return -1;
 	}
 
-	debug("ofono_dial %s\n",dial);
-	if (!dbus_g_proxy_call (ofono_proxy_voice_call_manager_get(), "Dial", &error, G_TYPE_STRING, dial, G_TYPE_STRING, "", G_TYPE_INVALID,
-         G_TYPE_VALUE, NULL, G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.VoiceCall->Dial");
-		ret=-1;
-		goto error;
-    }
+	g_variant_unref(result);
 
-	debug("Call Dial done\n");
-
-error:
-	return ret;
+	return 0;
 }
 
 int ofono_sms_send(const gchar *to, const gchar *text)
 {
-	GError *error=NULL;
-	int ret=0;
+	GVariant *val;
+	GVariant *result;
+	GError *error = NULL;
 
-	if (g_ofono.connection == NULL)	{
-		ret=-1;
-		goto error;
+	g_debug("Sending sms: %s %s", to, text);
+
+	val = g_variant_new("(ss)", to, text);
+	result = g_dbus_connection_call_sync(ofono_if_priv.s_bus_conn, OFONO_SERVICE, ofono_if_priv.modem,
+		OFONO_MESSAGE_MANAGER_IFACE, "SendMessage", val, NULL,
+		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+	
+	if(error) {
+		error_dbus(error);
+		return -1;
 	}
 
-	if (!dbus_g_proxy_call (ofono_proxy_sms_manager_get(), "SendMessage", &error, G_TYPE_STRING, to, G_TYPE_STRING, text, G_TYPE_INVALID,
-         G_TYPE_INVALID))
-    {
-		error_dbus(error,"org.ofono.SmsManager->SendMessage");
-		ret=-1;
-		goto error;
-    }
-
-	debug("Call ofono_sms_send done\n");
-
-error:
-	return ret;
+	g_variant_unref(result);
+	return 0;
 }
 
 int ofono_sms_incoming_add_handler(gpointer handler, gpointer data)
 {
-	int ret=0;
-
-	dbus_g_proxy_add_signal(ofono_proxy_sms_manager_get(),"IncomingMessage", G_TYPE_STRING, dbus_g_type_get_map ("GHashTable", G_TYPE_STRING, G_TYPE_VALUE), G_TYPE_INVALID);
-	dbus_g_proxy_connect_signal(ofono_proxy_sms_manager_get(),"IncomingMessage",G_CALLBACK(handler),data,NULL);
-
-	debug("Call ofono_sms_incoming_add_handler done\n");
-
-	return ret;
+	return 0;
 }

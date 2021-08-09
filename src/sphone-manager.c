@@ -109,32 +109,25 @@ static void sphone_manager_call_status_changed_cb(SphoneCall *call, gchar *statu
 	debug("Call table length=%d\n",g_hash_table_size(private->calls));
 }
 
-static void _sphone_manager_voice_call_manager_properties_callback(gpointer *data1,gchar *name, GValue *value, GObject *object)
+static void _sphone_manager_voice_call_callback(OfonoCallProperties *calls, size_t count, GObject *object)
 {
-	int i=0;
-	
 	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(object);
 
-	if(value==NULL)
+	if(calls == NULL)
 		return;
-	debug("_sphone_manager_voice_call_manager_properties_callback %s %s\n",name,G_VALUE_TYPE_NAME(value));
 	
-	if(!g_strcmp0 (name, "Calls")){
-		GPtrArray *l=g_value_get_boxed(value);
-		// Add new call objects
-		for(i=0;i<l->len;i++){
-			char *path=g_ptr_array_index(l,i);
-			debug(" check call=%s\n",g_ptr_array_index(l,i));
-			if(!g_hash_table_lookup(private->calls,path)){
-				debug("  Add call %s %d\n", path, g_str_hash(path));
-				SphoneCall *call=g_object_new(sphone_call_get_type(),"dbus_path",path,NULL);
-				g_signal_connect(call, "status_changed", G_CALLBACK(sphone_manager_call_status_changed_cb), object);
-				g_hash_table_insert(private->calls,g_strdup(path),call);
-				g_signal_emit(object,manager_signals[CALL_ADDED],0,call);
-			}
+	// Add new call objects
+	for(int i=0; i < count; ++i) {
+		const gchar *path = calls[i].path;
+		if(!g_hash_table_lookup(private->calls, path)) {
+			debug("Add call %s %d\n", path, g_str_hash(path));
+			SphoneCall *call=g_object_new(sphone_call_get_type(), "dbus_path", path, NULL);
+			g_signal_connect(call, "status_changed", G_CALLBACK(sphone_manager_call_status_changed_cb), object);
+			g_hash_table_insert(private->calls, g_strdup(path), call);
+			g_signal_emit(object,manager_signals[CALL_ADDED], 0, call);
 		}
-		debug("Call table length=%d\n",g_hash_table_size(private->calls));
 	}
+	debug("Call table length=%d\n",g_hash_table_size(private->calls));
 }
 
 static void _sphone_manager_sms_incoming_callback(gpointer *data1,gchar *text, GHashTable *value, GObject *object)
@@ -162,7 +155,7 @@ sphone_manager_init (SphoneManager *object)
 	ofono_read_network_properties(&private->network_properties);
 
 	ofono_network_properties_add_handler(_sphone_manager_network_properties_callback, object);
-	ofono_voice_call_manager_properties_add_handler(_sphone_manager_voice_call_manager_properties_callback, object);
+	//ofono_voice_call_manager_properties_add_handler(_sphone_manager_voice_call_manager_properties_callback, object);
 	ofono_sms_incoming_add_handler(_sphone_manager_sms_incoming_callback, object);
 
 	private->calls=g_hash_table_new_full(g_str_hash,g_str_equal, g_free, g_object_unref);
@@ -404,7 +397,8 @@ int sphone_manager_sms_send(SphoneManager *manager, const gchar *to, const char 
 
 void sphone_manager_populate(SphoneManager *manager)
 {
-	GValue *v;
-	if(!ofono_voice_call_manager_get_calls(&v))
-		_sphone_manager_voice_call_manager_properties_callback(NULL,"Calls",v,manager);
+	size_t count;
+	OfonoCallProperties *calls;
+	if(!ofono_voice_call_get_calls(&calls, &count))
+		_sphone_manager_voice_call_callback(calls, count, manager);
 }
