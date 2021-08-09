@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Sphone New SMS
+GenericName=SMS
+Exec=sphone -c dialer-open
+Icon=sphone-new-sms
+Terminal=false
+Type=Application
+Categories=Telephony;

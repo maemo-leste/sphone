@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Sphone Dialer
+GenericName=Dialer
+Exec=sphone -c dialer-open
+Icon=sphone-phone
+Terminal=false
+Type=Application
+Categories=Telephony;
