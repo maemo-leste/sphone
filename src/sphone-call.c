@@ -56,10 +56,11 @@ typedef struct _SphoneCallPrivate  SphoneCallPrivate;
 struct _SphoneCallPrivate
 {
 	gchar *dbus_path;
-	OfonoCallProperties call_properties;
+	OfonoCallProperties *call_properties;
 	store_interaction_direction_enum direction;
 	store_interaction_call_status_enum answer_status;
 	guint ofono_signal_handler;
+	int callback_id;
 };
 
 static void _sphone_call_properties_callback(gpointer *data1,gchar *name, GValue *value, GObject *object);
@@ -76,9 +77,9 @@ sphone_call_finalize (GObject *object)
 	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(object);
 	
 	debug("Clear call object \n");
-	ofono_voice_call_properties_remove_handler(private->dbus_path, _sphone_call_properties_callback, object);
+	ofono_voice_call_properties_remove_handler(private->callback_id);
 	if(private->dbus_path)g_free(private->dbus_path);
-	ofono_call_properties_free(&private->call_properties);
+	ofono_call_properties_free(private->call_properties);
 
 	G_OBJECT_CLASS (sphone_call_parent_class)->finalize (object);
 }
@@ -88,52 +89,52 @@ static void _sphone_call_properties_callback(gpointer *data1,gchar *name, GValue
 	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(object);
 	debug("_sphone_call_properties_callback %s %s\n",name,G_VALUE_TYPE_NAME(value));
 	if(!g_strcmp0(name,"StartTime")){
-		g_free(private->call_properties.start_time);
-		private->call_properties.start_time=g_value_dup_string(value);
+		g_free(private->call_properties->start_time);
+		private->call_properties->start_time=g_value_dup_string(value);
 	}else if(!g_strcmp0(name,"State")){
-		g_free(private->call_properties.state);
-		private->call_properties.state=g_value_dup_string(value);
-		debug("	  value='%s'\n",private->call_properties.state);
+		g_free(private->call_properties->state);
+		private->call_properties->state=g_value_dup_string(value);
+		debug("	  value='%s'\n",private->call_properties->state);
 
-		if(!g_strcmp0(private->call_properties.state,"dialing")
-		   || !g_strcmp0(private->call_properties.state,"alerting")){
+		if(!g_strcmp0(private->call_properties->state,"dialing")
+		   || !g_strcmp0(private->call_properties->state,"alerting")){
 			private->direction=STORE_INTERACTION_DIRECTION_OUTGOING;
 		}
-		if(!g_strcmp0(private->call_properties.state,"incoming")){
+		if(!g_strcmp0(private->call_properties->state,"incoming")){
 			private->direction=STORE_INTERACTION_DIRECTION_INCOMING;
 		}
-		if(!g_strcmp0(private->call_properties.state,"active")){
+		if(!g_strcmp0(private->call_properties->state,"active")){
 			if(private->answer_status!=STORE_INTERACTION_CALL_STATUS_ESTABLISHED){  // Make sure only once
 				if(private->direction==STORE_INTERACTION_DIRECTION_OUTGOING){
-					utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_OUTGOING_ANSWERED,private->call_properties.line_identifier,NULL);
+					utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_OUTGOING_ANSWERED,private->call_properties->line_identifier,NULL);
 					utils_connected_notify();
 				}else{
-					utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_INCOMING_ANSWERED,private->call_properties.line_identifier,NULL);
+					utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_INCOMING_ANSWERED,private->call_properties->line_identifier,NULL);
 				}
 			}
 			private->answer_status=STORE_INTERACTION_CALL_STATUS_ESTABLISHED;
 		}
-		if(!g_strcmp0(private->call_properties.state,"disconnected")){
+		if(!g_strcmp0(private->call_properties->state,"disconnected")){
 			struct tm tm;
 			int duration=0;
 			time_t now_t=time(NULL);
 			time_t start_t=now_t;
-			if(private->call_properties.start_time){
-				strptime(private->call_properties.start_time,"%Y-%m-%dT%H:%M:%S%z",&tm);
+			if(private->call_properties->start_time){
+				strptime(private->call_properties->start_time,"%Y-%m-%dT%H:%M:%S%z",&tm);
 				start_t=mktime(&tm);
 				duration=now_t-start_t;
 			}
 			if(private->answer_status==STORE_INTERACTION_CALL_STATUS_MISSED){  // missed call
 				if(private->direction==STORE_INTERACTION_DIRECTION_OUTGOING){
-					utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_OUTGOING_MISSED,private->call_properties.line_identifier,NULL);
+					utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_OUTGOING_MISSED,private->call_properties->line_identifier,NULL);
 				}else{
-					utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_INCOMING_MISSED,private->call_properties.line_identifier,NULL);
+					utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_INCOMING_MISSED,private->call_properties->line_identifier,NULL);
 				}
 			}
-			store_call_add(private->direction, start_t,private->call_properties.line_identifier,private->answer_status, duration);
+			store_call_add(private->direction, start_t,private->call_properties->line_identifier,private->answer_status, duration);
 		}
 		
-		g_signal_emit(object,call_signals[STATUS_CHANGED],0,private->call_properties.state);
+		g_signal_emit(object,call_signals[STATUS_CHANGED],0,private->call_properties->state);
 	}
 }
 
@@ -146,19 +147,21 @@ sphone_call_set_property (GObject *object, guint prop_id, const GValue *value, G
 	switch (prop_id)
 	{
 	case PROP_DBUS_PATH:
-		if(private->dbus_path)g_free(private->dbus_path);
+		if(private->dbus_path)
+			g_free(private->dbus_path);
 		private->dbus_path=g_value_dup_string(value);
-		ofono_call_properties_read(&private->call_properties,private->dbus_path);
-		if(!g_strcmp0(private->call_properties.state,"dialing")
-		   || !g_strcmp0(private->call_properties.state,"alerting")){
+		private->call_properties = ofono_call_properties_read(private->dbus_path);
+		g_debug("%s: PROP_DBUS_PATH %s %p", __func__, private->dbus_path, private->call_properties);
+		if(!g_strcmp0(private->call_properties->state, "dialing")
+		   || !g_strcmp0(private->call_properties->state, "alerting")){
 			private->direction=STORE_INTERACTION_DIRECTION_OUTGOING;
-			utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_OUTGOING,private->call_properties.line_identifier,NULL);
+			utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_OUTGOING,private->call_properties->line_identifier,NULL);
 		}
-		if(!g_strcmp0(private->call_properties.state,"incoming")){
+		if(!g_strcmp0(private->call_properties->state,"incoming")){
 			private->direction=STORE_INTERACTION_DIRECTION_INCOMING;
-			utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_INCOMING,private->call_properties.line_identifier,NULL);
+			utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_INCOMING,private->call_properties->line_identifier,NULL);
 		}
-		ofono_voice_call_properties_add_handler(private->dbus_path, _sphone_call_properties_callback, object);
+		private->callback_id = ofono_voice_call_properties_add_handler(private->dbus_path, _sphone_call_properties_callback, object);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -177,10 +180,10 @@ sphone_call_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 	switch (prop_id)
 	{
 	case PROP_STATE:
-		g_value_set_string(value, private->call_properties.state);
+		g_value_set_string(value, private->call_properties->state);
 		break;
 	case PROP_LINE_IDENTIFIER:
-		g_value_set_string(value, private->call_properties.line_identifier);
+		g_value_set_string(value, private->call_properties->line_identifier);
 		break;
 	case PROP_DBUS_PATH:
 		g_value_set_string(value, private->dbus_path);

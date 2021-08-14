@@ -26,6 +26,8 @@ typedef struct _OfonoNetworkProperties{
 	guint  strength;
 }OfonoNetworkProperties;
 
+typedef void (*network_handler)(OfonoNetworkProperties *properties, void *data);
+
 typedef struct _OfonoCallProperties{
 	gchar *path;
 	gchar *line_identifier;
@@ -34,20 +36,21 @@ typedef struct _OfonoCallProperties{
 	gboolean emergency;
 }OfonoCallProperties;
 
+typedef void (*call_handler_t)(OfonoCallProperties *properties, size_t count, void *data);
+
 int ofono_init();
 int ofono_read_network_properties(OfonoNetworkProperties *properties);
 void ofono_network_properties_free(OfonoNetworkProperties *properties);
 int ofono_network_properties_add_handler(gpointer handler, gpointer data);
-int ofono_network_properties_remove_handler(gpointer handler, gpointer data);
+void ofono_network_properties_remove_handler(void);
 
-int ofono_voice_call_add_handler(gpointer handler, gpointer data);
-int ofono_voice_call_remove_handler(gpointer handler, gpointer data);
+int ofono_voice_call_add_new_call_handler(call_handler_t handler, void *data);
 int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count);
 
-int ofono_call_properties_read(OfonoCallProperties *properties, gchar *path);
+OfonoCallProperties *ofono_call_properties_read(gchar *path);
 void ofono_call_properties_free(OfonoCallProperties *properties);
 int ofono_voice_call_properties_add_handler(gchar *path, gpointer handler, gpointer data);
-int ofono_voice_call_properties_remove_handler(gchar *path, gpointer handler, gpointer data);
+int ofono_voice_call_properties_remove_handler(int id);
 int ofono_call_answer(gchar *path);
 int ofono_call_hangup(gchar *path);
 int ofono_call_hold_and_answer();

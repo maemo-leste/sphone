@@ -111,6 +111,7 @@ static void sphone_manager_call_status_changed_cb(SphoneCall *call, gchar *statu
 
 static void _sphone_manager_voice_call_callback(OfonoCallProperties *calls, size_t count, GObject *object)
 {
+	g_debug("%s: %p %i", __func__, calls, count);
 	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(object);
 
 	if(calls == NULL)
@@ -155,7 +156,7 @@ sphone_manager_init (SphoneManager *object)
 	ofono_read_network_properties(&private->network_properties);
 
 	ofono_network_properties_add_handler(_sphone_manager_network_properties_callback, object);
-	//ofono_voice_call_manager_properties_add_handler(_sphone_manager_voice_call_manager_properties_callback, object);
+	ofono_voice_call_add_new_call_handler(_sphone_manager_voice_call_callback, object);
 	ofono_sms_incoming_add_handler(_sphone_manager_sms_incoming_callback, object);
 
 	private->calls=g_hash_table_new_full(g_str_hash,g_str_equal, g_free, g_object_unref);
@@ -166,7 +167,7 @@ sphone_manager_finalize (GObject *object)
 {
 	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(object);
 	ofono_network_properties_free(&private->network_properties);
-	ofono_network_properties_remove_handler(_sphone_manager_network_properties_callback, object);
+	ofono_network_properties_remove_handler();
 
 	G_OBJECT_CLASS (sphone_manager_parent_class)->finalize (object);
 
