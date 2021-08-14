@@ -1,5 +1,9 @@
 #!/usr/bin/make -f
 export DH_VERBOSE=1
 
+override_dh_install:
+	dh_install
+	dh_installxsession -u 'post 70'
+
 %:
 	dh $@ --with autoreconf
