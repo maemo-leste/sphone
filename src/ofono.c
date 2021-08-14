@@ -17,9 +17,7 @@
  */
 
 
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-gtype-specialized.h>
-#include <dbus/dbus-protocol.h>
+#include <stdbool.h>
 #include <gio/gio.h>
 #include "ofono-dbus-names.h"
 #include "ofono.h"
@@ -53,6 +51,11 @@ static void call_added_cb(GDBusConnection *connection,
 		const gchar *signal_name,
 		GVariant *parameters,
 		void *data);
+
+static bool ofono_init_valid()
+{
+	return ofono_if_priv.s_bus_conn && ofono_if_priv.modem;
+}
 
 static GDBusConnection *get_dbus_connection()
 {
@@ -145,6 +148,7 @@ int ofono_init()
 
 	if (modems->count <= 0) {
 		g_warning("There is no modem");
+		g_free(modems);
 		return -1;
 	}
 
@@ -175,6 +179,9 @@ int ofono_init()
 
 void ofono_clear()
 {
+	if(!ofono_init_valid())
+		return;
+
 	g_free(ofono_if_priv.modem);
 	g_dbus_connection_close_sync(ofono_if_priv.s_bus_conn, NULL, NULL);
 }
@@ -255,6 +262,9 @@ static void call_added_cb(GDBusConnection *connection,
 
 int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count)
 {
+	if(!ofono_init_valid())
+		return -1;
+	
 	g_debug("%s", __func__);
 	GError *error = NULL;
 	GVariant *result;
@@ -297,6 +307,9 @@ int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count)
 
 OfonoCallProperties *ofono_call_properties_read(gchar *path)
 {
+	if(!ofono_init_valid())
+		return NULL;
+
 	OfonoCallProperties *properties = g_malloc0(sizeof(*properties));
 	g_debug("%s: %s", __func__, path);
 	
@@ -331,18 +344,25 @@ void ofono_call_properties_free(OfonoCallProperties *properties)
 
 int ofono_voice_call_properties_add_handler(gchar *path, gpointer handler, gpointer data)
 {
+	if(!ofono_init_valid())
+		return -1;
 	g_debug("%s: %s", __func__, path);
 	return 0;
 }
 
 int ofono_voice_call_properties_remove_handler(int id)
 {
+	if(!ofono_init_valid())
+		return -1;
 	g_debug("%s", __func__);
 	return 0;
 }
 
 int ofono_call_answer(gchar *path)
 {
+	if(!ofono_init_valid())
+		return -1;
+
 	GVariant *result;
 	GError *error = NULL;
 	
@@ -361,6 +381,9 @@ int ofono_call_answer(gchar *path)
 
 int ofono_call_hangup(gchar *path)
 {
+	if(!ofono_init_valid())
+		return -1;
+
 	GVariant *result;
 	GError *error = NULL;
 	
@@ -379,18 +402,25 @@ int ofono_call_hangup(gchar *path)
 
 int ofono_call_hold_and_answer()
 {
+	if(!ofono_init_valid())
+		return -1;
 	g_debug("%s", __func__);
 	return 0;
 }
 
 int ofono_call_swap()
 {
+	if(!ofono_init_valid())
+		return -1;
 	g_debug("%s", __func__);
 	return 0;
 }
 
 int ofono_dial(const gchar *dial)
 {
+	if(!ofono_init_valid())
+		return -1;
+
 	GVariant *val;
 	GVariant *result;
 	GError *error = NULL;
@@ -414,6 +444,9 @@ int ofono_dial(const gchar *dial)
 
 int ofono_sms_send(const gchar *to, const gchar *text)
 {
+	if(!ofono_init_valid())
+		return -1;
+
 	GVariant *val;
 	GVariant *result;
 	GError *error = NULL;

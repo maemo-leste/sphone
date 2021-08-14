@@ -151,17 +151,19 @@ sphone_call_set_property (GObject *object, guint prop_id, const GValue *value, G
 			g_free(private->dbus_path);
 		private->dbus_path=g_value_dup_string(value);
 		private->call_properties = ofono_call_properties_read(private->dbus_path);
-		g_debug("%s: PROP_DBUS_PATH %s %p", __func__, private->dbus_path, private->call_properties);
-		if(!g_strcmp0(private->call_properties->state, "dialing")
-		   || !g_strcmp0(private->call_properties->state, "alerting")){
-			private->direction=STORE_INTERACTION_DIRECTION_OUTGOING;
-			utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_OUTGOING,private->call_properties->line_identifier,NULL);
+		if(private->call_properties) {
+			g_debug("%s: PROP_DBUS_PATH %s %p", __func__, private->dbus_path, private->call_properties);
+			if(!g_strcmp0(private->call_properties->state, "dialing")
+			|| !g_strcmp0(private->call_properties->state, "alerting")){
+				private->direction=STORE_INTERACTION_DIRECTION_OUTGOING;
+				utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_OUTGOING,private->call_properties->line_identifier,NULL);
+			}
+			if(!g_strcmp0(private->call_properties->state,"incoming")){
+				private->direction=STORE_INTERACTION_DIRECTION_INCOMING;
+				utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_INCOMING,private->call_properties->line_identifier,NULL);
+			}
+			private->callback_id = ofono_voice_call_properties_add_handler(private->dbus_path, _sphone_call_properties_callback, object);
 		}
-		if(!g_strcmp0(private->call_properties->state,"incoming")){
-			private->direction=STORE_INTERACTION_DIRECTION_INCOMING;
-			utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_CALL_INCOMING,private->call_properties->line_identifier,NULL);
-		}
-		private->callback_id = ofono_voice_call_properties_add_handler(private->dbus_path, _sphone_call_properties_callback, object);
 		break;
 	default:
 		G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -180,10 +182,12 @@ sphone_call_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 	switch (prop_id)
 	{
 	case PROP_STATE:
-		g_value_set_string(value, private->call_properties->state);
+		if(private->call_properties)
+			g_value_set_string(value, private->call_properties->state);
 		break;
 	case PROP_LINE_IDENTIFIER:
-		g_value_set_string(value, private->call_properties->line_identifier);
+		if(private->call_properties)
+			g_value_set_string(value, private->call_properties->line_identifier);
 		break;
 	case PROP_DBUS_PATH:
 		g_value_set_string(value, private->dbus_path);
