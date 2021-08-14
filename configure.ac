@@ -37,4 +37,5 @@ Makefile
 src/Makefile
 po/Makefile.in
 icons/Makefile
+desktop/Makefile
 ])

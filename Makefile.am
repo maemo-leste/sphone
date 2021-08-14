@@ -1,7 +1,8 @@
 ## Process this file with automake to produce Makefile.in
 
 SUBDIRS = src po \
-	icons
+	icons \
+	desktop
 
 sphonedocdir = ${prefix}/doc/sphone
 sphonedoc_DATA = \
