@@ -61,6 +61,10 @@ GdkPixbuf *utils_get_icon(const gchar *name);
 #define UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_VOICE_REPEAT_ENABLE "sound.voice.incoming.repeat.enable"
 #define UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_SMS_INCOMING_PATH "sound.sms.incoming.path"
 
+GDBusConnection *get_dbus_connection(void);
+
+void utils_mce_init(void);
+
 gchar *utils_conf_get_string(const gchar *group, const gchar *name);
 void utils_conf_set_string(const gchar *group, const gchar *name, const gchar *value);
 gint utils_conf_get_int(const gchar *group, const gchar *name);

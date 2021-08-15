@@ -2,6 +2,7 @@
 /*
  * sphone
  * Copyright (C) Ahmed Abdel-Hamid 2010 <ahmedam@mail.usa.com>
+ * Copyright (C) Carl Philipp Klemm 2021 <carl@uvos.xyz>
  * 
  * sphone is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -109,10 +110,10 @@ static void sphone_manager_call_status_changed_cb(SphoneCall *call, gchar *statu
 	debug("Call table length=%d\n",g_hash_table_size(private->calls));
 }
 
-static void _sphone_manager_voice_call_callback(OfonoCallProperties *calls, size_t count, GObject *object)
+static void _sphone_manager_voice_call_callback(const OfonoCallProperties *calls, size_t count, void *object)
 {
 	g_debug("%s: %p %i", __func__, calls, count);
-	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(object);
+	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE((GObject*)object);
 
 	if(calls == NULL)
 		return;
@@ -131,19 +132,16 @@ static void _sphone_manager_voice_call_callback(OfonoCallProperties *calls, size
 	debug("Call table length=%d\n",g_hash_table_size(private->calls));
 }
 
-static void _sphone_manager_sms_incoming_callback(gpointer *data1,gchar *text, GHashTable *value, GObject *object)
+static void _sphone_manager_sms_incoming_callback(const gchar *from, const gchar *text, time_t time, void *data)
 {
-	const gchar *from=g_value_get_string(g_hash_table_lookup(value,"Sender"));
-	const gchar *_time=g_value_get_string(g_hash_table_lookup(value,"LocalSentTime"));
+	GObject *object = (GObject*)data;
+	store_sms_add(STORE_INTERACTION_DIRECTION_INCOMING, time, from, text);
+	utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_SMS_INCOMING, from, text, NULL);
 	
-	struct tm tm;
-	strptime(_time,"%Y-%m-%dT%H:%M:%S%z",&tm);
-	store_sms_add(STORE_INTERACTION_DIRECTION_INCOMING, mktime(&tm),from,text);
-	utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_SMS_INCOMING,from,text,NULL);
+    char time_string[256];
+    strftime(time_string, sizeof(time_string), "%m-%d-%Y %H-%M (mon=%b)", localtime(&time));
 	
-	debug("_sphone_manager_sms_incoming_callback %s %s %s %p\n",from,text,_time,object);
-	
-	g_signal_emit(object,manager_signals[SMS_ARRIVED],0,from,text,_time);
+	g_signal_emit(object, manager_signals[SMS_ARRIVED], 0, from, text, time_string);
 }
 
 static void

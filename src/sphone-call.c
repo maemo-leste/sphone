@@ -2,6 +2,7 @@
 /*
  * sphone
  * Copyright (C) Ahmed Abdel-Hamid 2010 <ahmedam@mail.usa.com>
+ * Copyright (C) Carl Philipp Klemm 2021 <carl@uvos.xyz>
  * 
  * sphone is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -63,8 +64,6 @@ struct _SphoneCallPrivate
 	int callback_id;
 };
 
-static void _sphone_call_properties_callback(gpointer *data1,gchar *name, GValue *value, GObject *object);
-
 static void
 sphone_call_init (SphoneCall *object)
 {
@@ -84,16 +83,16 @@ sphone_call_finalize (GObject *object)
 	G_OBJECT_CLASS (sphone_call_parent_class)->finalize (object);
 }
 
-static void _sphone_call_properties_callback(gpointer *data1,gchar *name, GValue *value, GObject *object)
+static void _sphone_call_properties_callback(call_property_t property, const gchar *value, void *object)
 {
-	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(object);
-	debug("_sphone_call_properties_callback %s %s\n",name,G_VALUE_TYPE_NAME(value));
-	if(!g_strcmp0(name,"StartTime")){
+	g_debug("%s: %i %s %p", __func__, property, value, object);
+	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE((GObject*)object);
+	if(property == CALL_PROPERTY_START_TIME){
 		g_free(private->call_properties->start_time);
-		private->call_properties->start_time=g_value_dup_string(value);
-	}else if(!g_strcmp0(name,"State")){
+		private->call_properties->start_time=g_strdup(value);
+	}else if(property == CALL_PROPERTY_STATE){
 		g_free(private->call_properties->state);
-		private->call_properties->state=g_value_dup_string(value);
+		private->call_properties->state=g_strdup(value);
 		debug("	  value='%s'\n",private->call_properties->state);
 
 		if(!g_strcmp0(private->call_properties->state,"dialing")

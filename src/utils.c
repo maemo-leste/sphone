@@ -26,11 +26,11 @@
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 #include <alsa/asoundlib.h>
+#include <stdbool.h>
 #include "utils.h"
 
 #define ICONS_PATH "/usr/share/sphone/icons/"
 
-static void utils_vibrate(int val);
 int conf_key_set_stickiness(char *key_code, char *cmd, char *arg);
 int conf_key_set_code(char *key_code, char *cmd, char *arg);
 int conf_key_set_power_key(char *key_code, char *cmd, char *arg);
@@ -39,10 +39,15 @@ static int utils_audio_route_set_incall();
 static int utils_audio_route_save();
 static int utils_audio_route_restore();
 
+struct{
+	GDBusConnection *s_bus_conn;
+} mce_if_priv;
+
 int debug_level=0;
 void set_debug(int level){
 	debug_level=level;
 }
+
 void debug(const char *s,...)
 {
 	if(!debug_level)
@@ -78,38 +83,109 @@ void syserror(const char *s,...)
 
 static int utils_audio_status=0;	// 1: incall
 
+GDBusConnection *get_dbus_connection(void)
+{
+	GError *error = NULL;
+	char *addr;
+	
+	GDBusConnection *s_bus_conn;
+
+	#if !GLIB_CHECK_VERSION(2,35,0)
+	g_type_init();
+	#endif
+
+	addr = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+	if (addr == NULL) {
+		g_error("fail to get dbus addr: %s\n", error->message);
+		g_free(error);
+		return NULL;
+	}
+
+	s_bus_conn = g_dbus_connection_new_for_address_sync(addr,
+			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
+			G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
+			NULL, NULL, &error);
+
+	if (s_bus_conn == NULL) {
+		g_error("fail to create dbus connection: %s\n", error->message);
+		g_free(error);
+	}
+
+	return s_bus_conn;
+}
+
+void utils_mce_init(void)
+{
+	mce_if_priv.s_bus_conn = get_dbus_connection();
+}
+
+void utils_enter_call_mode(void);
+
+void utils_exit_call_mode(void);
+
 /*
  Start/stop vibration
  */
-static void utils_vibrate(int val) {
-	debug(" utils_vibrate %d\n",val);
-	//TODO: kick mce evdevvirbrator here
+
+static void utils_vibrate_message(void) {
+	if(!mce_if_priv.s_bus_conn)
+		return;
+
+	GVariant *val;
+	GVariant *result;
+	GError *error = NULL;
+
+	val = g_variant_new("(s)", "PatternIncomingMessage");
+	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, "com.nokia.mce", "/com/nokia/mce/request",
+		"com.nokia.mce.request", "req_vibrator_pattern_activate", val, NULL,
+		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+
+	if(error)
+		return;
+
+	g_variant_unref(result);
 }
 
-guint ring_timeout=0;
-static int _utils_ring_stop_callback(gpointer data)
+static void utils_stop_ringing_vibrate()
 {
-	utils_vibrate(0);
-	return FALSE;
-}
+	if(!mce_if_priv.s_bus_conn)
+		return;
 
-static int _utils_ring_callback(gpointer data)
-{
-	utils_vibrate(1);
-	g_timeout_add_seconds(2,_utils_ring_stop_callback, NULL);
-	return TRUE;
+	GVariant *val;
+	GVariant *result;
+	GError *error = NULL;
+
+	val = g_variant_new("(s)", "PatternIncomingCall");
+	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, "com.nokia.mce", "/com/nokia/mce/request",
+		"com.nokia.mce.request", "req_vibrator_pattern_deactivate", val, NULL,
+		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+
+	if(error)
+		return;
+
+	g_variant_unref(result);
 }
 
 static void utils_start_ringing_vibrate()
 {
-	if(ring_timeout)
-		return;
 	if(utils_audio_status)	// No vibration during an active call
 		return;
+	if(!mce_if_priv.s_bus_conn)
+		return;
 
-	utils_vibrate(1);
-	g_timeout_add_seconds(2,_utils_ring_stop_callback, NULL);
-	ring_timeout=g_timeout_add_seconds(5,_utils_ring_callback, NULL);
+	GVariant *val;
+	GVariant *result;
+	GError *error = NULL;
+
+	val = g_variant_new("(s)", "PatternIncomingCall");
+	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, "com.nokia.mce", "/com/nokia/mce/request",
+		"com.nokia.mce.request", "req_vibrator_pattern_activate", val, NULL,
+		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+
+	if(error)
+		return;
+
+	g_variant_unref(result);
 }
 
 static int utils_ringing_state=0;
@@ -155,11 +231,7 @@ void utils_stop_ringing(const gchar *dial)
 		return;
 	utils_ringing_state=0;
 	
-	if(ring_timeout){
-		utils_vibrate(0);
-		g_source_remove(ring_timeout);
-		ring_timeout=0;
-	}
+	utils_stop_ringing_vibrate();
 	utils_media_stop();
 	utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_RINGING_OFF,dial,NULL);
 }
@@ -190,18 +262,14 @@ void utils_sms_notify()
 		}
 	}
 	
-	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE)){
-		utils_vibrate(1);
-		g_timeout_add_seconds(2,_utils_ring_stop_callback, NULL);
-	}
+	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE))
+		utils_vibrate_message();
 }
 
 void utils_connected_notify()
 {
-	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE)){
-		utils_vibrate(1);
-		g_timeout_add_seconds(2,_utils_ring_stop_callback, NULL);
-	}
+	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE))
+		utils_vibrate_message();
 }
 
 static GdkPixbuf *photo_default=NULL;

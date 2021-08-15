@@ -1,6 +1,7 @@
 /*
  * sphone
  * Copyright (C) Ahmed Abdel-Hamid 2010 <ahmedam@mail.usa.com>
+ * Copyright (C) Carl Philipp Klemm 2021 <carl@uvos.xyz>
  * 
  * sphone is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -16,28 +17,42 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _XOPEN_SOURCE
 
 #include <stdbool.h>
 #include <gio/gio.h>
+#include <time.h>
 #include "ofono-dbus-names.h"
 #include "ofono.h"
 #include "dbus-marshalers.h"
 #include "utils.h"
 
+
 enum {
-	NEW_CALL_HANDEL_ID = 0,
-	END_CALL_HANDEL_ID,
-	NETWORK_HANDEL_ID,
-	HANDEL_ID_COUNT
+	NEW_CALL_HANDLE_ID = 0,
+	END_CALL_HANDLE_ID,
+	NEW_SMS_HANDLE_ID,
+	NETWORK_HANDLE_ID,
+	HANDLE_ID_COUNT
 };
 
 struct{
 	GDBusConnection *s_bus_conn;
 	gchar *modem;
-	int callback_ids[HANDEL_ID_COUNT];
-	call_handler_t call_handler;
-	void *call_handler_user_data;
+	int callback_ids[HANDLE_ID_COUNT];
+	call_handler_t new_call_handler;
+	void *new_call_handler_user_data;
+	sms_handler_t new_sms_handler;
+	void *new_sms_handler_user_data;
+	GList *call_handler_list;
 } ofono_if_priv;
+
+struct ofono_call_handler_endpoint {
+	char *path;
+	call_property_handler_t callback;
+	void *user_data;
+	int id;
+};
 
 struct str_list {
   char **data;
@@ -51,43 +66,19 @@ static void call_added_cb(GDBusConnection *connection,
 		const gchar *signal_name,
 		GVariant *parameters,
 		void *data);
+		
+static void new_sms_cb(GDBusConnection *connection,
+		const gchar *sender_name,
+		const gchar *object_path,
+		const gchar *interface_name,
+		const gchar *signal_name,
+		GVariant *parameters,
+		void *data);
 
-static bool ofono_init_valid()
+static bool ofono_init_valid(void)
 {
 	return ofono_if_priv.s_bus_conn && ofono_if_priv.modem;
 }
-
-static GDBusConnection *get_dbus_connection()
-{
-	GError *error = NULL;
-	char *addr;
-	
-	GDBusConnection *s_bus_conn;
-
-	#if !GLIB_CHECK_VERSION(2,35,0)
-	g_type_init();
-	#endif
-
-	addr = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
-	if (addr == NULL) {
-		g_error("fail to get dbus addr: %s\n", error->message);
-		g_free(error);
-		return NULL;
-	}
-
-	s_bus_conn = g_dbus_connection_new_for_address_sync(addr,
-			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
-			G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
-			NULL, NULL, &error);
-
-	if (s_bus_conn == NULL) {
-		g_error("fail to create dbus connection: %s\n", error->message);
-		g_free(error);
-	}
-
-	return s_bus_conn;
-}
-
 
 // Print the dbus error message and free the error object
 static void error_dbus(GError *error)
@@ -137,7 +128,7 @@ static struct str_list *ofono_get_modems(GDBusConnection *s_bus_conn)
 	return modems;
 }
 
-int ofono_init()
+int ofono_init(void)
 {	
 	ofono_if_priv.s_bus_conn = get_dbus_connection();
 	
@@ -163,7 +154,8 @@ int ofono_init()
 	
 	g_free(modems);
 	
-	g_dbus_connection_signal_subscribe(ofono_if_priv.s_bus_conn,
+	ofono_if_priv.callback_ids[NEW_CALL_HANDLE_ID] = g_dbus_connection_signal_subscribe(
+		ofono_if_priv.s_bus_conn,
 		OFONO_SERVICE,
 		OFONO_VOICECALL_MANAGER_IFACE,
 		"CallAdded",
@@ -173,15 +165,29 @@ int ofono_init()
 		call_added_cb,
 		NULL,
 		NULL);
+		
+	ofono_if_priv.callback_ids[NEW_SMS_HANDLE_ID] = g_dbus_connection_signal_subscribe(
+		ofono_if_priv.s_bus_conn,
+		OFONO_SERVICE,
+		OFONO_MESSAGE_MANAGER_IFACE,
+		"IncomingMessage",
+		ofono_if_priv.modem,
+		NULL,
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		new_sms_cb,
+		NULL,
+		NULL);
 
 	return 0;
 }
 
-void ofono_clear()
+void ofono_clear(void)
 {
 	if(!ofono_init_valid())
 		return;
 
+	g_dbus_connection_signal_unsubscribe(ofono_if_priv.s_bus_conn, ofono_if_priv.callback_ids[NEW_CALL_HANDLE_ID]);
+	g_dbus_connection_signal_unsubscribe(ofono_if_priv.s_bus_conn, ofono_if_priv.callback_ids[NEW_SMS_HANDLE_ID]);
 	g_free(ofono_if_priv.modem);
 	g_dbus_connection_close_sync(ofono_if_priv.s_bus_conn, NULL, NULL);
 }
@@ -210,8 +216,8 @@ void ofono_network_properties_remove_handler(void)
 
 int ofono_voice_call_add_new_call_handler(call_handler_t handler, gpointer data)
 {
-	ofono_if_priv.call_handler_user_data = data;
-	ofono_if_priv.call_handler = handler; 
+	ofono_if_priv.new_call_handler_user_data = data;
+	ofono_if_priv.new_call_handler = handler; 
 	return 0;
 }
 
@@ -243,12 +249,11 @@ static void call_added_cb(GDBusConnection *connection,
 		void *data)
 {
 	g_debug("%s", __func__);
-	if(ofono_if_priv.call_handler) {
+	if(ofono_if_priv.new_call_handler) {
 		(void)data;
 		GVariantIter *info_iter;
 		char *path;
-		OfonoCallProperties *call_info;
-		call_info = g_malloc0(sizeof(*call_info));
+		OfonoCallProperties *call_info = g_malloc0(sizeof(*call_info));
 
 		g_variant_get(parameters, "(oa{sv})", &path, &info_iter);
 		g_debug("%s: %s", __func__, path);
@@ -256,7 +261,8 @@ static void call_added_cb(GDBusConnection *connection,
 
 		g_variant_iter_free(info_iter);
 		g_free(path);
-		ofono_if_priv.call_handler(call_info, 1, ofono_if_priv.call_handler_user_data);
+		ofono_if_priv.new_call_handler(call_info, 1, ofono_if_priv.new_call_handler_user_data);
+		ofono_call_properties_free(call_info);
 	}
 }
 
@@ -342,18 +348,84 @@ void ofono_call_properties_free(OfonoCallProperties *properties)
 	g_free(properties);
 }
 
-int ofono_voice_call_properties_add_handler(gchar *path, gpointer handler, gpointer data)
+static void call_properties_cb(GDBusConnection *connection,
+		const gchar *sender_name,
+		const gchar *object_path,
+		const gchar *interface_name,
+		const gchar *signal_name,
+		GVariant *parameters,
+		void *data)
+{
+	g_debug("%s: %s", __func__, object_path);
+	GList *element = ofono_if_priv.call_handler_list;
+	do {
+		struct ofono_call_handler_endpoint *endpoint = 
+			(struct ofono_call_handler_endpoint*)element->data;
+		if(g_strcmp0(object_path, endpoint->path) == 0) {
+			g_debug("%s: %s matched %p %p", __func__, object_path, endpoint->callback, endpoint->user_data);
+  			gchar *key;
+  			GVariant *value;
+			
+  			g_variant_get(parameters, "(sv)", &key, &value);
+  			if(g_strcmp0(key, "State") == 0)
+  				endpoint->callback(CALL_PROPERTY_STATE, g_variant_get_string(value, NULL), endpoint->user_data);
+			
+  			g_variant_unref(value);
+  			g_free(key);
+		}
+	} while((element = element->next));
+}
+
+int ofono_voice_call_properties_add_handler(gchar *path, call_property_handler_t handler, void *data)
 {
 	if(!ofono_init_valid())
 		return -1;
-	g_debug("%s: %s", __func__, path);
-	return 0;
+	g_debug("%s: %s %p %p", __func__, path, handler, data);
+	struct ofono_call_handler_endpoint *endpoint = g_malloc(sizeof(*endpoint));
+	endpoint->user_data = data;
+	endpoint->callback = handler;
+	endpoint->path = g_strdup(path);
+	
+	int ret = g_dbus_connection_signal_subscribe(
+		ofono_if_priv.s_bus_conn,
+		OFONO_SERVICE,
+		OFONO_VOICECALL_IFACE,
+		"PropertyChanged",
+		endpoint->path,
+		NULL,
+		G_DBUS_SIGNAL_FLAGS_NONE,
+		call_properties_cb,
+		NULL,
+		NULL);
+	
+	if(ret >= 0)
+	{
+		endpoint->id=ret;
+		ofono_if_priv.call_handler_list = 
+			g_list_append(ofono_if_priv.call_handler_list, endpoint);
+	}
+	return ret;
 }
 
 int ofono_voice_call_properties_remove_handler(int id)
 {
 	if(!ofono_init_valid())
 		return -1;
+	
+	GList *element = ofono_if_priv.call_handler_list;
+	do {
+		struct ofono_call_handler_endpoint *endpoint = 
+			(struct ofono_call_handler_endpoint*)element->data;
+		if(endpoint->id == id) {
+			g_debug("%s: %u", __func__, g_list_length(ofono_if_priv.call_handler_list));
+			g_free(endpoint->path);
+			ofono_if_priv.call_handler_list = g_list_remove(ofono_if_priv.call_handler_list, element);
+			g_debug("%s: %i", __func__, g_list_length(ofono_if_priv.call_handler_list));
+			break;
+		}
+	} while((element = element->next));
+	
+	g_dbus_connection_signal_unsubscribe(ofono_if_priv.s_bus_conn, id);
 	g_debug("%s", __func__);
 	return 0;
 }
@@ -400,7 +472,7 @@ int ofono_call_hangup(gchar *path)
 	return 0;
 }
 
-int ofono_call_hold_and_answer()
+int ofono_call_hold_and_answer(void)
 {
 	if(!ofono_init_valid())
 		return -1;
@@ -408,7 +480,7 @@ int ofono_call_hold_and_answer()
 	return 0;
 }
 
-int ofono_call_swap()
+int ofono_call_swap(void)
 {
 	if(!ofono_init_valid())
 		return -1;
@@ -442,6 +514,58 @@ int ofono_dial(const gchar *dial)
 	return 0;
 }
 
+static void new_sms_cb(GDBusConnection *connection,
+		const gchar *sender_name,
+		const gchar *object_path,
+		const gchar *interface_name,
+		const gchar *signal_name,
+		GVariant *parameters,
+		void *data)
+{
+	GVariantIter *iter;
+	GVariant *var;
+	char *key;
+	char *message = NULL;
+	
+	const char *from = NULL;
+	struct tm tm;
+
+	g_variant_get(parameters, "(sa{sv})", &message, &iter);
+	
+	while (g_variant_iter_next(iter, "{sv}", &key, &var)) {
+		if (g_strcmp0(key, "Sender") == 0) {
+			from = g_variant_get_string(var, NULL);
+			if (!from) {
+				g_variant_unref(var);
+				g_free(key);
+				goto error;
+			}
+		}
+		else if (g_strcmp0(key, "LocalSentTime") == 0) {
+			const char *time = g_variant_get_string(var, NULL);
+			if (!time) {
+				g_variant_unref(var);
+				g_free(key);
+				goto error;
+			}
+			strptime(time,"%Y-%m-%dT%H:%M:%S%z", &tm);
+			g_debug("%s: sms time: %s", __func__, time);
+		}
+		g_variant_unref(var);
+		g_free(key);
+	}
+	
+	if(ofono_if_priv.new_sms_handler && from && message) {
+		
+		time_t time = mktime(&tm);
+		ofono_if_priv.new_sms_handler(from, message, time, ofono_if_priv.new_sms_handler_user_data);
+	}
+
+	error:
+	g_free(message);
+	g_variant_iter_free(iter);
+}
+
 int ofono_sms_send(const gchar *to, const gchar *text)
 {
 	if(!ofono_init_valid())
@@ -467,8 +591,10 @@ int ofono_sms_send(const gchar *to, const gchar *text)
 	return 0;
 }
 
-int ofono_sms_incoming_add_handler(gpointer handler, gpointer data)
+int ofono_sms_incoming_add_handler(sms_handler_t handler, void *data)
 {
+	ofono_if_priv.new_sms_handler = handler;
+	ofono_if_priv.new_sms_handler_user_data = data;
 	return 0;
 }
 
