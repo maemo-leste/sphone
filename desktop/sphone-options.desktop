@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Sphone Settings
+GenericName=SMS
+Exec=sphone -c options
+Icon=general_settings
+Terminal=false
+Type=Application
+Categories=Telephony;
+Name[en_US]=sphone-options.desktop

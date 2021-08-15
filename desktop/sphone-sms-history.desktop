@@ -1,8 +1,9 @@
 [Desktop Entry]
-Name=Sphone New SMS
+Name=Sphone SMS history
 GenericName=SMS
-Exec=sphone -c sms-new
+Exec=sphone -c history-sms
 Icon=general_sms
 Terminal=false
 Type=Application
 Categories=Telephony;
+Name[en_US]=sphone-sms-history.desktop
