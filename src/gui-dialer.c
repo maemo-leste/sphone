@@ -20,6 +20,7 @@
 #include <config.h>
 #include <ctype.h>
 #include <gtk/gtk.h>
+#include <hildon/hildon-gtk.h>
 #include "sphone-manager.h"
 #include "keypad.h"
 #include "utils.h"
@@ -235,6 +236,8 @@ int gui_dialer_init(SphoneManager *manager)
 	g_gui_calls.manager=manager;
 	g_gui_calls.display=display;
 	GtkWidget *book=gui_dialer_build_book();
+	
+	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_gui_calls.main_window), HILDON_PORTRAIT_MODE_REQUEST);
 
 	gtk_widget_modify_font(display,pango_font_description_from_string("Monospace 24"));
 	gtk_entry_set_alignment(GTK_ENTRY(display),1.0);
@@ -243,8 +246,6 @@ int gui_dialer_init(SphoneManager *manager)
 	gdk_color_parse ("black",&black);
 	gdk_color_parse ("white",&white);
 	
-	gtk_widget_modify_text(display,GTK_STATE_NORMAL,&white);
-	gtk_widget_modify_base(display,GTK_STATE_NORMAL,&black);
 	gtk_widget_modify_bg(e,GTK_STATE_NORMAL,&black);
 	
 	gtk_container_add(GTK_CONTAINER(e), display);

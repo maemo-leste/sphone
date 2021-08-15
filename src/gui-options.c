@@ -18,6 +18,7 @@
 
 #include <config.h>
 #include <gtk/gtk.h>
+#include <gio/gio.h>
 #include "utils.h"
 
 struct {
@@ -126,7 +127,8 @@ static GtkWidget *gui_options_build_option_file_audio(const gchar *group, const 
 
 static int gui_options_close(GtkWidget *w)
 {
-	if(w!=g_options.main_window)		// If the called is g_options.main_window, then it is already in the destroy process
+	// If the called is g_options.main_window, then it is already in the destroy process
+	if(w!=g_options.main_window)
 		gtk_widget_destroy(g_options.main_window);
 	g_options.main_window=NULL;
 
