@@ -1,3 +1,12 @@
+sphone (0.1) unstable; urgency=medium
+
+  * Port to gdbus and modern ofono
+  * Use mce for vibration
+  * Inital hildonization
+  * Misc fixes and improvements
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 15 Aug 2021 21:57:32 +0200
+
 sphone (0.06) unstable; urgency=medium
 
   * Initial leste import
