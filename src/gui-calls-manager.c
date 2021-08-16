@@ -151,6 +151,7 @@ int gui_calls_manager_init(SphoneManager *manager)
 static int gui_calls_voice_status=0;
 static void gui_calls_check_voice(void)
 {
+	debug("%s\n", __func__);
 	int enable_voice=FALSE;
 	GValue value={0};
 	GtkTreeIter iter;	
@@ -168,20 +169,30 @@ static void gui_calls_check_voice(void)
 		r=gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter);
 	}
 
-	if(enable_voice)
+	if(enable_voice) {
+		debug("%s: enable\n", __func__);
+		utils_set_call_mode(UTILS_MODE_INCALL);
 		gui_calls_voice_status=1;
-	else
+	}
+	else {
+		debug("%s: disable\n", __func__);
+		utils_set_call_mode(UTILS_MODE_NO_CALL);
 		gui_calls_voice_status=0;
+	}
 	
 	//TODO: do routing somehow utils_audio_set(gui_calls_voice_status);
 }
 
 static void gui_calls_update_global_status()
 {
-	if(utils_ringing_status())
+	if(utils_ringing_status()) {
+		debug("%s: ", __func__);
+		utils_set_call_mode(UTILS_MODE_RINGING);
 		gtk_widget_show(g_calls_manager.mute_button);
-	else
+	}
+	else {
 		gtk_widget_hide(g_calls_manager.mute_button);
+	}
 
 	if(gui_calls_voice_status){
 		int route=utils_audio_route_get();
@@ -203,14 +214,16 @@ static void gui_calls_call_status_callback(SphoneCall *call)
 	gchar *state=NULL;
 	gint answer_status, direction;
 	
-	debug("gui_calls_call_status_callback\n");
+	debug("%s\n", __func__);
 	
 	g_object_get( G_OBJECT(call), "line_identifier", &dial, "state", &state, "answer_status", &answer_status, "direction", &direction, NULL);
 	debug("Update call %s %s\n",dial,state);
-	if(!g_strcmp0 (state,"incoming"))
+	if(!g_strcmp0 (state,"incoming")) {
 		utils_start_ringing(dial);
-	else
+	}
+	else {
 		utils_stop_ringing(dial);
+	}
 
 	if(!g_strcmp0 (state,"disconnected")){
 		gui_calls_utils_delete_dial(dial);
@@ -233,7 +246,7 @@ static void gui_calls_new_call_callback(SphoneManager *manager, SphoneCall *call
 	gchar *dial=NULL;
 	gchar *state=NULL;
 	
-	debug("gui_calls_new_call_callback\n");
+	debug("%s\n", __func__);
 	
 	g_object_get( G_OBJECT(call), "line_identifier", &dial, "state", &state, NULL);
 	debug("Add new call %s %s\n",dial,state);
@@ -254,7 +267,7 @@ static void gui_calls_new_call_callback(SphoneManager *manager, SphoneCall *call
 
 static void gui_calls_select_callback()
 {
-	debug("gui_calls_select_callback\n");
+	debug("%s\n", __func__);
 	GtkTreePath *path;
 	gtk_tree_view_get_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),&path,NULL);
 	GtkTreeIter iter;
@@ -307,7 +320,7 @@ static void gui_calls_select_callback()
 
 static void gui_calls_double_click_callback()
 {
-	debug("gui_calls_select_callback\n");
+	debug("%s\n", __func__);
 	GtkTreePath *path;
 	gtk_tree_view_get_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),&path,NULL);
 	GtkTreeIter iter;
@@ -331,19 +344,20 @@ static void gui_calls_utils_delete_dial(gchar *dial)
 	if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter)){
 		return;
 	}
-	do{
+	do {
 		gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,1,&value);
 		const gchar *idial=g_value_get_string(&value);
 		if(!g_strcmp0(dial,idial)){
 			gtk_list_store_remove(g_calls_manager.dials_store, &iter);
 		}
 		g_value_unset(&value);
-	}while(gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter));
+	} while(gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter));
 
 	// Hide the window if no active calls
-	if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter)){
+	if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter)) {
 		gtk_widget_hide(g_calls_manager.main_window);
-	}else{
+	}
+	else {
 		GtkTreePath *path=gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter);
 		gtk_tree_view_set_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),path,NULL,FALSE);
 		gtk_tree_path_free(path);
@@ -361,7 +375,7 @@ static void gui_calls_utils_update_dial(gchar *dial, gchar *status)
 	do{
 		gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,1,&value);
 		const gchar *idial=g_value_get_string(&value);
-		if(!g_strcmp0(dial,idial)){
+		if(!g_strcmp0(dial,idial)) {
 			gtk_list_store_set(g_calls_manager.dials_store, &iter, 0, status, -1);
 			GtkTreePath *path=gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter);
 			gtk_tree_view_set_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),path,NULL,FALSE);
@@ -369,7 +383,7 @@ static void gui_calls_utils_update_dial(gchar *dial, gchar *status)
 			gui_calls_select_callback();
 		}
 		g_value_unset(&value);
-	}while(gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter));
+	} while(gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter));
 	
 }
 
@@ -380,7 +394,7 @@ static void gui_calls_utils_add_dial(gchar *dial, gchar *status, SphoneCall *cal
 	store_contact_struct *contact;
 	gchar *desc;
 	GdkPixbuf *photo=NULL;
-	
+
 	store_contact_match(&contact, dial);
 	if(contact && (contact->picture || contact->name)){
 		desc=g_strdup_printf("%s\n%s",contact->name, dial);
@@ -393,7 +407,7 @@ static void gui_calls_utils_add_dial(gchar *dial, gchar *status, SphoneCall *cal
 		photo=utils_get_photo_unknown();
 	}
 	store_contact_free(contact);
-		
+
 	gtk_list_store_append(g_calls_manager.dials_store, &iter);
 	gtk_list_store_set(g_calls_manager.dials_store, &iter, GUI_CALLS_COLUMN_STATUS, status,GUI_CALLS_COLUMN_DIAL , dial, GUI_CALLS_COLUMN_CALL, call, GUI_CALLS_COLUMN_DESC, desc, GUI_CALLS_COLUMN_PHOTO, photo, -1);
 	g_object_unref(G_OBJECT(photo));
@@ -415,7 +429,11 @@ static void gui_calls_answer_callback()
 	gtk_tree_path_free(path);
 	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,2,&value);
 	SphoneCall *call=g_value_get_object(&value);
-
+	
+	gchar *dial=NULL;
+	g_object_get( G_OBJECT(call), "line_identifier", &dial, NULL);
+	
+	utils_stop_ringing(dial);
 	sphone_call_answer(call);
 	
 	g_value_unset(&value);
@@ -461,6 +479,6 @@ static void gui_calls_hangup_callback()
 	SphoneCall *call=g_value_get_object(&value);
 
 	sphone_call_hangup(call);
-	
+
 	g_value_unset(&value);
 }

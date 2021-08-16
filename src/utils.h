@@ -1,6 +1,7 @@
 /*
  * sphone
  * Copyright (C) Ahmed Abdel-Hamid 2010 <ahmedam@mail.usa.com>
+ * Copyright (C) Carl Philipp Klemm 2021 <carl@uvos.xyz>
  * 
  * sphone is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -20,6 +21,7 @@
 #define _UTILS_H_
 
 #include <gtk/gtk.h>
+#include <stdbool.h>
 
 #define ARRAY_SIZE(x)   (sizeof(x)/sizeof(x[0]))
 #define TEST_BIT(x,addr) (1UL & (addr[x/8] >> (x & 0xff)))
@@ -61,9 +63,23 @@ GdkPixbuf *utils_get_icon(const gchar *name);
 #define UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_VOICE_REPEAT_ENABLE "sound.voice.incoming.repeat.enable"
 #define UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_SMS_INCOMING_PATH "sound.sms.incoming.path"
 
+enum {
+	UTILS_AUDIO_ROUTE_UNKNOWN=-1,
+	UTILS_AUDIO_ROUTE_SPEAKER=0,
+	UTILS_AUDIO_ROUTE_HANDSET=1,
+	UTILS_AUDIO_ROUTE_COUNT=2
+};
+
+typedef enum {
+	UTILS_MODE_NO_CALL=0,
+	UTILS_MODE_RINGING,
+	UTILS_MODE_INCALL,
+} utils_call_mode_t;
+
 GDBusConnection *get_dbus_connection(void);
 
 void utils_mce_init(void);
+bool utils_set_call_mode(utils_call_mode_t mode);
 
 gchar *utils_conf_get_string(const gchar *group, const gchar *name);
 void utils_conf_set_string(const gchar *group, const gchar *name, const gchar *value);
@@ -78,12 +94,8 @@ void utils_media_stop();
 int utils_media_play_once(gchar *path);
 int utils_media_play_repeat(gchar *path);
 
-enum {
-	UTILS_AUDIO_ROUTE_UNKNOWN=-1,
-	UTILS_AUDIO_ROUTE_SPEAKER=0,
-	UTILS_AUDIO_ROUTE_HANDSET=1,
-	UTILS_AUDIO_ROUTE_COUNT=2
-};
+
+
 int utils_audio_route_set(int route);
 int utils_audio_route_get();
 

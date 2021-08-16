@@ -276,7 +276,7 @@ void sphone_call_answer (SphoneCall *object)
 {
 	SphoneCall *call=SPHONE_CALL(object);
 	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(call);
-	
+
 	ofono_call_answer(private->dbus_path);
 }
 

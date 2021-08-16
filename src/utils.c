@@ -1,12 +1,13 @@
 /*
  * sphone
  * Copyright (C) Ahmed Abdel-Hamid 2010 <ahmedam@mail.usa.com>
-	 * 
+ * Copyright (C) Carl Philipp Klemm 2021 <carl@uvos.xyz>
+ * 
  * sphone is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
-	 * 
+ * 
  * sphone is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -26,10 +27,31 @@
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 #include <alsa/asoundlib.h>
-#include <stdbool.h>
 #include "utils.h"
 
 #define ICONS_PATH "/usr/share/sphone/icons/"
+
+/** MCE D-Bus service */
+#define MCE_SERVICE			"com.nokia.mce"
+/** MCE D-Bus Request interface */
+#define MCE_REQUEST_IF			"com.nokia.mce.request"
+/** MCE D-Bus Signal interface */
+#define MCE_SIGNAL_IF			"com.nokia.mce.signal"
+/** MCE D-Bus Request path */
+#define MCE_REQUEST_PATH		"/com/nokia/mce/request"
+/** MCE D-Bus Signal path */
+#define MCE_SIGNAL_PATH			"/com/nokia/mce/signal"
+
+/** No ongoing call */
+#define MCE_CALL_STATE_NONE			"none"
+/** Call ringing */
+#define MCE_CALL_STATE_RINGING			"ringing"
+/** Call on-going */
+#define MCE_CALL_STATE_ACTIVE			"active"
+/** Normal call */
+#define MCE_NORMAL_CALL				"normal"
+/** Emergency call  */
+#define MCE_EMERGENCY_CALL			"emergency"
 
 int conf_key_set_stickiness(char *key_code, char *cmd, char *arg);
 int conf_key_set_code(char *key_code, char *cmd, char *arg);
@@ -81,8 +103,6 @@ void syserror(const char *s,...)
 	va_end(va);
 }
 
-static int utils_audio_status=0;	// 1: incall
-
 GDBusConnection *get_dbus_connection(void)
 {
 	GError *error = NULL;
@@ -119,9 +139,41 @@ void utils_mce_init(void)
 	mce_if_priv.s_bus_conn = get_dbus_connection();
 }
 
-void utils_enter_call_mode(void);
+bool utils_set_call_mode(utils_call_mode_t mode)
+{
+	if(!mce_if_priv.s_bus_conn)
+		return false;
 
-void utils_exit_call_mode(void);
+	GVariant *val;
+	GVariant *result;
+	GError *error = NULL;
+
+	if(mode == UTILS_MODE_NO_CALL) {
+		val = g_variant_new("(ss)", MCE_CALL_STATE_NONE, MCE_NORMAL_CALL);
+		debug("%s: %s\n", __func__, MCE_CALL_STATE_NONE);
+	}
+	else if(mode == UTILS_MODE_RINGING) {
+		val = g_variant_new("(ss)", MCE_CALL_STATE_RINGING, MCE_NORMAL_CALL);
+		debug("%s: %s\n", __func__, MCE_CALL_STATE_RINGING);
+	}
+	else if(mode == UTILS_MODE_INCALL) {
+		val = g_variant_new("(ss)", MCE_CALL_STATE_ACTIVE, MCE_NORMAL_CALL);
+		debug("%s: %s\n", __func__, MCE_CALL_STATE_ACTIVE);
+	}
+	else {
+		return false;
+	}
+
+	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+		MCE_REQUEST_IF, "req_call_state_change", val, NULL,
+		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+
+	if(error)
+		return false;
+
+	g_variant_unref(result);
+	return true;
+}
 
 /*
  Start/stop vibration
@@ -136,8 +188,8 @@ static void utils_vibrate_message(void) {
 	GError *error = NULL;
 
 	val = g_variant_new("(s)", "PatternIncomingMessage");
-	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, "com.nokia.mce", "/com/nokia/mce/request",
-		"com.nokia.mce.request", "req_vibrator_pattern_activate", val, NULL,
+	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+		MCE_REQUEST_IF, "req_vibrator_pattern_activate", val, NULL,
 		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
 	if(error)
@@ -156,8 +208,8 @@ static void utils_stop_ringing_vibrate()
 	GError *error = NULL;
 
 	val = g_variant_new("(s)", "PatternIncomingCall");
-	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, "com.nokia.mce", "/com/nokia/mce/request",
-		"com.nokia.mce.request", "req_vibrator_pattern_deactivate", val, NULL,
+	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+		MCE_REQUEST_IF, "req_vibrator_pattern_deactivate", val, NULL,
 		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
 	if(error)
@@ -168,8 +220,6 @@ static void utils_stop_ringing_vibrate()
 
 static void utils_start_ringing_vibrate()
 {
-	if(utils_audio_status)	// No vibration during an active call
-		return;
 	if(!mce_if_priv.s_bus_conn)
 		return;
 
@@ -178,8 +228,8 @@ static void utils_start_ringing_vibrate()
 	GError *error = NULL;
 
 	val = g_variant_new("(s)", "PatternIncomingCall");
-	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, "com.nokia.mce", "/com/nokia/mce/request",
-		"com.nokia.mce.request", "req_vibrator_pattern_activate", val, NULL,
+	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+		MCE_REQUEST_IF, "req_vibrator_pattern_activate", val, NULL,
 		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
 	if(error)
@@ -573,7 +623,7 @@ static int utils_audio_route_restore()
  */
 static int utils_audio_route_set_incall()
 {
-	//TODO kick mce into call mode
+	utils_stop_ringing("");
 	return 0;
 }
 

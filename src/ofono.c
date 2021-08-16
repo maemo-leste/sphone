@@ -150,7 +150,7 @@ int ofono_init(void)
 	
 	ofono_if_priv.modem = g_strdup(modems->data[0]);
 	
-	g_debug("Using modem: %s", ofono_if_priv.modem);
+	debug("Using modem: %s\n", ofono_if_priv.modem);
 	
 	g_free(modems);
 	
@@ -194,18 +194,18 @@ void ofono_clear(void)
 
 int ofono_read_network_properties(OfonoNetworkProperties *properties)
 {
-	g_debug("%s", __func__);
+	debug("%s", __func__);
 	return 0;
 }
 
 void ofono_network_properties_free(OfonoNetworkProperties *properties)
 {
-	g_debug("%s", __func__);
+	debug("%s", __func__);
 }
 
 int ofono_network_properties_add_handler(gpointer handler, gpointer data)
 {
-	g_debug("%s", __func__);
+	debug("%s", __func__);
 	return 0;
 }
 
@@ -236,7 +236,7 @@ static void ofono_voice_call_decode_properties(OfonoCallProperties *call, GVaria
 			g_variant_get(val, "b", call->emergency);
 	}
 
-	g_debug("call: %s, state: %s, line identification %s, emergency: %i", 
+	debug("call: %s, state: %s, line identification %s, emergency: %i", 
 		call->path, call->state, call->line_identifier, call->emergency);
 }
 
@@ -248,7 +248,7 @@ static void call_added_cb(GDBusConnection *connection,
 		GVariant *parameters,
 		void *data)
 {
-	g_debug("%s", __func__);
+	debug("%s", __func__);
 	if(ofono_if_priv.new_call_handler) {
 		(void)data;
 		GVariantIter *info_iter;
@@ -256,7 +256,7 @@ static void call_added_cb(GDBusConnection *connection,
 		OfonoCallProperties *call_info = g_malloc0(sizeof(*call_info));
 
 		g_variant_get(parameters, "(oa{sv})", &path, &info_iter);
-		g_debug("%s: %s", __func__, path);
+		debug("%s: %s", __func__, path);
 		ofono_voice_call_decode_properties(call_info, info_iter, path);
 
 		g_variant_iter_free(info_iter);
@@ -271,7 +271,7 @@ int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count)
 	if(!ofono_init_valid())
 		return -1;
 	
-	g_debug("%s", __func__);
+	debug("%s", __func__);
 	GError *error = NULL;
 	GVariant *result;
 	char *path;
@@ -291,7 +291,7 @@ int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count)
 	*count = g_variant_iter_n_children(iter);
 	if (*count == 0) {
 		*calls = NULL;
-		g_debug("No call");
+		debug("No call");
 		g_variant_iter_free(iter);
 		g_variant_unref(result);
 		return 0;
@@ -317,7 +317,7 @@ OfonoCallProperties *ofono_call_properties_read(gchar *path)
 		return NULL;
 
 	OfonoCallProperties *properties = g_malloc0(sizeof(*properties));
-	g_debug("%s: %s", __func__, path);
+	debug("%s: %s", __func__, path);
 	
 	GError *error = NULL;
 	GVariant *var_properties;
@@ -356,13 +356,13 @@ static void call_properties_cb(GDBusConnection *connection,
 		GVariant *parameters,
 		void *data)
 {
-	g_debug("%s: %s", __func__, object_path);
+	debug("%s: %s\n", __func__, object_path);
 	GList *element = ofono_if_priv.call_handler_list;
 	do {
 		struct ofono_call_handler_endpoint *endpoint = 
 			(struct ofono_call_handler_endpoint*)element->data;
 		if(g_strcmp0(object_path, endpoint->path) == 0) {
-			g_debug("%s: %s matched %p %p", __func__, object_path, endpoint->callback, endpoint->user_data);
+			debug("%s: %s matched %p %p\n", __func__, object_path, endpoint->callback, endpoint->user_data);
   			gchar *key;
   			GVariant *value;
 			
@@ -380,7 +380,7 @@ int ofono_voice_call_properties_add_handler(gchar *path, call_property_handler_t
 {
 	if(!ofono_init_valid())
 		return -1;
-	g_debug("%s: %s %p %p", __func__, path, handler, data);
+	debug("%s: %s %p %p\n", __func__, path, handler, data);
 	struct ofono_call_handler_endpoint *endpoint = g_malloc(sizeof(*endpoint));
 	endpoint->user_data = data;
 	endpoint->callback = handler;
@@ -417,16 +417,16 @@ int ofono_voice_call_properties_remove_handler(int id)
 		struct ofono_call_handler_endpoint *endpoint = 
 			(struct ofono_call_handler_endpoint*)element->data;
 		if(endpoint->id == id) {
-			g_debug("%s: %u", __func__, g_list_length(ofono_if_priv.call_handler_list));
+			debug("%s: %u\n", __func__, g_list_length(ofono_if_priv.call_handler_list));
 			g_free(endpoint->path);
 			ofono_if_priv.call_handler_list = g_list_remove(ofono_if_priv.call_handler_list, element);
-			g_debug("%s: %i", __func__, g_list_length(ofono_if_priv.call_handler_list));
+			debug("%s: %i\n", __func__, g_list_length(ofono_if_priv.call_handler_list));
 			break;
 		}
 	} while((element = element->next));
 	
 	g_dbus_connection_signal_unsubscribe(ofono_if_priv.s_bus_conn, id);
-	g_debug("%s", __func__);
+	debug("%s\n", __func__);
 	return 0;
 }
 
@@ -476,7 +476,7 @@ int ofono_call_hold_and_answer(void)
 {
 	if(!ofono_init_valid())
 		return -1;
-	g_debug("%s", __func__);
+	debug("%s\n", __func__);
 	return 0;
 }
 
@@ -484,7 +484,7 @@ int ofono_call_swap(void)
 {
 	if(!ofono_init_valid())
 		return -1;
-	g_debug("%s", __func__);
+	debug("%s\n", __func__);
 	return 0;
 }
 
@@ -497,7 +497,7 @@ int ofono_dial(const gchar *dial)
 	GVariant *result;
 	GError *error = NULL;
 
-	g_debug("Dialing number: %s", dial);
+	debug("Dialing number: %s\n", dial);
 
 	val = g_variant_new("(ss)", dial, "enabled");
 	result = g_dbus_connection_call_sync(ofono_if_priv.s_bus_conn, OFONO_SERVICE, ofono_if_priv.modem,
@@ -549,7 +549,7 @@ static void new_sms_cb(GDBusConnection *connection,
 				goto error;
 			}
 			strptime(time,"%Y-%m-%dT%H:%M:%S%z", &tm);
-			g_debug("%s: sms time: %s", __func__, time);
+			debug("%s: sms time: %s\n", __func__, time);
 		}
 		g_variant_unref(var);
 		g_free(key);
@@ -575,7 +575,7 @@ int ofono_sms_send(const gchar *to, const gchar *text)
 	GVariant *result;
 	GError *error = NULL;
 
-	g_debug("Sending sms: %s %s", to, text);
+	debug("Sending sms: %s %s\n", to, text);
 
 	val = g_variant_new("(ss)", to, text);
 	result = g_dbus_connection_call_sync(ofono_if_priv.s_bus_conn, OFONO_SERVICE, ofono_if_priv.modem,
