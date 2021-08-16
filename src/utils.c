@@ -553,10 +553,12 @@ static int utils_gst_start(gchar *path)
 	GstBus *bus;
 	gchar *uri=g_filename_to_uri(path,NULL,NULL);
 
-	if(!uri)
+	if(!uri) {
+		error("%s: unable to get uri for %s", path);
 		return 1;
+	}
 
-	utils_gst_play = gst_element_factory_make ("playbin2", "play");
+	utils_gst_play = gst_element_factory_make ("playbin", "play");
 	g_object_set (G_OBJECT (utils_gst_play), "uri", uri, NULL);
 
 	bus = gst_pipeline_get_bus (GST_PIPELINE (utils_gst_play));
