@@ -1,3 +1,10 @@
+sphone (0.1.1) unstable; urgency=medium
+
+  * Fix audio playback (ringer) on gst-1.0
+  * Put mce into ringing/call mode
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 17 Aug 2021 11:57:32 +0200
+
 sphone (0.1) unstable; urgency=medium
 
   * Port to gdbus and modern ofono
