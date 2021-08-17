@@ -1,8 +1,9 @@
 [Desktop Entry]
 Name=Sphone Dialer
 GenericName=Dialer
-Exec=sphone -c dialer-open
+Exec=sphone -c dialer-open -n %u
 Icon=general_application_call
 Terminal=false
 Type=Application
 Categories=Telephony;
+MimeType=x-scheme-handler/tel;

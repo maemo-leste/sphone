@@ -279,5 +279,5 @@ void gui_dialer_show(const gchar *dial)
 
 	gui_dialer_book_update_model();
 	if(dial)
-		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display),dial);
+		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), dial);
 }

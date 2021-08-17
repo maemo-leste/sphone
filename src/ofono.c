@@ -270,8 +270,7 @@ int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count)
 {
 	if(!ofono_init_valid())
 		return -1;
-	
-	debug("%s", __func__);
+
 	GError *error = NULL;
 	GVariant *result;
 	char *path;
@@ -291,7 +290,6 @@ int ofono_voice_call_get_calls(OfonoCallProperties **calls, size_t *count)
 	*count = g_variant_iter_n_children(iter);
 	if (*count == 0) {
 		*calls = NULL;
-		debug("No call");
 		g_variant_iter_free(iter);
 		g_variant_unref(result);
 		return 0;

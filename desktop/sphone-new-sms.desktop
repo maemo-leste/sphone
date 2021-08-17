@@ -1,8 +1,9 @@
 [Desktop Entry]
 Name=Sphone New SMS
 GenericName=SMS
-Exec=sphone -c sms-new
+Exec=sphone -c sms-new -n %u
 Icon=general_sms
 Terminal=false
 Type=Application
 Categories=Telephony;
+MimeType=x-scheme-handler/sms;

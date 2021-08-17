@@ -73,14 +73,21 @@ typedef enum {
 	SPHONE_CMD_NONE,
 } sphone_cmd;
 
-static UniqueResponse  main_message_received_callback(UniqueApp *app,gint command, UniqueMessageData *message_data, guint time_,gpointer user_data)
+static UniqueResponse  main_message_received_callback(UniqueApp *app, gint command, UniqueMessageData *message_data, guint time_, gpointer user_data)
 {
+	gchar *number = NULL;
+	if(message_data)
+		number = unique_message_data_get_text(message_data);
+	
+	if(number)
+		debug("number: %s\n", number);
+
 	switch(command){
 		case SPHONE_CMD_DIALER_OPEN:
-			gui_dialer_show(NULL);
+			gui_dialer_show(number);
 			break;
 		case SPHONE_CMD_SMS_NEW:
-			gui_sms_send_show(NULL,NULL);
+			gui_sms_send_show(number,NULL);
 			break;
 		case SPHONE_CMD_HISTORY_CALLS:
 			gui_history_calls();
@@ -115,16 +122,21 @@ int main (int argc, char *argv[])
 	sphone_cmd command = SPHONE_CMD_NONE;
 	gboolean is_done=FALSE;
 	guint c;
+
+	gchar *number = NULL;
 	
-	while ((c = getopt (argc, argv, "hvc:i:")) != -1)
-		switch (c){
+	while ((c = getopt (argc, argv, ":hn:vc:i:")) != -1) {
+		switch (c) {
 			case '?':
+				if (optopt == 'n')
+					break;
 			case 'h':
 				error("SPhone \n%s [hvc] \n"
-				      "   h\tDisplay this help\n"
-				      "   v\tEnable debug\n"
-				      "   c [cmd]\tExecute command. Accepted commands are: dialer-open, sms-new, history-calls, history-sms, options\n"
-				      "   i [file]\timport contacts XML\n",argv[0]);
+				      "   -h\tDisplay this help\n"
+				      "   -v\tEnable debug\n"
+					  "   -n [number]\topen with number\n"
+				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, sms-new, history-calls, history-sms, options\n"
+				      "   -i [file]\timport contacts XML\n", argv[0]);
 				return 0;
 			case 'c':
 				if(!g_strcmp0(optarg,"dialer-open"))
@@ -146,7 +158,21 @@ int main (int argc, char *argv[])
 			case 'v':
 				set_debug(1);
 				break;
+			case 'n':
+				printf("num: %s\n", optarg);
+				number = optarg;
+				break;
        }
+	}
+	
+	gchar** numbersplit = g_strsplit(number, ":", 2);
+	if(numbersplit[1] != NULL) {
+		number = numbersplit[1];
+	}
+	else {
+		 g_strfreev(numbersplit);
+		 numbersplit = NULL;
+	}
 
 	UniqueApp *unique = unique_app_new_with_commands("org.maemo.sphone", NULL
 	                                               ,"dialer-open", SPHONE_CMD_DIALER_OPEN
@@ -165,12 +191,15 @@ int main (int argc, char *argv[])
 		sphone_manager_populate(manager);
 		utils_mce_init();
 		
+		if(number)
+			debug("number: %s\n", number);
+		
 		switch (command) {
 			case SPHONE_CMD_DIALER_OPEN:
-				gui_dialer_show(NULL);
+				gui_dialer_show(number);
 				break;
 			case SPHONE_CMD_SMS_NEW:
-				gui_sms_send_show(NULL,NULL);
+				gui_sms_send_show(number,NULL);
 				break;
 			case SPHONE_CMD_HISTORY_CALLS:
 				gui_history_calls();
@@ -188,12 +217,26 @@ int main (int argc, char *argv[])
 
 		g_signal_connect(G_OBJECT(unique), "message-received", G_CALLBACK(main_message_received_callback), NULL);
 		
-		gtk_main ();
-	}else{
-		debug("Instance is already running, sending commands ...\n");
-		if(command != SPHONE_CMD_NONE)
-			unique_app_send_message(unique, command, NULL);
+		gtk_main();
 	}
+	else {
+		debug("Instance is already running, sending commands ...\n");
+		if(number)
+			debug("number: %s\n", number);
+		if(command != SPHONE_CMD_NONE) {
+			UniqueMessageData *message = NULL;
+			if(number) {
+				message = unique_message_data_new();
+				unique_message_data_set_text(message, number, strlen(number));
+			}
+			unique_app_send_message(unique, command, message);
+			if(message)
+				unique_message_data_free(message);
+		}
+	}
+
+	if(numbersplit)
+		 g_strfreev(numbersplit);
 	
 	return 0;
 }
