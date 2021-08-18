@@ -165,13 +165,17 @@ int main (int argc, char *argv[])
        }
 	}
 	
-	gchar** numbersplit = g_strsplit(number, ":", 2);
-	if(numbersplit[1] != NULL) {
-		number = numbersplit[1];
-	}
-	else {
-		 g_strfreev(numbersplit);
-		 numbersplit = NULL;
+	
+	gchar** numbersplit = NULL;
+	if(number) {
+		numbersplit = g_strsplit(number, ":", 2);
+		if(numbersplit[1] != NULL) {
+			number = numbersplit[1];
+		}
+		else {
+			g_strfreev(numbersplit);
+			numbersplit = NULL;
+		}
 	}
 
 	UniqueApp *unique = unique_app_new_with_commands("org.maemo.sphone", NULL
