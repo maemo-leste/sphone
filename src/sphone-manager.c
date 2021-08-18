@@ -51,8 +51,7 @@ enum
 	LAST_SIGNAL
 };
 
-#define SPHONE_MANAGER_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), \
-                                        SPHONE_TYPE_MANAGER, SphoneManagerPrivate))
+#define SPHONE_MANAGER_GET_PRIVATE(obj) (sphone_manager_get_instance_private(obj))
 
 typedef struct _SphoneManagerPrivate  SphoneManagerPrivate;
 
@@ -64,11 +63,11 @@ struct _SphoneManagerPrivate
 
 static guint manager_signals[LAST_SIGNAL] = { 0 };
 
-G_DEFINE_TYPE (SphoneManager, sphone_manager, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE (SphoneManager, sphone_manager, G_TYPE_OBJECT);
 
 static void _sphone_manager_network_properties_callback(gpointer *data1,gchar *name, GValue *value, GObject *object)
 {
-	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(object);
+	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(SPHONE_MANAGER(object));
 	debug("_sphone_manager_network_properties_callback %s %s\n",name,G_VALUE_TYPE_NAME(value));
 	if(!g_strcmp0(name,"Strength")){
 		private->network_properties.strength=g_value_get_uint(value);
@@ -98,7 +97,7 @@ static void _sphone_manager_network_properties_callback(gpointer *data1,gchar *n
 
 static void sphone_manager_call_status_changed_cb(SphoneCall *call, gchar *status, SphoneManager *object){
 	gchar *path;
-	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(object);
+	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(SPHONE_MANAGER(object));
 
 	g_object_get(call,"dbus_path",&path,NULL);
 	debug("sphone_manager_call_status_changed_cb %s\n",path);
@@ -113,7 +112,7 @@ static void sphone_manager_call_status_changed_cb(SphoneCall *call, gchar *statu
 static void _sphone_manager_voice_call_callback(const OfonoCallProperties *calls, size_t count, void *object)
 {
 	g_debug("%s: %p %i", __func__, calls, count);
-	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE((GObject*)object);
+	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(SPHONE_MANAGER((GObject*)object));
 
 	if(calls == NULL)
 		return;
@@ -147,7 +146,7 @@ static void _sphone_manager_sms_incoming_callback(const gchar *from, const gchar
 static void
 sphone_manager_init (SphoneManager *object)
 {
-	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(object);
+	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(SPHONE_MANAGER(object));
 	debug("sphone_manager_init %p\n", object);
 
 	ofono_init();
@@ -163,7 +162,7 @@ sphone_manager_init (SphoneManager *object)
 static void
 sphone_manager_finalize (GObject *object)
 {
-	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(object);
+	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(SPHONE_MANAGER(object));
 	ofono_network_properties_free(&private->network_properties);
 	ofono_network_properties_remove_handler();
 
@@ -368,8 +367,6 @@ sphone_manager_class_init (SphoneManagerClass *klass)
 			g_cclosure_marshal_VOID__STRING,
 			G_TYPE_NONE,
 			1, G_TYPE_STRING);
-
-	g_type_class_add_private (klass, sizeof (SphoneManagerPrivate));
 }
 
 void sphone_manager_call_hold_and_answer(void)

@@ -23,10 +23,8 @@
 #include "store.h"
 #include "sphone-store-tree-model.h"
 
-#define SPHONE_STORE_TREE_MODEL_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), \
-                                        SPHONE_TYPE_STORE_TREE_MODEL, SphoneStoreTreeModelPrivate))
+#define SPHONE_STORE_TREE_MODEL_GET_PRIVATE(obj) (sphone_store_tree_model_get_instance_private(obj))
 
-static void sphone_store_tree_model_class_init (SphoneStoreTreeModelClass *klass);
 static void sphone_store_tree_model_tree_model_init (GtkTreeModelIface *iface);
 static void sphone_store_tree_model_finalize (GObject *object);
 static GtkTreeModelFlags sphone_store_tree_model_get_flags (GtkTreeModel *tree_model);
@@ -95,6 +93,9 @@ enum
 	PROP_MAX_ITEMS
 };
 
+G_DEFINE_TYPE_WITH_CODE (SphoneStoreTreeModel, sphone_store_tree_model, G_TYPE_OBJECT, 
+						 G_ADD_PRIVATE (SphoneStoreTreeModel)
+						 G_IMPLEMENT_INTERFACE(GTK_TYPE_TREE_MODEL, sphone_store_tree_model_tree_model_init));
 
 SphoneStoreTreeModelFilter SPHONE_STORE_TREE_MODEL_FILTER_MATCH_NAME_DIAL_FUZY={
 	.query_count="select count(*) from (select  contact.name, contact.picture, dial.dial, max(interaction.date) from dial \
@@ -247,10 +248,9 @@ SphoneStoreTreeModelFilter SPHONE_STORE_TREE_MODEL_FILTER_SMS_ALL={
 static GObjectClass *parent_class = NULL; 
 
 static void
-sphone_store_tree_model_init (GObject *object)
+sphone_store_tree_model_init (SphoneStoreTreeModel *store)
 {
-	SphoneStoreTreeModel *store=SPHONE_STORE_TREE_MODEL(object);
-	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(store);
+	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(SPHONE_STORE_TREE_MODEL(store));
 
 	if(!private->filter)
 		return;
@@ -273,39 +273,6 @@ sphone_store_tree_model_init (GObject *object)
 	if(stmt)sqlite3_finalize(stmt);
 
 	private->cache=NULL;
-}
-
-GType
-sphone_store_tree_model_get_type (void)
-{
-	static GType sphone_store_tree_model_type = 0;
-
-	if (sphone_store_tree_model_type == 0)
-	{
-		static const GTypeInfo sphone_store_tree_model_info =
-						{
-							sizeof (SphoneStoreTreeModelClass),
-							NULL,                                         /* base_init */
-							NULL,                                         /* base_finalize */
-							(GClassInitFunc) sphone_store_tree_model_class_init,
-							NULL,                                         /* class finalize */
-							NULL,                                         /* class_data */
-							sizeof (SphoneStoreTreeModel),
-							0,                                           /* n_preallocs */
-							NULL,
-							};
-							static const GInterfaceInfo tree_model_info =
-							{
-							(GInterfaceInitFunc)sphone_store_tree_model_tree_model_init,
-							NULL,
-							NULL
-						};
-
-		sphone_store_tree_model_type = g_type_register_static (G_TYPE_OBJECT, "SphoneStoreTreeModel",&sphone_store_tree_model_info, (GTypeFlags)0);
-		g_type_add_interface_static (sphone_store_tree_model_type, GTK_TYPE_TREE_MODEL, &tree_model_info);
-	}
-
-	return sphone_store_tree_model_type;
 }
 
 static void
@@ -382,7 +349,7 @@ sphone_store_tree_model_class_init (SphoneStoreTreeModelClass *klass)
 	object_class->finalize = sphone_store_tree_model_finalize;
 	object_class->set_property = sphone_store_tree_model_set_property;
 	object_class->get_property = sphone_store_tree_model_get_property;
-	object_class->constructed = sphone_store_tree_model_init;
+	object_class->constructed = (void(*)(GObject *obj))sphone_store_tree_model_init;
 
 	g_object_class_install_property (object_class,
 	                                 PROP_FILTER,
@@ -406,7 +373,6 @@ sphone_store_tree_model_class_init (SphoneStoreTreeModelClass *klass)
 	                                                   G_MAXINT, /* TODO: Adjust maximum property value */
 	                                                   0,
 	                                                   G_PARAM_READWRITE));
-	g_type_class_add_private (klass, sizeof (SphoneStoreTreeModelPrivate));
 }
 
 static void
@@ -425,6 +391,7 @@ sphone_store_tree_model_tree_model_init (GtkTreeModelIface *iface)
 	iface->iter_nth_child  = sphone_store_tree_model_iter_nth_child;
 	iface->iter_parent     = sphone_store_tree_model_iter_parent;
 }
+
 
 static GtkTreeModelFlags
 sphone_store_tree_model_get_flags (GtkTreeModel *tree_model)
@@ -467,13 +434,13 @@ sphone_store_tree_model_get_column_type (GtkTreeModel *tree_model,gint index)
 
 
 static gboolean
-sphone_store_tree_model_get_iter (GtkTreeModel *tree_model,GtkTreeIter  *iter,GtkTreePath  *path)
+sphone_store_tree_model_get_iter (GtkTreeModel *tree_model, GtkTreeIter  *iter,GtkTreePath  *path)
 {
 	gint          *indices, n, depth;
 
 	g_assert(SPHONE_IS_STORE_TREE_MODEL(tree_model));
 	g_assert(path!=NULL);
-	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(tree_model);
+	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(SPHONE_STORE_TREE_MODEL(tree_model));
 
 	indices = gtk_tree_path_get_indices(path);
 	depth   = gtk_tree_path_get_depth(path);
@@ -536,14 +503,13 @@ sphone_store_tree_model_get_value (GtkTreeModel *tree_model,GtkTreeIter  *iter,g
 	g_return_if_fail (SPHONE_IS_STORE_TREE_MODEL (tree_model));
 	g_return_if_fail (iter != NULL);
 	g_return_if_fail (column < SPHONE_STORE_TREE_MODEL_COLUMN_LAST);
-	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(tree_model);
+	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(SPHONE_STORE_TREE_MODEL(tree_model));
 
 	g_value_init (value, sphone_store_tree_model_get_column_type(tree_model,column));
 
 	n = GPOINTER_TO_INT(iter->user_data);
 	if(n >= private->rows_count)
 		g_return_if_reached();
-//	debug("sphone_store_tree_model_get_value %d\n",n);
 
 	struct SphoneStoreTreeModelCacheEntry *entry=NULL;
 	
@@ -666,7 +632,7 @@ sphone_store_tree_model_iter_next (GtkTreeModel  *tree_model,GtkTreeIter   *iter
 	int n;
 	
 	g_return_val_if_fail (SPHONE_IS_STORE_TREE_MODEL (tree_model), FALSE);
-	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(tree_model);
+	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(SPHONE_STORE_TREE_MODEL(tree_model));
 
 	if (iter == NULL)
 		return FALSE;
@@ -746,7 +712,7 @@ sphone_store_tree_model_iter_n_children (GtkTreeModel *tree_model,GtkTreeIter  *
 {
 	g_return_val_if_fail (SPHONE_IS_STORE_TREE_MODEL (tree_model), -1);
 	g_return_val_if_fail (iter == NULL || iter->user_data != NULL, FALSE);
-	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(tree_model);
+	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(SPHONE_STORE_TREE_MODEL(tree_model));
 
 	/* special case: if iter == NULL, return number of top-level rows */
 	if (!iter){
@@ -772,7 +738,7 @@ static gboolean
 sphone_store_tree_model_iter_nth_child (GtkTreeModel *tree_model,GtkTreeIter  *iter,GtkTreeIter  *parent,gint n)
 {
 	g_return_val_if_fail (SPHONE_IS_STORE_TREE_MODEL (tree_model), FALSE);
-	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(tree_model);
+	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(SPHONE_STORE_TREE_MODEL(tree_model));
 
 	/* a list has only top-level rows */
 	if(parent)

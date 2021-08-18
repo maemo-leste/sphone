@@ -44,14 +44,6 @@ enum
 	LAST_SIGNAL
 };
 
-
-static guint call_signals[LAST_SIGNAL] = { 0 };
-
-G_DEFINE_TYPE (SphoneCall, sphone_call, G_TYPE_OBJECT);
-
-#define SPHONE_CALL_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE ((obj), \
-                                        SPHONE_TYPE_CALL, SphoneCallPrivate))
-
 typedef struct _SphoneCallPrivate  SphoneCallPrivate;
 
 struct _SphoneCallPrivate
@@ -64,16 +56,21 @@ struct _SphoneCallPrivate
 	int callback_id;
 };
 
+static guint call_signals[LAST_SIGNAL] = { 0 };
+
+G_DEFINE_TYPE_WITH_PRIVATE (SphoneCall, sphone_call, G_TYPE_OBJECT);
+
+#define SPHONE_CALL_GET_PRIVATE(obj) (sphone_call_get_instance_private(obj))
+
 static void
 sphone_call_init (SphoneCall *object)
 {
-	/* TODO: Add initialization code here */
 }
 
 static void
 sphone_call_finalize (GObject *object)
 {
-	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(object);
+	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(SPHONE_CALL(object));
 	
 	debug("Clear call object \n");
 	ofono_voice_call_properties_remove_handler(private->callback_id);
@@ -85,8 +82,8 @@ sphone_call_finalize (GObject *object)
 
 static void _sphone_call_properties_callback(call_property_t property, const gchar *value, void *object)
 {
-	g_debug("%s: %i %s %p", __func__, property, value, object);
-	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE((GObject*)object);
+	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(SPHONE_CALL(object));
+
 	if(property == CALL_PROPERTY_START_TIME){
 		g_free(private->call_properties->start_time);
 		private->call_properties->start_time=g_strdup(value);
@@ -141,7 +138,7 @@ static void
 sphone_call_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
 {
 	g_return_if_fail (SPHONE_IS_CALL (object));
-	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(object);
+	SphoneCallPrivate *private=sphone_call_get_instance_private(SPHONE_CALL(object));
 
 	switch (prop_id)
 	{
@@ -151,7 +148,6 @@ sphone_call_set_property (GObject *object, guint prop_id, const GValue *value, G
 		private->dbus_path=g_value_dup_string(value);
 		private->call_properties = ofono_call_properties_read(private->dbus_path);
 		if(private->call_properties) {
-			g_debug("%s: PROP_DBUS_PATH %s %p", __func__, private->dbus_path, private->call_properties);
 			if(!g_strcmp0(private->call_properties->state, "dialing")
 			|| !g_strcmp0(private->call_properties->state, "alerting")){
 				private->direction=STORE_INTERACTION_DIRECTION_OUTGOING;
@@ -177,6 +173,7 @@ sphone_call_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 
 	SphoneCall *call=SPHONE_CALL(object);
 	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(call);
+	debug("%s: %p\n", __func__, private);
 
 	switch (prop_id)
 	{
@@ -266,8 +263,6 @@ sphone_call_class_init (SphoneCallClass *klass)
 			g_cclosure_marshal_VOID__STRING,
 			G_TYPE_NONE,
 			1, G_TYPE_STRING);
-
-	g_type_class_add_private (klass, sizeof (SphoneCallPrivate));
 }
 
 
@@ -276,6 +271,7 @@ void sphone_call_answer (SphoneCall *object)
 {
 	SphoneCall *call=SPHONE_CALL(object);
 	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(call);
+	debug("%s: %p\n", __func__, private);
 
 	ofono_call_answer(private->dbus_path);
 }

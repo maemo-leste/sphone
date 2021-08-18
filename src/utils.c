@@ -57,7 +57,7 @@ int conf_key_set_stickiness(char *key_code, char *cmd, char *arg);
 int conf_key_set_code(char *key_code, char *cmd, char *arg);
 int conf_key_set_power_key(char *key_code, char *cmd, char *arg);
 static int utils_audio_route_set_play();
-static int utils_audio_route_set_incall();
+//static int utils_audio_route_set_incall();
 static int utils_audio_route_save();
 static int utils_audio_route_restore();
 
@@ -374,11 +374,13 @@ static void utils_conf_load(void)
 	conf_user=g_key_file_new();
 
 	// Load system wide configuration
-	g_key_file_load_from_dirs(conf_global,"sphone/sphone.conf",g_get_system_config_dirs(),NULL,G_KEY_FILE_NONE,NULL);
-
+	gchar **confdirs = g_strdupv((gchar**)g_get_system_config_dirs());
+	g_key_file_load_from_dirs(conf_global,"sphone/sphone.conf", (const gchar**)confdirs,NULL,G_KEY_FILE_NONE,NULL);
+	g_strfreev(confdirs);
+	
 	// load local configuration
 	gchar *localpath=g_build_filename(g_get_user_config_dir(),"sphone","sphone.conf",NULL);
-	g_key_file_load_from_file(conf_user,localpath,G_KEY_FILE_NONE,NULL);
+	g_key_file_load_from_file(conf_user, localpath, G_KEY_FILE_NONE,NULL);
 	g_free(localpath);
 }
 
@@ -623,12 +625,12 @@ static int utils_audio_route_restore()
 /*
  Change sound routing to incall value
  */
+/*
 static int utils_audio_route_set_incall()
 {
-	utils_stop_ringing("");
 	return 0;
 }
-
+*/
 /*
  Change sound routing
  */
