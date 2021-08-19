@@ -9,7 +9,7 @@ AM_CPPFLAGS = \
 	-DPACKAGE_LOCALE_DIR=\""$(prefix)/$(DATADIRNAME)/locale"\" \
 	-DPACKAGE_SRC_DIR=\""$(srcdir)"\" \
 	-DPACKAGE_DATA_DIR=\""$(datadir)"\" \
-	$(SPHONE_CFLAGS)
+	$(SPHONE_CFLAGS) $(LIBPROFILE_CFLAGS)
 
 AM_CFLAGS =\
 	 -Wall\
@@ -51,7 +51,7 @@ sphone_SOURCES = \
 sphone_LDFLAGS = \
 	-Wl,--export-dynamic
 
-sphone_LDADD = $(SPHONE_LIBS)
+sphone_LDADD = $(SPHONE_LIBS) $(LIBPROFILE_LIBS)
 
 EXTRA_DIST = $(glade_DATA)
 
