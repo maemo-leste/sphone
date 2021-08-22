@@ -46,7 +46,12 @@ sphone_SOURCES = \
 	book-import.c \
 	book-import.h \
 	gui-options.c \
-	gui-options.h
+	gui-options.h \
+	conf.h \
+	conf-ini.c \
+	conf-libprofile.c \
+	log.c \
+	log.h
 
 sphone_LDFLAGS = \
 	-Wl,--export-dynamic

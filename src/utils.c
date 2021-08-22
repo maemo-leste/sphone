@@ -27,7 +27,10 @@
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 #include <alsa/asoundlib.h>
+
 #include "utils.h"
+
+
 
 #define ICONS_PATH "/usr/share/sphone/icons/"
 
@@ -64,44 +67,6 @@ static int utils_audio_route_restore();
 struct{
 	GDBusConnection *s_bus_conn;
 } mce_if_priv;
-
-int debug_level=0;
-void set_debug(int level){
-	debug_level=level;
-}
-
-void debug(const char *s,...)
-{
-	if(!debug_level)
-		return;
-
-	va_list va;
-	va_start(va,s);
-
-	vfprintf(stdout,s,va);
-
-	va_end(va);
-}
-
-void error(const char *s,...)
-{
-	va_list va;
-	va_start(va,s);
-
-	vfprintf(stderr,s,va);
-
-	va_end(va);
-}
-
-void syserror(const char *s,...)
-{
-	va_list va;
-	va_start(va,s);
-
-	vfprintf(stderr,s,va);
-
-	va_end(va);
-}
 
 GDBusConnection *get_dbus_connection(void)
 {
@@ -251,22 +216,16 @@ void utils_start_ringing(const gchar *dial)
 		return;
 	utils_ringing_state=1;
 
-	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE))
+	if(conf_vibration_enabled())
 		utils_start_ringing_vibrate();
 
-	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_ENABLE)){
-		char *path=utils_conf_get_string(UTILS_CONF_GROUP_NOTIFICATIONS,UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_VOICE_INCOMING_PATH);
-		
-		if(path){
-			if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_VOICE_REPEAT_ENABLE))
-				utils_media_play_repeat(path);
-			else
-				utils_media_play_once(path);
-			g_free(path);
-		}
+	if(conf_ringer_enabled()){
+		char *path=conf_call_sound_path();
+		if(path)
+			utils_media_play_repeat(path);
 	}
 	
-	utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_RINGING_ON,dial,NULL);
+	utils_external_exec(CONF_ATTR_EXTERNAL_RINGING_ON, dial, NULL);
 }
 
 /*
@@ -283,7 +242,7 @@ void utils_stop_ringing(const gchar *dial)
 	
 	utils_stop_ringing_vibrate();
 	utils_media_stop();
-	utils_external_exec(UTILS_CONF_ATTR_EXTERNAL_RINGING_OFF,dial,NULL);
+	utils_external_exec(CONF_ATTR_EXTERNAL_RINGING_OFF,dial,NULL);
 }
 
 /*
@@ -291,9 +250,7 @@ void utils_stop_ringing(const gchar *dial)
  */
 int utils_ringing_status()
 {
-	return utils_ringing_state &&
-		(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_ENABLE)
-		 || utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE));
+	return utils_ringing_state && (conf_ringer_enabled() || conf_vibration_enabled());
 }
 
 /*
@@ -303,22 +260,22 @@ int utils_ringing_status()
 */
 void utils_sms_notify()
 {
-	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_ENABLE)){
-		char *path=utils_conf_get_string(UTILS_CONF_GROUP_NOTIFICATIONS,UTILS_CONF_ATTR_NOTIFICATIONS_SOUND_SMS_INCOMING_PATH);
+	if(conf_ringer_enabled()) {
+		char *path = conf_sms_sound_path();
 
-		if(path){
+		if(path) {
 			utils_media_play_once(path);
 			g_free(path);
 		}
 	}
 	
-	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE))
+	if(conf_vibration_enabled())
 		utils_vibrate_message();
 }
 
 void utils_connected_notify()
 {
-	if(utils_conf_get_int(UTILS_CONF_GROUP_NOTIFICATIONS, UTILS_CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE))
+	if(conf_vibration_enabled())
 		utils_vibrate_message();
 }
 
@@ -360,98 +317,15 @@ GdkPixbuf *utils_get_icon(const gchar *name)
 }
 
 /****************************************************
- 	Configuration handling and parsing
- ****************************************************/
-
-static GKeyFile *conf_global=NULL;
-static GKeyFile *conf_user=NULL;
-static void utils_conf_load(void)
-{
-	if(conf_global)
-		return;
-
-	conf_global=g_key_file_new();
-	conf_user=g_key_file_new();
-
-	// Load system wide configuration
-	gchar **confdirs = g_strdupv((gchar**)g_get_system_config_dirs());
-	g_key_file_load_from_dirs(conf_global,"sphone/sphone.conf", (const gchar**)confdirs,NULL,G_KEY_FILE_NONE,NULL);
-	g_strfreev(confdirs);
-	
-	// load local configuration
-	gchar *localpath=g_build_filename(g_get_user_config_dir(),"sphone","sphone.conf",NULL);
-	g_key_file_load_from_file(conf_user, localpath, G_KEY_FILE_NONE,NULL);
-	g_free(localpath);
-}
-
-gchar *utils_conf_get_string(const gchar *group, const gchar *name)
-{
-	utils_conf_load();
-	if(g_key_file_has_key(conf_user,group,name,NULL))
-		return g_key_file_get_string(conf_user,group,name,NULL);
-	return g_key_file_get_string(conf_global,group,name,NULL);
-}
-
-// Save only to local configuration
-void utils_conf_set_string(const gchar *group, const gchar *name, const gchar *value)
-{
-	utils_conf_load();
-	g_key_file_set_string(conf_user,group,name,value);
-}
-
-gint utils_conf_get_int(const gchar *group, const gchar *name)
-{
-	utils_conf_load();
-	if(g_key_file_has_key(conf_user,group,name,NULL))
-		return g_key_file_get_integer(conf_user,group,name,NULL);
-	return g_key_file_get_integer(conf_global,group,name,NULL);
-}
-
-// Save only to local configuration
-void utils_conf_set_int(const gchar *group, const gchar *name, int value)
-{
-	utils_conf_load();
-	g_key_file_set_integer(conf_user,group,name,value);
-}
-
-gboolean utils_conf_has_key(const gchar *group, const gchar *name)
-{
-	utils_conf_load();
-	if(g_key_file_has_key(conf_user,group,name,NULL))
-		return TRUE;
-	return g_key_file_has_key(conf_global,group,name,NULL);
-}
-
-int utils_conf_save_local()
-{
-	int ret=1;
-	
-	gchar *localpath=g_build_filename(g_get_user_config_dir(),"sphone","sphone.conf",NULL);
-	gchar *contents=g_key_file_to_data(conf_user, NULL, NULL);
-	debug("utils_conf_save_local: contents: %s\n", contents);
-	if(contents){
-		GError *err=NULL;
-		ret=g_file_set_contents(localpath, contents, -1, &err)?0:1;
-		if(ret){
-			error("utils_conf_save_local: configuration file save failed: %s\n", err->message);
-			g_error_free(err);
-		}
-	}
-	g_free(localpath);
-
-	return ret;
-}
-
-/****************************************************
  	External applications execution
  ****************************************************/
 
-void utils_external_exec(const gchar *name, ...)
+void utils_external_exec(conf_ext_t type, ...)
 {
-	debug("utils_external_exec %s\n",name);
-	gchar *path=utils_conf_get_string(UTILS_CONF_GROUP_EXTERNAL,name);
+	debug("utils_external_exec %i\n", type);
+	gchar *path=conf_get_external_handler(type);
 	if(!path){
-		debug("utils_external_exec: No " UTILS_CONF_GROUP_EXTERNAL " for %s\n",name);
+		debug("utils_external_exec: No external handler for %i\n", type);
 		return;
 	}
 	signal(SIGCHLD, SIG_IGN);	// Prevent zombie processes
@@ -477,10 +351,10 @@ void utils_external_exec(const gchar *name, ...)
 	args[0]=path;
 
 	va_list va;
-	va_start(va,name);
+	va_start(va, type);
 
 	while(args_count<9){
-		gchar *a=va_arg(va,gchar *);
+		gchar *a=va_arg(va, gchar *);
 		if(!a)
 			break;
 		args[args_count++]=a;
@@ -488,8 +362,10 @@ void utils_external_exec(const gchar *name, ...)
 	args[args_count]=NULL;
 
 	va_end(va);
-
-	setenv("SPHONE_ACTION",name,1);
+	
+	char* typestr = g_strdup_printf("%i", type);
+	setenv("SPHONE_ACTION", typestr, 1);
+	g_free(typestr);
 	execv(path,args);
 	error("utils_external_exec: execv failed %s\n",path);
 	exit(0);
