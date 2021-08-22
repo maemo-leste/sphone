@@ -17,6 +17,14 @@
  */
 
 
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#ifdef ENABLE_LIBHILDON
+#include <hildon/hildon-gtk.h>
+#endif
+
 #include <gtk/gtk.h>
 #include "utils.h"
 #include "store.h"
@@ -310,6 +318,10 @@ gint gui_history_calls(void)
 	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(calls_view),TRUE);
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
+	
+#ifdef ENABLE_LIBHILDON
+	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(calls_window), HILDON_PORTRAIT_MODE_SUPPORT);
+#endif
 
 	renderer = gtk_cell_renderer_pixbuf_new();
 	column = gtk_tree_view_column_new_with_attributes("", renderer, "pixbuf", SPHONE_STORE_TREE_MODEL_COLUMN_PICTURE, NULL);
@@ -399,6 +411,10 @@ gint gui_history_sms(void)
 	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(calls_view),TRUE);
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
+	
+#ifdef ENABLE_LIBHILDON
+	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(sms_window), HILDON_PORTRAIT_MODE_SUPPORT);
+#endif
 
 	renderer = gtk_cell_renderer_pixbuf_new();
 	column = gtk_tree_view_column_new_with_attributes("", renderer, "pixbuf", SPHONE_STORE_TREE_MODEL_COLUMN_PICTURE, NULL);

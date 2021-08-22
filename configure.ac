@@ -27,7 +27,7 @@ AM_PROG_LIBTOOL
 
 
 
-PKG_CHECK_MODULES(SPHONE, [gtk+-2.0 >= 2.8 dbus-glib-1 unique-1.0 sqlite3 gstreamer-1.0 alsa hildon-1])
+PKG_CHECK_MODULES(SPHONE, [gtk+-2.0 >= 2.8 dbus-glib-1 unique-1.0 sqlite3 gstreamer-1.0 alsa])
 
 
 AC_ARG_ENABLE(libprofile,
@@ -37,11 +37,25 @@ AC_ARG_ENABLE(libprofile,
      [],
      [enable_libprofile="yes"])
 
+AC_ARG_ENABLE(libhildon,
+    [AS_HELP_STRING([--enable-libhildon],
+             [Use libhildon for ui [default=yes]]
+             )],
+     [],
+     [enable_libhildon="yes"])
+
 if test "x$enable_libprofile" = "xyes"; then
     PKG_CHECK_MODULES(LIBPROFILE, profile)
     AC_SUBST(LIBPROFILE_CFLAGS)
     AC_SUBST(LIBPROFILE_LIBS)
     AC_DEFINE(ENABLE_LIBPROFILE, 1, [libprofile enable define])
+fi
+
+if test "x$enable_libhildon" = "xyes"; then
+    PKG_CHECK_MODULES(LIBHILDON, hildon-1)
+    AC_SUBST(LIBHILDON_CFLAGS)
+    AC_SUBST(LIBHILDON_LIBS)
+    AC_DEFINE(ENABLE_LIBHILDON, 1, [libhildon enable define])
 fi
 
 AC_OUTPUT([

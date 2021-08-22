@@ -16,8 +16,15 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
  
 #include <gtk/gtk.h>
+
+#ifdef ENABLE_LIBHILDON
+#include <hildon/hildon-gtk.h>
+#endif
 
 #include "sphone-manager.h"
 #include "utils.h"
@@ -115,6 +122,10 @@ void gui_sms_send_show(const gchar *to, const gchar *text)
 	GtkWidget *s = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (s),
 		       GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+	
+#ifdef ENABLE_LIBHILDON
+	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(main_window), HILDON_PORTRAIT_MODE_SUPPORT);
+#endif
 
 	GtkTextBuffer *text_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_edit));
 

@@ -16,10 +16,17 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
 
 #include <config.h>
 #include <gtk/gtk.h>
+
+#ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
+#endif
+
 #include "sphone-manager.h"
 #include "sphone-call.h"
 #include "utils.h"
@@ -83,7 +90,9 @@ int gui_calls_manager_init(SphoneManager *manager)
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
 	
+#ifdef ENABLE_LIBHILDON
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_calls_manager.main_window), HILDON_PORTRAIT_MODE_REQUEST);
+#endif
 
 	renderer = gtk_cell_renderer_pixbuf_new();
 	column = gtk_tree_view_column_new_with_attributes("Photo", renderer, "pixbuf", GUI_CALLS_COLUMN_PHOTO, NULL);

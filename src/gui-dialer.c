@@ -16,11 +16,18 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif
 
 #include <config.h>
 #include <ctype.h>
 #include <gtk/gtk.h>
+
+#ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
+#endif
+
 #include "sphone-manager.h"
 #include "keypad.h"
 #include "utils.h"
@@ -237,8 +244,10 @@ int gui_dialer_init(SphoneManager *manager)
 	g_gui_calls.display=display;
 	GtkWidget *book=gui_dialer_build_book();
 	
+#ifdef ENABLE_LIBHILDON
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_gui_calls.main_window), HILDON_PORTRAIT_MODE_REQUEST);
-
+#endif
+	
 	gtk_widget_modify_font(display,pango_font_description_from_string("Monospace 24"));
 	gtk_entry_set_alignment(GTK_ENTRY(display),1.0);
 	gtk_entry_set_has_frame(GTK_ENTRY(display),FALSE);
