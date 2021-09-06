@@ -1,3 +1,10 @@
+sphone (0.1.5) unstable; urgency=medium
+
+  * add inital audio routing support via pulse profiles
+  * Make the contacts/recent list thumb scrollable when built with hildon support
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 06 Sep 2021 19:30:32 +0200
+
 sphone (0.1.4) unstable; urgency=medium
 
   * watch for ofono instead of only connecting on startup.
