@@ -32,19 +32,20 @@ void utils_start_ringing(const gchar *dial);
 void utils_stop_ringing(const gchar *dial);
 int utils_ringing_status();
 void utils_sms_notify();
-void utils_connected_notify();
 
 GdkPixbuf *utils_get_photo_default();
 GdkPixbuf *utils_get_photo_unknown();
 GdkPixbuf *utils_get_photo(const gchar *path);
 GdkPixbuf *utils_get_icon(const gchar *name);
 
-enum {
+typedef enum {
 	UTILS_AUDIO_ROUTE_UNKNOWN=-1,
 	UTILS_AUDIO_ROUTE_SPEAKER=0,
-	UTILS_AUDIO_ROUTE_HANDSET=1,
-	UTILS_AUDIO_ROUTE_COUNT=2
-};
+	UTILS_AUDIO_ROUTE_HANDSET,
+	UTILS_AUDIO_ROUTE_HEADSET,
+	UTILS_AUDIO_ROUTE_BT,
+	UTILS_AUDIO_ROUTE_COUNT
+} utils_audio_route_t;
 
 typedef enum {
 	UTILS_MODE_NO_CALL=0,
@@ -54,17 +55,15 @@ typedef enum {
 
 GDBusConnection *get_dbus_connection(void);
 
-void utils_mce_init(void);
+void utils_init(void);
 bool utils_set_call_mode(utils_call_mode_t mode);
-
 void utils_external_exec(conf_ext_t type, ...);
-
 void utils_gst_init(int *argc, char ***argv);
 void utils_media_stop();
 int utils_media_play_once(gchar *path);
 int utils_media_play_repeat(gchar *path);
 
-int utils_audio_route_set(int route);
+int utils_audio_route_set(utils_audio_route_t route);
 int utils_audio_route_get();
 
 #endif

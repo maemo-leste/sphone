@@ -51,7 +51,9 @@ sphone_SOURCES = \
 	conf-ini.c \
 	conf-libprofile.c \
 	log.c \
-	log.h
+	log.h \
+	pulse.c \
+	pulse.h
 
 sphone_LDFLAGS = \
 	-Wl,--export-dynamic

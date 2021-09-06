@@ -193,7 +193,7 @@ int main (int argc, char *argv[])
 		gui_dialer_init(manager);
 		gui_sms_init(manager);
 		sphone_manager_populate(manager);
-		utils_mce_init();
+		utils_init();
 		
 		if(number)
 			debug("number: %s\n", number);

@@ -100,10 +100,9 @@ static void _sphone_call_properties_callback(call_property_t property, const gch
 			private->direction=STORE_INTERACTION_DIRECTION_INCOMING;
 		}
 		if(!g_strcmp0(private->call_properties->state,"active")){
-			if(private->answer_status!=STORE_INTERACTION_CALL_STATUS_ESTABLISHED){  // Make sure only once
+			if(private->answer_status!=STORE_INTERACTION_CALL_STATUS_ESTABLISHED){
 				if(private->direction==STORE_INTERACTION_DIRECTION_OUTGOING){
 					utils_external_exec(CONF_ATTR_EXTERNAL_CALL_OUTGOING_ANSWERED,private->call_properties->line_identifier,NULL);
-					utils_connected_notify();
 				}else{
 					utils_external_exec(CONF_ATTR_EXTERNAL_CALL_INCOMING_ANSWERED,private->call_properties->line_identifier,NULL);
 				}

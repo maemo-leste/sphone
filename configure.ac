@@ -27,7 +27,7 @@ AM_PROG_LIBTOOL
 
 
 
-PKG_CHECK_MODULES(SPHONE, [gtk+-2.0 >= 2.8 dbus-glib-1 unique-1.0 sqlite3 gstreamer-1.0 alsa])
+PKG_CHECK_MODULES(SPHONE, [gtk+-2.0 >= 2.8 dbus-glib-1 unique-1.0 sqlite3 gstreamer-1.0 alsa libpulse])
 
 
 AC_ARG_ENABLE(libprofile,

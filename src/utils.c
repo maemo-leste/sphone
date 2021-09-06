@@ -29,8 +29,7 @@
 #include <alsa/asoundlib.h>
 
 #include "utils.h"
-
-
+#include "pulse.h"
 
 #define ICONS_PATH "/usr/share/sphone/icons/"
 
@@ -59,14 +58,13 @@
 int conf_key_set_stickiness(char *key_code, char *cmd, char *arg);
 int conf_key_set_code(char *key_code, char *cmd, char *arg);
 int conf_key_set_power_key(char *key_code, char *cmd, char *arg);
-static int utils_audio_route_set_play();
-//static int utils_audio_route_set_incall();
 static int utils_audio_route_save();
 static int utils_audio_route_restore();
 
 struct{
 	GDBusConnection *s_bus_conn;
-} mce_if_priv;
+	struct sphone_pa_if pa_if;
+} utils_priv;
 
 GDBusConnection *get_dbus_connection(void)
 {
@@ -99,14 +97,15 @@ GDBusConnection *get_dbus_connection(void)
 	return s_bus_conn;
 }
 
-void utils_mce_init(void)
+void utils_init(void)
 {
-	mce_if_priv.s_bus_conn = get_dbus_connection();
+	utils_priv.s_bus_conn = get_dbus_connection();
+	sphone_pa_create_interface(&utils_priv.pa_if);
 }
 
 bool utils_set_call_mode(utils_call_mode_t mode)
 {
-	if(!mce_if_priv.s_bus_conn)
+	if(!utils_priv.s_bus_conn)
 		return false;
 
 	GVariant *val;
@@ -116,20 +115,23 @@ bool utils_set_call_mode(utils_call_mode_t mode)
 	if(mode == UTILS_MODE_NO_CALL) {
 		val = g_variant_new("(ss)", MCE_CALL_STATE_NONE, MCE_NORMAL_CALL);
 		debug("%s: %s\n", __func__, MCE_CALL_STATE_NONE);
+		sphone_pa_audio_route_set_playback(&utils_priv.pa_if);
 	}
 	else if(mode == UTILS_MODE_RINGING) {
 		val = g_variant_new("(ss)", MCE_CALL_STATE_RINGING, MCE_NORMAL_CALL);
 		debug("%s: %s\n", __func__, MCE_CALL_STATE_RINGING);
+		sphone_pa_audio_route_set_playback(&utils_priv.pa_if);
 	}
 	else if(mode == UTILS_MODE_INCALL) {
 		val = g_variant_new("(ss)", MCE_CALL_STATE_ACTIVE, MCE_NORMAL_CALL);
 		debug("%s: %s\n", __func__, MCE_CALL_STATE_ACTIVE);
+		sphone_pa_audio_route_set_in_call(&utils_priv.pa_if);
 	}
 	else {
 		return false;
 	}
 
-	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+	result = g_dbus_connection_call_sync(utils_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
 		MCE_REQUEST_IF, "req_call_state_change", val, NULL,
 		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
@@ -145,7 +147,7 @@ bool utils_set_call_mode(utils_call_mode_t mode)
  */
 
 static void utils_vibrate_message(void) {
-	if(!mce_if_priv.s_bus_conn)
+	if(!utils_priv.s_bus_conn)
 		return;
 
 	GVariant *val;
@@ -153,7 +155,7 @@ static void utils_vibrate_message(void) {
 	GError *error = NULL;
 
 	val = g_variant_new("(s)", "PatternIncomingMessage");
-	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+	result = g_dbus_connection_call_sync(utils_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
 		MCE_REQUEST_IF, "req_vibrator_pattern_activate", val, NULL,
 		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
@@ -165,7 +167,7 @@ static void utils_vibrate_message(void) {
 
 static void utils_stop_ringing_vibrate()
 {
-	if(!mce_if_priv.s_bus_conn)
+	if(!utils_priv.s_bus_conn)
 		return;
 
 	GVariant *val;
@@ -173,7 +175,7 @@ static void utils_stop_ringing_vibrate()
 	GError *error = NULL;
 
 	val = g_variant_new("(s)", "PatternIncomingCall");
-	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+	result = g_dbus_connection_call_sync(utils_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
 		MCE_REQUEST_IF, "req_vibrator_pattern_deactivate", val, NULL,
 		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
@@ -185,7 +187,7 @@ static void utils_stop_ringing_vibrate()
 
 static void utils_start_ringing_vibrate()
 {
-	if(!mce_if_priv.s_bus_conn)
+	if(!utils_priv.s_bus_conn)
 		return;
 
 	GVariant *val;
@@ -193,7 +195,7 @@ static void utils_start_ringing_vibrate()
 	GError *error = NULL;
 
 	val = g_variant_new("(s)", "PatternIncomingCall");
-	result = g_dbus_connection_call_sync(mce_if_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+	result = g_dbus_connection_call_sync(utils_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
 		MCE_REQUEST_IF, "req_vibrator_pattern_activate", val, NULL,
 		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
@@ -269,12 +271,6 @@ void utils_sms_notify()
 		}
 	}
 	
-	if(conf_vibration_enabled())
-		utils_vibrate_message();
-}
-
-void utils_connected_notify()
-{
 	if(conf_vibration_enabled())
 		utils_vibrate_message();
 }
@@ -445,7 +441,7 @@ static int utils_gst_start(gchar *path)
 
 	// Set audio routing
 	utils_audio_route_save();
-	utils_audio_route_set_play();
+	sphone_pa_audio_route_set_playback(&utils_priv.pa_if);
 
 	gst_element_set_state (utils_gst_play, GST_STATE_PLAYING);
 	g_free(uri);
@@ -478,16 +474,6 @@ int utils_media_play_repeat(gchar *path)
 	return utils_gst_start(path);
 }
 
-/****************************************************
- 	Audio playback routines using gstreamer
- ****************************************************/
-
-static int utils_audio_route_set_play()
-{
-	return 0;
-}
-
-
 static int utils_audio_route_save()
 {
 	return 0;
@@ -499,18 +485,9 @@ static int utils_audio_route_restore()
 }
 
 /*
- Change sound routing to incall value
- */
-/*
-static int utils_audio_route_set_incall()
-{
-	return 0;
-}
-*/
-/*
  Change sound routing
  */
-int utils_audio_route_set(int route)
+int utils_audio_route_set(utils_audio_route_t route)
 {	
 	//TODO
 	return 0;
