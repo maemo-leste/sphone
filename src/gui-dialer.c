@@ -187,7 +187,12 @@ GtkWidget *gui_dialer_build_book()
 	gtk_tree_view_append_column(GTK_TREE_VIEW(g_gui_calls.dials_view), column);
 
 	gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(g_gui_calls.dials_view),TRUE);
+#ifdef ENABLE_LIBHILDON
+	scroll = hildon_pannable_area_new();
+#else
 	scroll = gtk_scrolled_window_new(NULL,NULL);
+#endif
+	gtk_widget_set_size_request(GTK_WIDGET(scroll), 0, 200);
 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 	gtk_container_add (GTK_CONTAINER(scroll),g_gui_calls.dials_view);
 
