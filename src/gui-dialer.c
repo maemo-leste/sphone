@@ -191,9 +191,9 @@ GtkWidget *gui_dialer_build_book()
 	scroll = hildon_pannable_area_new();
 #else
 	scroll = gtk_scrolled_window_new(NULL,NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 #endif
 	gtk_widget_set_size_request(GTK_WIDGET(scroll), 0, 200);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
 	gtk_container_add (GTK_CONTAINER(scroll),g_gui_calls.dials_view);
 
 	g_signal_connect(G_OBJECT(g_gui_calls.dials_view),"focus-in-event", G_CALLBACK(gui_dialer_book_focus_callback),NULL);
