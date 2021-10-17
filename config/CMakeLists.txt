@@ -1,0 +1,1 @@
+install(FILES sphone.ini DESTINATION ${SPHONE_SYSCONF_DIR})

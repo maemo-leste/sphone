@@ -1,0 +1,7 @@
+install(FILES sphone-dialer.desktop DESTINATION ${SPHONE_DESKTOP_DIR})
+install(FILES sphone-new-sms.desktop DESTINATION ${SPHONE_DESKTOP_DIR})
+install(FILES sphone-sms-history.desktop DESTINATION ${SPHONE_DESKTOP_DIR})
+
+if(NOT DEFINED LIBPROFILE_LIBRARIES)
+	install(FILES sphone-options.desktop DESTINATION ${SPHONE_DESKTOP_DIR})
+endif(NOT DEFINED LIBPROFILE_LIBRARIES)
