@@ -1,7 +1,23 @@
-#ifndef ENABLE_LIBPROFILE
 #include <glib.h>
-#include "conf.h"
-#include "utils.h"
+#include "rtconf.h"
+#include "sphone-modules.h"
+#include "sphone-log.h"
+
+/** Module name */
+#define MODULE_NAME		"rtconf-ini"
+
+/** Functionality provided by this module */
+static const gchar *const provides[] = { "rtconf", NULL };
+
+/** Module information */
+G_MODULE_EXPORT module_info_struct module_info = {
+	/** Name of the module */
+	.name = MODULE_NAME,
+	/** Module provides */
+	.provides = provides,
+	/** Module priority */
+	.priority = 250
+};
 
 #define CONF_GROUP_EXTERNAL "external.handlers"
 #define CONF_ATTR_EXTERNAL_RINGING_ON "ringing.on"
@@ -26,6 +42,8 @@
 static GKeyFile *conf_global=NULL;
 static GKeyFile *conf_user=NULL;
 
+static int backend_id;
+
 static void conf_ini_load(void)
 {
 	if(conf_global)
@@ -45,7 +63,7 @@ static void conf_ini_load(void)
 	g_free(localpath);
 }
 
-bool conf_vibration_enabled(void)
+static bool conf_vibration_enabled(void)
 {
 	conf_ini_load();
 	if(g_key_file_has_key(conf_user, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE, NULL))
@@ -53,14 +71,14 @@ bool conf_vibration_enabled(void)
 	return g_key_file_get_boolean(conf_global, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE, NULL);
 }
 
-bool conf_set_vibration_enabled(bool enabled)
+static bool conf_set_vibration_enabled(bool enabled)
 {
 	conf_ini_load();
 	g_key_file_set_boolean(conf_user, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_VIBRATION_ENABLE, enabled);
 	return true;
 }
 
-bool conf_ringer_enabled(void)
+static bool conf_ringer_enabled(void)
 {
 	conf_ini_load();
 	if(g_key_file_has_key(conf_user, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_ENABLE, NULL))
@@ -68,14 +86,14 @@ bool conf_ringer_enabled(void)
 	return g_key_file_get_boolean(conf_global, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_ENABLE, NULL);
 }
 
-bool conf_set_ringer_enabled(bool enabled)
+static bool conf_set_ringer_enabled(bool enabled)
 {
 	conf_ini_load();
 	g_key_file_set_boolean(conf_user, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_ENABLE, enabled);
 	return true;
 }
 
-char* conf_sms_sound_path(void)
+static char* conf_sms_sound_path(void)
 {
 	conf_ini_load();
 	if(g_key_file_has_key(conf_user, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_SMS_INCOMING_PATH, NULL))
@@ -83,14 +101,14 @@ char* conf_sms_sound_path(void)
 	return g_key_file_get_string(conf_global, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_SMS_INCOMING_PATH, NULL);
 }
 
-bool conf_set_sms_sound_path(const char *path)
+static bool conf_set_sms_sound_path(const char *path)
 {
 	conf_ini_load();
 	g_key_file_set_string(conf_user, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_SMS_INCOMING_PATH, path);
 	return true;
 }
 
-char* conf_call_sound_path(void)
+static char* conf_call_sound_path(void)
 {
 	conf_ini_load();
 	if(g_key_file_has_key(conf_user, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_VOICE_INCOMING_PATH, NULL))
@@ -98,25 +116,25 @@ char* conf_call_sound_path(void)
 	return g_key_file_get_string(conf_global, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_VOICE_INCOMING_PATH, NULL);
 }
 
-bool conf_set_call_sound_path(const char *path)
+static bool conf_set_call_sound_path(const char *path)
 {
 	conf_ini_load();
 	g_key_file_set_string(conf_user, CONF_GROUP_NOTIFICATIONS, CONF_ATTR_NOTIFICATIONS_SOUND_VOICE_INCOMING_PATH, path);
 	return true;
 }
 
-int conf_save(void)
+static int conf_save(void)
 {
 	int ret=1;
 	
 	gchar *localpath=g_build_filename(g_get_user_config_dir(),"sphone","sphone.conf",NULL);
 	gchar *contents=g_key_file_to_data(conf_user, NULL, NULL);
-	sphone_log(LL_DEBUG, "utils_conf_save_local: contents: %s\n", contents);
+	sphone_module_log(LL_DEBUG, "utils_conf_save_local: contents: %s", contents);
 	if(contents){
 		GError *err=NULL;
 		ret=g_file_set_contents(localpath, contents, -1, &err)?0:1;
 		if(ret){
-			sphone_log(LL_ERROR, "utils_conf_save_local: configuration file save failed: %s\n", err->message);
+			sphone_module_log(LL_ERR, "utils_conf_save_local: configuration file save failed: %s", err->message);
 			g_error_free(err);
 		}
 	}
@@ -125,9 +143,25 @@ int conf_save(void)
 	return ret;
 }
 
-char* conf_get_external_handler(conf_ext_t type)
+G_MODULE_EXPORT const gchar *sphone_module_init(void);
+const gchar *sphone_module_init(void)
 {
+	backend_id = rtconf_register_backend(conf_vibration_enabled,
+							conf_set_vibration_enabled,
+							conf_ringer_enabled,
+							conf_set_ringer_enabled,
+							conf_sms_sound_path,
+							conf_set_sms_sound_path,
+							conf_call_sound_path,
+							conf_set_call_sound_path,
+							conf_save);
+	
 	return NULL;
 }
 
-#endif
+G_MODULE_EXPORT void g_module_unload(GModule *module);
+void g_module_unload(GModule *module)
+{
+	(void)module;
+	rtconf_unregister_backend(backend_id);
+}

@@ -19,8 +19,10 @@
 #include <gtk/gtk.h>
 #include <gio/gio.h>
 #include "utils.h"
-#include "conf.h"
+#include "rtconf.h"
 #include "gui-options.h"
+#include "datapipes.h"
+#include "datapipe.h"
 
 struct {
 	GtkWidget *main_window;
@@ -64,19 +66,19 @@ void gui_options_open(void)
 	GtkWidget *notifications_v=gtk_vbox_new(FALSE,0);
 	
 	struct b_option boption;
-	boption.get_fn = &conf_ringer_enabled;
-	boption.set_fn = &conf_set_ringer_enabled;
+	boption.get_fn = &rtconf_ringer_enabled;
+	boption.set_fn = &rtconf_set_ringer_enabled;
 	gtk_box_pack_start(GTK_BOX(notifications_v), gui_options_build_option_check(boption, "Enable sound"), FALSE, FALSE, 0);
-	boption.get_fn = &conf_vibration_enabled;
-	boption.set_fn = &conf_set_vibration_enabled;
+	boption.get_fn = &rtconf_vibration_enabled;
+	boption.set_fn = &rtconf_set_vibration_enabled;
 	gtk_box_pack_start(GTK_BOX(notifications_v), gui_options_build_option_check(boption, "Enable vibration"), FALSE, FALSE, 0);
 
 	struct s_option soption;
-	soption.get_fn = &conf_call_sound_path;
-	soption.set_fn = &conf_set_call_sound_path;
+	soption.get_fn = &rtconf_call_sound_path;
+	soption.set_fn = &rtconf_set_call_sound_path;
 	gtk_box_pack_start(GTK_BOX(notifications_v), gui_options_build_option_file_audio(soption, "Ring tone"), FALSE, FALSE, 0);
-	soption.get_fn = &conf_sms_sound_path;
-	soption.set_fn = &conf_set_sms_sound_path;
+	soption.get_fn = &rtconf_sms_sound_path;
+	soption.set_fn = &rtconf_set_sms_sound_path;
 	gtk_box_pack_start(GTK_BOX(notifications_v), gui_options_build_option_file_audio(soption, "SMS tone"), FALSE, FALSE, 0);
 	
 	gtk_notebook_append_page(GTK_NOTEBOOK(tabs), notifications_v, gtk_label_new ("Notifications"));
@@ -149,7 +151,7 @@ static int gui_options_close(GtkWidget *w)
 	g_options.main_window=NULL;
 
 	if(is_dirty)
-		conf_save();
+		rtconf_save();
 	is_dirty=0;
 	
 	return FALSE;
@@ -177,13 +179,13 @@ static void gui_options_stop_callback(GtkButton *button, GtkFileChooser *chooser
 {
 	(void)button;
 	(void)chooser;
-	utils_media_stop();
+	execute_datapipe(&audio_stop_pipe, NULL);;
 }
 
 static void gui_options_play_callback(GtkButton *button, GtkFileChooser *chooser)
 {
 	(void)button;
 	gchar *file=gtk_file_chooser_get_filename(chooser);
-	utils_media_play_once(file);
+	execute_datapipe(&audio_play_once_pipe, file);;
 	g_free(file);
 }

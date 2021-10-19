@@ -61,6 +61,37 @@ struct str_list {
   int count;
 };
 
+static GDBusConnection *get_dbus_connection(void)
+{
+	GError *error = NULL;
+	char *addr;
+	
+	GDBusConnection *s_bus_conn;
+
+	#if !GLIB_CHECK_VERSION(2,35,0)
+	g_type_init();
+	#endif
+
+	addr = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+	if (addr == NULL) {
+		sphone_log(LL_ERR, "failed to get dbus addr: %s", error->message);
+		g_free(error);
+		return NULL;
+	}
+
+	s_bus_conn = g_dbus_connection_new_for_address_sync(addr,
+			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
+			G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
+			NULL, NULL, &error);
+
+	if (s_bus_conn == NULL) {
+		sphone_log(LL_ERR, "failed to create dbus connection: %s", error->message);
+		g_free(error);
+	}
+
+	return s_bus_conn;
+}
+
 static void call_added_cb(GDBusConnection *connection,
 		const gchar *sender_name,
 		const gchar *object_path,
@@ -88,7 +119,7 @@ static void error_dbus(GError *gerror)
 	if(!gerror)
 		return;
 	
-	sphone_log(LL_ERR, "Error: %s\n", gerror->message);
+	sphone_log(LL_ERR, "Error: %s", gerror->message);
 	g_error_free(gerror);
 }
 
@@ -141,15 +172,15 @@ static void ofono_service_appeard(GDBusConnection *connection, const gchar *name
 	struct ofono_if_priv_s *private = (struct ofono_if_priv_s*)user_data;
 	struct str_list *modems = ofono_get_modems(private->s_bus_conn);
 	
-	sphone_log(LL_DEBUG, "Ofono has appeard.\n");
+	sphone_log(LL_DEBUG, "Ofono has appeard.");
 		
 	if (modems->count <= 0) {
-		sphone_log(LL_DEBUG, "There is no modem.\n");
+		sphone_log(LL_DEBUG, "There is no modem.");
 		g_free(modems);
 		return;
 	}
 	private->modem = g_strdup(modems->data[0]);
-	sphone_log(LL_DEBUG, "Using modem: %s\n", private->modem);
+	sphone_log(LL_DEBUG, "Using modem: %s", private->modem);
 	g_free(modems);
 	
 	private->callback_ids[NEW_CALL_HANDLE_ID] = g_dbus_connection_signal_subscribe(
@@ -185,7 +216,7 @@ static void ofono_service_vanished(GDBusConnection *connection, const gchar *nam
 
 	struct ofono_if_priv_s *private = (struct ofono_if_priv_s*)user_data;
 
-	sphone_log(LL_DEBUG, "Ofono has vanished.\n");
+	sphone_log(LL_DEBUG, "Ofono has vanished.");
 
 	g_dbus_connection_signal_unsubscribe(private->s_bus_conn, private->callback_ids[NEW_CALL_HANDLE_ID]);
 	g_dbus_connection_signal_unsubscribe(private->s_bus_conn, private->callback_ids[NEW_SMS_HANDLE_ID]);
@@ -198,7 +229,7 @@ int ofono_init(void)
 	ofono_if_priv.s_bus_conn = get_dbus_connection();
 	
 	if(!ofono_if_priv.s_bus_conn) {
-		sphone_log(LL_ERR, "Unable to connect to dbus!\n");
+		sphone_log(LL_ERR, "Unable to connect to dbus!");
 		return -1;
 	}
 
@@ -225,21 +256,21 @@ void ofono_clear(void)
 int ofono_read_network_properties(OfonoNetworkProperties *properties)
 {
 	(void)properties;
-	sphone_log(LL_DEBUG, "%s\n", __func__);
+	sphone_log(LL_DEBUG, "%s", __func__);
 	return 0;
 }
 
 void ofono_network_properties_free(OfonoNetworkProperties *properties)
 {
 	(void)properties;
-	sphone_log(LL_DEBUG, "%s\n", __func__);
+	sphone_log(LL_DEBUG, "%s", __func__);
 }
 
 int ofono_network_properties_add_handler(gpointer handler, gpointer data)
 {
 	(void)handler;
 	(void)data;
-	sphone_log(LL_DEBUG, "%s\n", __func__);
+	sphone_log(LL_DEBUG, "%s", __func__);
 	return 0;
 }
 
@@ -270,7 +301,7 @@ static void ofono_voice_call_decode_properties(OfonoCallProperties *call, GVaria
 			g_variant_get(val, "b", call->emergency);
 	}
 
-	sphone_log(LL_DEBUG, "call: %s, state: %s, line identification %s, emergency: %i\n", 
+	sphone_log(LL_DEBUG, "call: %s, state: %s, line identification %s, emergency: %i", 
 		call->path, call->state, call->line_identifier, call->emergency);
 }
 
@@ -356,7 +387,7 @@ OfonoCallProperties *ofono_call_properties_read(gchar *path)
 		return NULL;
 
 	OfonoCallProperties *properties = g_malloc0(sizeof(*properties));
-	sphone_log(LL_DEBUG, "%s: %s\n", __func__, path);
+	sphone_log(LL_DEBUG, "%s: %s", __func__, path);
 	
 	GError *gerror = NULL;
 	GVariant *var_properties;
@@ -401,13 +432,13 @@ static void call_properties_cb(GDBusConnection *connection,
 	(void)signal_name;
 	(void)data;
 	
-	sphone_log(LL_DEBUG, "%s: %s\n", __func__, object_path);
+	sphone_log(LL_DEBUG, "%s: %s", __func__, object_path);
 	GList *element = ofono_if_priv.call_handler_list;
 	do {
 		struct ofono_call_handler_endpoint *endpoint = 
 			(struct ofono_call_handler_endpoint*)element->data;
 		if(g_strcmp0(object_path, endpoint->path) == 0) {
-			sphone_log(LL_DEBUG, "%s: %s matched %p %p\n", __func__, object_path, endpoint->callback, endpoint->user_data);
+			sphone_log(LL_DEBUG, "%s: %s matched %p %p", __func__, object_path, endpoint->callback, endpoint->user_data);
   			gchar *key;
   			GVariant *value;
 			
@@ -425,7 +456,7 @@ int ofono_voice_call_properties_add_handler(gchar *path, call_property_handler_t
 {
 	if(!ofono_init_valid())
 		return -1;
-	sphone_log(LL_DEBUG, "%s: %s %p %p\n", __func__, path, handler, data);
+	sphone_log(LL_DEBUG, "%s: %s %p %p", __func__, path, handler, data);
 	struct ofono_call_handler_endpoint *endpoint = g_malloc(sizeof(*endpoint));
 	endpoint->user_data = data;
 	endpoint->callback = handler;
@@ -462,16 +493,16 @@ int ofono_voice_call_properties_remove_handler(int id)
 		struct ofono_call_handler_endpoint *endpoint = 
 			(struct ofono_call_handler_endpoint*)element->data;
 		if(endpoint->id == id) {
-			sphone_log(LL_DEBUG, "%s: %u\n", __func__, g_list_length(ofono_if_priv.call_handler_list));
+			sphone_log(LL_DEBUG, "%s: %u", __func__, g_list_length(ofono_if_priv.call_handler_list));
 			g_free(endpoint->path);
 			ofono_if_priv.call_handler_list = g_list_remove(ofono_if_priv.call_handler_list, element);
-			sphone_log(LL_DEBUG, "%s: %i\n", __func__, g_list_length(ofono_if_priv.call_handler_list));
+			sphone_log(LL_DEBUG, "%s: %i", __func__, g_list_length(ofono_if_priv.call_handler_list));
 			break;
 		}
 	} while((element = element->next));
 	
 	g_dbus_connection_signal_unsubscribe(ofono_if_priv.s_bus_conn, id);
-	sphone_log(LL_DEBUG, "%s\n", __func__);
+	sphone_log(LL_DEBUG, "%s", __func__);
 	return 0;
 }
 
@@ -521,7 +552,7 @@ int ofono_call_hold_and_answer(void)
 {
 	if(!ofono_init_valid())
 		return -1;
-	sphone_log(LL_DEBUG, "%s\n", __func__);
+	sphone_log(LL_DEBUG, "%s", __func__);
 	return 0;
 }
 
@@ -529,7 +560,7 @@ int ofono_call_swap(void)
 {
 	if(!ofono_init_valid())
 		return -1;
-	sphone_log(LL_DEBUG, "%s\n", __func__);
+	sphone_log(LL_DEBUG, "%s", __func__);
 	return 0;
 }
 
@@ -542,7 +573,7 @@ int ofono_dial(const gchar *dial)
 	GVariant *result;
 	GError *gerror = NULL;
 
-	sphone_log(LL_DEBUG, "Dialing number: %s\n", dial);
+	sphone_log(LL_DEBUG, "Dialing number: %s", dial);
 
 	val = g_variant_new("(ss)", dial, "enabled");
 	result = g_dbus_connection_call_sync(ofono_if_priv.s_bus_conn, OFONO_SERVICE, ofono_if_priv.modem,
@@ -601,7 +632,7 @@ static void new_sms_cb(GDBusConnection *connection,
 				goto error;
 			}
 			strptime(time,"%Y-%m-%dT%H:%M:%S%z", &tm);
-			sphone_log(LL_DEBUG, "%s: sms time: %s\n", __func__, time);
+			sphone_log(LL_DEBUG, "%s: sms time: %s", __func__, time);
 		}
 		g_variant_unref(var);
 		g_free(key);
@@ -627,7 +658,7 @@ int ofono_sms_send(const gchar *to, const gchar *text)
 	GVariant *result;
 	GError *gerror = NULL;
 
-	sphone_log(LL_DEBUG, "Sending sms: %s %s\n", to, text);
+	sphone_log(LL_DEBUG, "Sending sms: %s %s", to, text);
 
 	val = g_variant_new("(ss)", to, text);
 	result = g_dbus_connection_call_sync(ofono_if_priv.s_bus_conn, OFONO_SERVICE, ofono_if_priv.modem,

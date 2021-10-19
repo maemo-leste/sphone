@@ -22,7 +22,7 @@
 
 #include <gtk/gtk.h>
 #include <stdbool.h>
-#include "conf.h"
+#include "rtconf.h"
 
 #define ARRAY_SIZE(x)   (sizeof(x)/sizeof(x[0]))
 #define TEST_BIT(x,addr) (1UL & (addr[x/8] >> (x & 0xff)))
@@ -31,38 +31,5 @@ void utils_start_ringing(const gchar *dial);
 void utils_stop_ringing(const gchar *dial);
 int utils_ringing_status(void);
 void utils_sms_notify(void);
-
-GdkPixbuf *utils_get_photo_default(void);
-GdkPixbuf *utils_get_photo_unknown(void);
-GdkPixbuf *utils_get_photo(const gchar *path);
-GdkPixbuf *utils_get_icon(const gchar *name);
-
-typedef enum {
-	UTILS_AUDIO_ROUTE_UNKNOWN=-1,
-	UTILS_AUDIO_ROUTE_SPEAKER=0,
-	UTILS_AUDIO_ROUTE_HANDSET,
-	UTILS_AUDIO_ROUTE_HEADSET,
-	UTILS_AUDIO_ROUTE_BT,
-	UTILS_AUDIO_ROUTE_COUNT
-} utils_audio_route_t;
-
-typedef enum {
-	UTILS_MODE_NO_CALL=0,
-	UTILS_MODE_RINGING,
-	UTILS_MODE_INCALL,
-} utils_call_mode_t;
-
-GDBusConnection *get_dbus_connection(void);
-
-void utils_init(void);
-bool utils_set_call_mode(utils_call_mode_t mode);
-void utils_external_exec(conf_ext_t type, ...);
-void utils_gst_init(int *argc, char ***argv);
-void utils_media_stop(void);
-int utils_media_play_once(gchar *path);
-int utils_media_play_repeat(gchar *path);
-
-int utils_audio_route_set(utils_audio_route_t route);
-int utils_audio_route_get(void);
 
 #endif

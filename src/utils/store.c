@@ -60,7 +60,7 @@
 static sqlite3 *sqlitedb=NULL;
 static void store_sqlite_error(const char *module)
 {
-sphone_log(LL_ERR, "%s error: %s\n",module,sqlite3_errmsg(sqlitedb));
+sphone_log(LL_ERR, "%s error: %s", module, sqlite3_errmsg(sqlitedb));
 }
 
 /*
@@ -71,7 +71,7 @@ int store_sql_exec(const gchar *sql, sqlite3_stmt **ret_stmt, GType t, ...)
 	int ret=0;
 	sqlite3_stmt *stmt=NULL;
 	while(*sql){
-		sphone_log(LL_DEBUG, "store_sql_exec: exec %s\n",sql);
+		sphone_log(LL_DEBUG, "store_sql_exec: exec %s",sql);
 		if(stmt)
 			sqlite3_finalize(stmt);
 		stmt=NULL;
@@ -89,7 +89,7 @@ int store_sql_exec(const gchar *sql, sqlite3_stmt **ret_stmt, GType t, ...)
 		while(t!=G_TYPE_INVALID){
 			if(t==G_TYPE_STRING){
 				gchar *value=va_arg(ap,gchar *);
-				sphone_log(LL_DEBUG, "store_sql_exec bind string %s \n",value);
+				sphone_log(LL_DEBUG, "store_sql_exec bind string %s",value);
 				if(sqlite3_bind_text(stmt,i++,value,-1,SQLITE_STATIC)){
 					store_sqlite_error("store_sql_exec sqlite3_bind_text");
 					goto error_va;
@@ -97,14 +97,14 @@ int store_sql_exec(const gchar *sql, sqlite3_stmt **ret_stmt, GType t, ...)
 			}
 			else if(t==G_TYPE_INT){
 				int value=va_arg(ap,int);
-				sphone_log(LL_DEBUG, "store_sql_exec bind int %d\n",value);
+				sphone_log(LL_DEBUG, "store_sql_exec bind int %d",value);
 				if(sqlite3_bind_int(stmt,i++,value)){
 					store_sqlite_error("store_sql_exec sqlite3_bind_int");
 					goto error_va;
 				}
 			}
 			else
-			sphone_log(LL_ERR, "store_sql_exec sqlite3_bind_text: Invalid parameter type\n");
+			sphone_log(LL_ERR, "store_sql_exec sqlite3_bind_text: Invalid parameter type");
 			t=va_arg(ap,GType);
 		}
 error_va:
@@ -112,7 +112,7 @@ error_va:
 		
 		ret=sqlite3_step(stmt);
 		if(ret==SQLITE_ROW)
-			sphone_log(LL_DEBUG, "store_sql_exec  row returned\n");
+			sphone_log(LL_DEBUG, "store_sql_exec  row returned");
 		if(ret!=SQLITE_DONE && ret!=SQLITE_ROW){
 			store_sqlite_error("store_sql_exec step");
 			goto error;
@@ -125,7 +125,7 @@ error_va:
 		if(stmt)sqlite3_finalize(stmt);
 	
 	if(ret==SQLITE_ROW)
-		sphone_log(LL_DEBUG, "store_sql_exec  row returned2\n");
+		sphone_log(LL_DEBUG, "store_sql_exec  row returned2");
 	return (ret==SQLITE_ROW?1:0);
 error:
 	if(stmt)sqlite3_finalize(stmt);
@@ -143,27 +143,27 @@ int store_init(void)
 	gboolean newdb=FALSE;
 	sqlite3_stmt *stmt=NULL;
 	gchar *dbpath;
-	sphone_log(LL_DEBUG, "store_init start\n");
+	sphone_log(LL_DEBUG, "store_init start");
 	dbpath=g_build_filename(g_get_user_config_dir(),"sphone",NULL);
 	mkdir(dbpath,S_IREAD|S_IWRITE|S_IEXEC);
 	g_free(dbpath);
 	dbpath=g_build_filename(g_get_user_config_dir(),"sphone","store.sqlite",NULL);
-	sphone_log(LL_DEBUG, "store_init open DB %s\n",dbpath);
+	sphone_log(LL_DEBUG, "store_init open DB %s",dbpath);
 	ret=sqlite3_open_v2(dbpath,&sqlitedb,SQLITE_OPEN_READWRITE,NULL);
 	if(ret==SQLITE_CANTOPEN){
 		if(sqlitedb)sqlite3_close(sqlitedb);
 		ret=sqlite3_open_v2(dbpath,&sqlitedb,SQLITE_OPEN_READWRITE|SQLITE_OPEN_CREATE,NULL);
 		newdb=TRUE;
-		sphone_log(LL_DEBUG, "store_init: create new store %s\n",dbpath);
+		sphone_log(LL_DEBUG, "store_init: create new store %s",dbpath);
 	}
 	g_free(dbpath);
 
 	if(ret){
-	sphone_log(LL_ERR, "store_init error: %s\n",sqlite3_errmsg(sqlitedb));
+	sphone_log(LL_ERR, "store_init error: %s",sqlite3_errmsg(sqlitedb));
 		goto error;
 	}
 	else
-		sphone_log(LL_DEBUG, "success\n");
+		sphone_log(LL_DEBUG, "success");
 
 	// Create the DB structure for the newly created DB
 	if(newdb){

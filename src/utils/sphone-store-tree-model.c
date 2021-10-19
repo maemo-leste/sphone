@@ -537,12 +537,12 @@ sphone_store_tree_model_get_value (GtkTreeModel *tree_model,GtkTreeIter  *iter,g
 				entry->name=g_strdup((const gchar *)sqlite3_column_text(stmt,0));
 				const gchar *picture=(const gchar *)sqlite3_column_text(stmt,1);
 				entry->dial=g_strdup((const gchar *)sqlite3_column_text(stmt,2));
-				if(entry->name==NULL && picture==NULL)
-					entry->photo=utils_get_photo_unknown();
-				else if(picture==NULL)
-					entry->photo=utils_get_photo_default();
+				if(entry->name== NULL && picture==NULL)
+					entry->photo = NULL; //TODO: replace utils_get_photo_unknown();
+				else if(picture == NULL)
+					entry->photo = NULL; //TODO: utils_get_photo_default();
 				else
-					entry->photo=utils_get_photo(picture);
+					entry->photo = NULL; //TODO: replace utils_get_photo(picture);
 
 				if(private->filter->type==FILTER_CALL || private->filter->type==FILTER_SMS){
 					//select contact.name, contact.picture, dial.dial, interaction.date,
@@ -801,7 +801,7 @@ sphone_store_tree_model_finalize (GObject *object)
 	SphoneStoreTreeModel *store=SPHONE_STORE_TREE_MODEL(object);
 	SphoneStoreTreeModelPrivate *private=SPHONE_STORE_TREE_MODEL_GET_PRIVATE(store);
 
-	sphone_log(LL_DEBUG, "sphone_store_tree_model_finalize\n");
+	sphone_log(LL_DEBUG, "sphone_store_tree_model_finalize");
 	
 	if(private->cache){
 		GList *cache=private->cache;

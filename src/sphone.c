@@ -61,6 +61,9 @@
 #include "book-import.h"
 #include "gui-contact-view.h"
 #include "sphone-log.h"
+#include "sphone-conf.h"
+#include "sphone-modules.h"
+#include "datapipes.h"
 
 typedef enum {
 	SPHONE_CMD_DIALER_OPEN=1,
@@ -118,10 +121,6 @@ int main (int argc, char *argv[])
 	textdomain (GETTEXT_PACKAGE);
 #endif
 
-	gtk_set_locale ();
-	gtk_init(&argc, &argv);
-	utils_gst_init(&argc, &argv);
-
 	sphone_cmd command = SPHONE_CMD_NONE;
 	gboolean is_done=FALSE;
 	int c;
@@ -169,7 +168,7 @@ int main (int argc, char *argv[])
        }
 	}
 	
-	sphone_log_open(PRG_NAME, LOG_USER, SPHONE_LOG_SYSLOG);
+	sphone_log_open(PRG_NAME, LOG_USER, SPHONE_LOG_STDERR);
 	sphone_log_set_verbosity(verbosity);
 	
 	gchar** numbersplit = NULL;
@@ -192,17 +191,32 @@ int main (int argc, char *argv[])
 	                                               ,"options", SPHONE_CMD_OPTIONS, NULL);
 
 	if (!is_done && !unique_app_is_running(unique)) {
-		sphone_log(LL_DEBUG,  "Staring new instance\n");
+		sphone_log(LL_INFO,  "Staring new instance");
+		
+		datapipes_init();
+		
+		if(!sphone_conf_init()) {
+			sphone_log(LL_ERR,  "sphone_conf_init failed");
+			return -1;
+		}
+
+		if(!sphone_modules_init()) {
+			sphone_log(LL_ERR,  "sphone_modules_init failed");
+			return -1;
+		}
+		
+		gtk_set_locale();
+		gtk_init(&argc, &argv);
+
 		SphoneManager *manager=g_object_new(sphone_manager_get_type(),NULL);
 		store_init();
 		gui_calls_manager_init(manager);
 		gui_dialer_init(manager);
 		gui_sms_init(manager);
 		sphone_manager_populate(manager);
-		utils_init();
 		
 		if(number)
-			sphone_log(LL_DEBUG,  "number: %s\n", number);
+			sphone_log(LL_DEBUG,  "number: %s", number);
 		
 		switch (command) {
 			case SPHONE_CMD_DIALER_OPEN:
@@ -228,11 +242,13 @@ int main (int argc, char *argv[])
 		g_signal_connect(G_OBJECT(unique), "message-received", G_CALLBACK(main_message_received_callback), NULL);
 		
 		gtk_main();
-	}
-	else {
-		sphone_log(LL_DEBUG, "Instance is already running, sending commands ...\n");
+		
+		sphone_modules_exit();
+		datapipes_exit();
+	} else {
+		sphone_log(LL_DEBUG, "Instance is already running, sending commands ...");
 		if(number)
-			sphone_log(LL_DEBUG,  "number: %s\n", number);
+			sphone_log(LL_DEBUG,  "number: %s", number);
 		if(command != SPHONE_CMD_NONE) {
 			UniqueMessageData *message = NULL;
 			if(number) {

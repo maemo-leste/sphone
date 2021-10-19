@@ -72,32 +72,32 @@ static void _sphone_manager_network_properties_callback(gpointer *data1, gchar *
 	
 	SphoneManagerPrivate *private = SPHONE_MANAGER_GET_PRIVATE(SPHONE_MANAGER(object));
 	
-	sphone_log(LL_DEBUG, "_sphone_manager_network_properties_callback %s %s\n", name, G_VALUE_TYPE_NAME(value));
+	sphone_log(LL_DEBUG, "_sphone_manager_network_properties_callback %s %s", name, G_VALUE_TYPE_NAME(value));
 
 	if(!g_strcmp0(name, "Strength")) {
 		private->network_properties.strength = g_value_get_uint(value);
 		g_signal_emit(object,manager_signals[NETWORK_PROPERT_STRENGTH_CHANGE], 0, private->network_properties.strength);
-		sphone_log(LL_DEBUG, "	  value='%d'\n",private->network_properties.strength);
+		sphone_log(LL_DEBUG, "	  value='%d'",private->network_properties.strength);
 	} else if(!g_strcmp0(name, "CellId")) {
 		guint v = g_value_get_uint(value);
 		//TODO: replace?
 		//g_signal_emit(object,manager_signals[NETWORK_PROPERT_STRENGTH_CHANGE],0,v);
-		sphone_log(LL_DEBUG, "	  value='%d'\n",v);
+		sphone_log(LL_DEBUG, "	  value='%d'",v);
 	} else if(!g_strcmp0(name,"Technology")) {
 		g_free(private->network_properties.technology);
 		private->network_properties.technology = g_value_dup_string(value);
 		g_signal_emit(object, manager_signals[NETWORK_PROPERT_TECHNOLOGY_CHANGE], 0, private->network_properties.technology);
-		sphone_log(LL_DEBUG, "	  value='%s'\n",private->network_properties.technology);
+		sphone_log(LL_DEBUG, "	  value='%s'",private->network_properties.technology);
 	} else if(!g_strcmp0(name,"Name")) {
 		g_free(private->network_properties.noperator);
 		private->network_properties.noperator=g_value_dup_string(value);
 		g_signal_emit(object, manager_signals[NETWORK_PROPERT_OPERATOR_CHANGE], 0, private->network_properties.noperator);
-		sphone_log(LL_DEBUG, "	  value='%s'\n",private->network_properties.noperator);
+		sphone_log(LL_DEBUG, "	  value='%s'",private->network_properties.noperator);
 	} else if(!g_strcmp0(name, "Status")) {
 		g_free(private->network_properties.status);
 		private->network_properties.status = g_value_dup_string(value);
 		g_signal_emit(object,manager_signals[NETWORK_PROPERT_STATUS_CHANGE],0,private->network_properties.status);
-		sphone_log(LL_DEBUG, "	  value='%s'\n",private->network_properties.status);
+		sphone_log(LL_DEBUG, "	  value='%s'",private->network_properties.status);
 	}
 }
 
@@ -106,13 +106,13 @@ static void sphone_manager_call_status_changed_cb(SphoneCall *call, gchar *statu
 	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(SPHONE_MANAGER(object));
 
 	g_object_get(call,"dbus_path",&path,NULL);
-	sphone_log(LL_DEBUG, "sphone_manager_call_status_changed_cb %s\n",path);
+	sphone_log(LL_DEBUG, "sphone_manager_call_status_changed_cb %s",path);
 	if(g_strcmp0("disconnected",status))
 		return;
 	
 	g_hash_table_remove(private->calls, path);
 
-	sphone_log(LL_DEBUG, "Call table length=%d\n",g_hash_table_size(private->calls));
+	sphone_log(LL_DEBUG, "Call table length=%d",g_hash_table_size(private->calls));
 }
 
 static void _sphone_manager_voice_call_callback(const OfonoCallProperties *calls, size_t count, void *object)
@@ -127,21 +127,20 @@ static void _sphone_manager_voice_call_callback(const OfonoCallProperties *calls
 	for(size_t i = 0; i < count; ++i) {
 		const gchar *path = calls[i].path;
 		if(!g_hash_table_lookup(private->calls, path)) {
-			sphone_log(LL_DEBUG, "Add call %s %d\n", path, g_str_hash(path));
+			sphone_log(LL_DEBUG, "Add call %s %d", path, g_str_hash(path));
 			SphoneCall *call=g_object_new(sphone_call_get_type(), "dbus_path", path, NULL);
 			g_signal_connect(call, "status_changed", G_CALLBACK(sphone_manager_call_status_changed_cb), object);
 			g_hash_table_insert(private->calls, g_strdup(path), call);
 			g_signal_emit(object,manager_signals[CALL_ADDED], 0, call);
 		}
 	}
-	sphone_log(LL_DEBUG, "Call table length=%d\n",g_hash_table_size(private->calls));
+	sphone_log(LL_DEBUG, "Call table length=%d",g_hash_table_size(private->calls));
 }
 
 static void _sphone_manager_sms_incoming_callback(const gchar *from, const gchar *text, time_t time, void *data)
 {
 	GObject *object = (GObject*)data;
 	store_sms_add(STORE_INTERACTION_DIRECTION_INCOMING, time, from, text);
-	utils_external_exec(CONF_ATTR_EXTERNAL_SMS_INCOMING, from, text, NULL);
 	
     char time_string[256];
     strftime(time_string, sizeof(time_string), "%m-%d-%Y %H-%M (mon=%b)", localtime(&time));
@@ -153,7 +152,7 @@ static void
 sphone_manager_init (SphoneManager *object)
 {
 	SphoneManagerPrivate *private=SPHONE_MANAGER_GET_PRIVATE(SPHONE_MANAGER(object));
-	sphone_log(LL_DEBUG, "sphone_manager_init %p\n", object);
+	sphone_log(LL_DEBUG, "sphone_manager_init %p", object);
 
 	ofono_init();
 	ofono_read_network_properties(&private->network_properties);
@@ -396,8 +395,6 @@ int sphone_manager_sms_send(SphoneManager *manager, const gchar *to, const char 
 {
 	(void)manager;
 	store_sms_add(STORE_INTERACTION_DIRECTION_OUTGOING, time(NULL),to,text);
-	utils_external_exec(CONF_ATTR_EXTERNAL_SMS_OUTGOING,to,text,NULL);
-	
 	return ofono_sms_send(to,text);
 }
 

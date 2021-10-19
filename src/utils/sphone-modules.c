@@ -1,6 +1,8 @@
 /**
  * @file sphone-modules.c
- * Module handling for sphone
+ * module handling for sphone
+ * @author David Weinehall <david.weinehall@nokia.com>
+ * @author Jonathan Wilson <jfwfreo@tpgi.com.au>
  * @author Carl Klemm <carl@uvos.xyz>
  *
  * sphone is free software; you can redistribute it and/or modify
@@ -16,7 +18,6 @@
  * License along with sphone.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <glib.h>
-#include <gmodule.h>
 #include "sphone-modules.h"
 #include "sphone-log.h"
 #include "sphone-conf.h"
@@ -24,19 +25,24 @@
 /** List of all loaded modules */
 static GSList *modules = NULL;
 
+static module_info_struct *sphone_modules_get_info(GModule *module)
+{
+	gpointer mip = NULL;
+	if(g_module_symbol(module, "module_info", (void**)&mip) == FALSE)
+		return NULL;
+	return (module_info_struct*)mip;
+}
+
 static gboolean sphone_modules_check_provides(module_info_struct *new_module_info)
 {
 	for (GSList *module = modules; module; module = module->next) {
-		gpointer mip = NULL;
-		module_info_struct *module_info;
-		if (g_module_symbol(module->data, "module_info", &mip) == FALSE)
-			continue;
-		module_info = (module_info_struct*)mip;
+		module_info_struct *module_info = sphone_modules_get_info(module->data);
 		for (int i = 0; new_module_info->provides[i]; ++i) {
 			for (int j = 0; module_info->provides[j]; ++j) {
 				if (g_strcmp0(new_module_info->provides[i], module_info->provides[j]) == 0) {
-					sphone_log(LL_WARN, "Module %s has the same provides as module %s, and will not be loaded.",
-							new_module_info->name, module_info->name);
+					sphone_log(LL_WARN,
+							   "Module %s has the same provides as module %s, and will not be loaded.",
+							   new_module_info->name, module_info->name);
 					return FALSE;
 				}
 			}
@@ -47,14 +53,10 @@ static gboolean sphone_modules_check_provides(module_info_struct *new_module_inf
 
 static gboolean sphone_modules_check_essential(void)
 {
-	gboolean foundRtconf = FALSE;
+	gboolean foundRtconf = TRUE;
 	
 	for (GSList *module = modules; module; module = module->next) {
-		gpointer mip = NULL;
-		module_info_struct *module_info;
-		if (g_module_symbol(module->data, "module_info", (void**)&mip) == FALSE)
-			continue;
-		module_info = (module_info_struct*)mip;
+		module_info_struct *module_info = sphone_modules_get_info(module->data);
 		for (int j = 0; module_info->provides[j]; ++j) {
 			if (g_strcmp0("rtconf", module_info->provides[j]) == 0) {
 				foundRtconf = TRUE;
@@ -71,14 +73,36 @@ static gboolean sphone_modules_check_essential(void)
 	return TRUE;
 }
 
+static gboolean sphone_modules_init_modules(void)
+{
+	for (GSList *module = modules; module; module = module->next) {
+		gpointer fnp = NULL;
+		sphone_module_init_fn *init_fn;
+		if (g_module_symbol(module->data, "sphone_module_init", (void**)&fnp) == FALSE) {
+			sphone_log(LL_ERR, "faled to load module %s: missing symbol sphone_module_init",
+					   sphone_modules_get_info(module->data)->name);
+			return FALSE;
+		}
+		init_fn = (sphone_module_init_fn*)fnp;
+		const char* result = init_fn();
+		if(result) {
+			sphone_log(LL_ERR, "faled to load module %s: %s",
+					   sphone_modules_get_info(module->data)->name, result);
+			return FALSE;
+		}
+	}
+
+	return TRUE;
+}
+
 static void sphone_modules_load(gchar **modlist)
 {
 	gchar *path = NULL;
 	int i;
 
-	path = sphone_conf_get_string(MCE_CONF_MODULES_GROUP,
-				   MCE_CONF_MODULES_PATH,
-				   DEFAULT_MCE_MODULE_PATH,
+	path = sphone_conf_get_string(SPHONE_CONF_MODULES_GROUP,
+				   SPHONE_CONF_MODULES_PATH,
+				   DEFAULT_SPHONE_MODULE_PATH,
 				   NULL);
 
 	for (i = 0; modlist[i]; i++) {
@@ -88,14 +112,14 @@ static void sphone_modules_load(gchar **modlist)
 		sphone_log(LL_DEBUG, "Loading module: %s from %s", modlist[i], path);
 
 		if ((module = g_module_open(tmp, 0)) != NULL) {
-			gpointer mip = NULL;
+			module_info_struct *info = sphone_modules_get_info(module);
 			gboolean blockLoad = FALSE;
 
-			if (g_module_symbol(module, "module_info", &mip) == FALSE) {
+			if (!info) {
 				sphone_log(LL_ERR, "Failed to retrieve module information for: %s", modlist[i]);
 				g_module_close(module);
 				blockLoad = TRUE;
-			} else if (!sphone_modules_check_provides((module_info_struct*)mip)) {
+			} else if (!sphone_modules_check_provides(info)) {
 				g_module_close(module);
 				blockLoad = TRUE;
 			}
@@ -120,38 +144,26 @@ static void sphone_modules_load(gchar **modlist)
 gboolean sphone_modules_init(void)
 {
 	gchar **modlist = NULL;
-	gchar **modlist_device = NULL;
-	gchar **modlist_user = NULL;
 	gsize length;
 
 	/* Get the list modules to load */
-	modlist = sphone_conf_get_string_list(MCE_CONF_MODULES_GROUP,
-					   MCE_CONF_MODULES_MODULES,
-					   &length,
-					   NULL);
-
-	modlist_device = sphone_conf_get_string_list(MCE_CONF_MODULES_GROUP,
-					   MCE_CONF_MODULES_DEVMODULES,
-					   &length,
-					   NULL);
-
-	modlist_user = sphone_conf_get_string_list(MCE_CONF_MODULES_GROUP,
-					   MCE_CONF_MODULES_USRMODULES,
+	modlist = sphone_conf_get_string_list(SPHONE_CONF_MODULES_GROUP,
+					   SPHONE_CONF_MODULES_MODULES,
 					   &length,
 					   NULL);
 
 	if (modlist)
+	{
 		sphone_modules_load(modlist);
-	if (modlist_device)
-		sphone_modules_load(modlist_device);
-	if (modlist_user)
-		sphone_modules_load(modlist_user);
+		g_strfreev(modlist);
 
-	g_strfreev(modlist);
-	g_strfreev(modlist_device);
-	g_strfreev(modlist_user);
+		if(!sphone_modules_check_essential())
+			return FALSE;
 
-	return sphone_modules_check_essential();
+		return sphone_modules_init_modules();
+	}
+
+	return TRUE;
 }
 
 /**

@@ -74,7 +74,7 @@ sphone_call_finalize (GObject *object)
 {
 	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(SPHONE_CALL(object));
 	
-	sphone_log(LL_DEBUG, "Clear call object \n");
+	sphone_log(LL_DEBUG, "Clear call object");
 	ofono_voice_call_properties_remove_handler(private->callback_id);
 	if(private->dbus_path)g_free(private->dbus_path);
 	ofono_call_properties_free(private->call_properties);
@@ -92,7 +92,7 @@ static void _sphone_call_properties_callback(call_property_t property, const gch
 	}else if(property == CALL_PROPERTY_STATE){
 		g_free(private->call_properties->state);
 		private->call_properties->state=g_strdup(value);
-		sphone_log(LL_DEBUG, "	  value='%s'\n",private->call_properties->state);
+		sphone_log(LL_DEBUG, "	  value='%s'",private->call_properties->state);
 
 		if(!g_strcmp0(private->call_properties->state,"dialing")
 		   || !g_strcmp0(private->call_properties->state,"alerting")) {
@@ -102,13 +102,6 @@ static void _sphone_call_properties_callback(call_property_t property, const gch
 			private->direction=STORE_INTERACTION_DIRECTION_INCOMING;
 		}
 		if(!g_strcmp0(private->call_properties->state,"active")){
-			if(private->answer_status!=STORE_INTERACTION_CALL_STATUS_ESTABLISHED){
-				if(private->direction==STORE_INTERACTION_DIRECTION_OUTGOING){
-					utils_external_exec(CONF_ATTR_EXTERNAL_CALL_OUTGOING_ANSWERED,private->call_properties->line_identifier,NULL);
-				}else{
-					utils_external_exec(CONF_ATTR_EXTERNAL_CALL_INCOMING_ANSWERED,private->call_properties->line_identifier,NULL);
-				}
-			}
 			private->answer_status=STORE_INTERACTION_CALL_STATUS_ESTABLISHED;
 		}
 		if(!g_strcmp0(private->call_properties->state,"disconnected")){
@@ -121,13 +114,8 @@ static void _sphone_call_properties_callback(call_property_t property, const gch
 				start_t=mktime(&tm);
 				duration=now_t-start_t;
 			}
-			if(private->answer_status==STORE_INTERACTION_CALL_STATUS_MISSED){  // missed call
-				if(private->direction==STORE_INTERACTION_DIRECTION_OUTGOING){
-					utils_external_exec(CONF_ATTR_EXTERNAL_CALL_OUTGOING_MISSED,private->call_properties->line_identifier,NULL);
-				}else{
-					utils_external_exec(CONF_ATTR_EXTERNAL_CALL_INCOMING_MISSED,private->call_properties->line_identifier,NULL);
-				}
-			}
+			/*if(private->answer_status==STORE_INTERACTION_CALL_STATUS_MISSED){  // missed call
+			}*/
 			store_call_add(private->direction, start_t,private->call_properties->line_identifier,private->answer_status, duration);
 		}
 		
@@ -152,11 +140,9 @@ sphone_call_set_property (GObject *object, guint prop_id, const GValue *value, G
 			if(!g_strcmp0(private->call_properties->state, "dialing")
 			|| !g_strcmp0(private->call_properties->state, "alerting")){
 				private->direction=STORE_INTERACTION_DIRECTION_OUTGOING;
-				utils_external_exec(CONF_ATTR_EXTERNAL_CALL_OUTGOING,private->call_properties->line_identifier,NULL);
 			}
 			if(!g_strcmp0(private->call_properties->state,"incoming")){
 				private->direction=STORE_INTERACTION_DIRECTION_INCOMING;
-				utils_external_exec(CONF_ATTR_EXTERNAL_CALL_INCOMING,private->call_properties->line_identifier,NULL);
 			}
 			private->callback_id = ofono_voice_call_properties_add_handler(private->dbus_path, _sphone_call_properties_callback, object);
 		}
@@ -174,7 +160,7 @@ sphone_call_get_property (GObject *object, guint prop_id, GValue *value, GParamS
 
 	SphoneCall *call=SPHONE_CALL(object);
 	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(call);
-	sphone_log(LL_DEBUG, "%s: %p\n", __func__, private);
+	sphone_log(LL_DEBUG, "%s: %p", __func__, private);
 
 	switch (prop_id)
 	{
@@ -272,7 +258,7 @@ void sphone_call_answer (SphoneCall *object)
 {
 	SphoneCall *call=SPHONE_CALL(object);
 	SphoneCallPrivate *private=SPHONE_CALL_GET_PRIVATE(call);
-	sphone_log(LL_DEBUG, "%s: %p\n", __func__, private);
+	sphone_log(LL_DEBUG, "%s: %p", __func__, private);
 
 	ofono_call_answer(private->dbus_path);
 }

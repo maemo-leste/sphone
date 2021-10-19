@@ -22,6 +22,8 @@
 #define SPHONE_LOG_SYSLOG			1	/**< Log to syslog */
 #define SPHONE_LOG_STDERR			0	/**< Log to stderr */
 
+#define sphone_module_log(loglevel, fmt, ...) sphone_log(loglevel, "%s: " fmt, MODULE_NAME, ##__VA_ARGS__)
+
 /** Severity of loglevels */
 typedef enum {
 	LL_NONE = 0,			/**< No logging at all */

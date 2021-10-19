@@ -17,7 +17,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -25,186 +24,12 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <gtk/gtk.h>
-#include <gst/gst.h>
-#include <alsa/asoundlib.h>
 
 #include "utils.h"
-#include "pulse.h"
 #include "sphone-log.h"
-
-#define ICONS_PATH "/usr/share/sphone/icons/"
-
-/** MCE D-Bus service */
-#define MCE_SERVICE			"com.nokia.mce"
-/** MCE D-Bus Request interface */
-#define MCE_REQUEST_IF			"com.nokia.mce.request"
-/** MCE D-Bus Signal interface */
-#define MCE_SIGNAL_IF			"com.nokia.mce.signal"
-/** MCE D-Bus Request path */
-#define MCE_REQUEST_PATH		"/com/nokia/mce/request"
-/** MCE D-Bus Signal path */
-#define MCE_SIGNAL_PATH			"/com/nokia/mce/signal"
-
-/** No ongoing call */
-#define MCE_CALL_STATE_NONE			"none"
-/** Call ringing */
-#define MCE_CALL_STATE_RINGING			"ringing"
-/** Call on-going */
-#define MCE_CALL_STATE_ACTIVE			"active"
-/** Normal call */
-#define MCE_NORMAL_CALL				"normal"
-/** Emergency call  */
-#define MCE_EMERGENCY_CALL			"emergency"
-
-int conf_key_set_stickiness(char *key_code, char *cmd, char *arg);
-int conf_key_set_code(char *key_code, char *cmd, char *arg);
-int conf_key_set_power_key(char *key_code, char *cmd, char *arg);
-static int utils_audio_route_save(void);
-static int utils_audio_route_restore(void);
-
-struct{
-	GDBusConnection *s_bus_conn;
-	struct sphone_pa_if pa_if;
-} utils_priv;
-
-GDBusConnection *get_dbus_connection(void)
-{
-	GError *error = NULL;
-	char *addr;
-	
-	GDBusConnection *s_bus_conn;
-
-	#if !GLIB_CHECK_VERSION(2,35,0)
-	g_type_init();
-	#endif
-
-	addr = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
-	if (addr == NULL) {
-		g_error("fail to get dbus addr: %s\n", error->message);
-		g_free(error);
-		return NULL;
-	}
-
-	s_bus_conn = g_dbus_connection_new_for_address_sync(addr,
-			G_DBUS_CONNECTION_FLAGS_AUTHENTICATION_CLIENT |
-			G_DBUS_CONNECTION_FLAGS_MESSAGE_BUS_CONNECTION,
-			NULL, NULL, &error);
-
-	if (s_bus_conn == NULL) {
-		g_error("fail to create dbus connection: %s\n", error->message);
-		g_free(error);
-	}
-
-	return s_bus_conn;
-}
-
-void utils_init(void)
-{
-	utils_priv.s_bus_conn = get_dbus_connection();
-	sphone_pa_create_interface(&utils_priv.pa_if);
-}
-
-bool utils_set_call_mode(utils_call_mode_t mode)
-{
-	if(!utils_priv.s_bus_conn)
-		return false;
-
-	GVariant *val;
-	GVariant *result;
-	GError *error = NULL;
-
-	if(mode == UTILS_MODE_NO_CALL) {
-		val = g_variant_new("(ss)", MCE_CALL_STATE_NONE, MCE_NORMAL_CALL);
-		sphone_log(LL_DEBUG, "%s: %s\n", __func__, MCE_CALL_STATE_NONE);
-		sphone_pa_audio_route_set_playback(&utils_priv.pa_if);
-	}
-	else if(mode == UTILS_MODE_RINGING) {
-		val = g_variant_new("(ss)", MCE_CALL_STATE_RINGING, MCE_NORMAL_CALL);
-		sphone_log(LL_DEBUG, "%s: %s\n", __func__, MCE_CALL_STATE_RINGING);
-		sphone_pa_audio_route_set_playback(&utils_priv.pa_if);
-	}
-	else if(mode == UTILS_MODE_INCALL) {
-		val = g_variant_new("(ss)", MCE_CALL_STATE_ACTIVE, MCE_NORMAL_CALL);
-		sphone_log(LL_DEBUG, "%s: %s\n", __func__, MCE_CALL_STATE_ACTIVE);
-		sphone_pa_audio_route_set_in_call(&utils_priv.pa_if);
-	}
-	else {
-		return false;
-	}
-
-	result = g_dbus_connection_call_sync(utils_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
-		MCE_REQUEST_IF, "req_call_state_change", val, NULL,
-		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-
-	if(error)
-		return false;
-
-	g_variant_unref(result);
-	return true;
-}
-
-/*
- Start/stop vibration
- */
-
-static void utils_vibrate_message(void) {
-	if(!utils_priv.s_bus_conn)
-		return;
-
-	GVariant *val;
-	GVariant *result;
-	GError *error = NULL;
-
-	val = g_variant_new("(s)", "PatternIncomingMessage");
-	result = g_dbus_connection_call_sync(utils_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
-		MCE_REQUEST_IF, "req_vibrator_pattern_activate", val, NULL,
-		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-
-	if(error)
-		return;
-
-	g_variant_unref(result);
-}
-
-static void utils_stop_ringing_vibrate(void)
-{
-	if(!utils_priv.s_bus_conn)
-		return;
-
-	GVariant *val;
-	GVariant *result;
-	GError *error = NULL;
-
-	val = g_variant_new("(s)", "PatternIncomingCall");
-	result = g_dbus_connection_call_sync(utils_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
-		MCE_REQUEST_IF, "req_vibrator_pattern_deactivate", val, NULL,
-		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-
-	if(error)
-		return;
-
-	g_variant_unref(result);
-}
-
-static void utils_start_ringing_vibrate(void)
-{
-	if(!utils_priv.s_bus_conn)
-		return;
-
-	GVariant *val;
-	GVariant *result;
-	GError *error = NULL;
-
-	val = g_variant_new("(s)", "PatternIncomingCall");
-	result = g_dbus_connection_call_sync(utils_priv.s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
-		MCE_REQUEST_IF, "req_vibrator_pattern_activate", val, NULL,
-		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-
-	if(error)
-		return;
-
-	g_variant_unref(result);
-}
+#include "datapipes.h"
+#include "rtconf.h"
+#include "types.h"
 
 static int utils_ringing_state=0;
 /*
@@ -215,20 +40,21 @@ static int utils_ringing_state=0;
 */
 void utils_start_ringing(const gchar *dial)
 {
+	(void)dial;
 	if(utils_ringing_state)
 		return;
 	utils_ringing_state=1;
 
-	if(conf_vibration_enabled())
-		utils_start_ringing_vibrate();
+	if(rtconf_vibration_enabled())
+		execute_datapipe(&vibrate_pipe, GINT_TO_POINTER(SPHONE_VIBRATE_CALL));
 
-	if(conf_ringer_enabled()){
-		char *path=conf_call_sound_path();
-		if(path)
-			utils_media_play_repeat(path);
+	if(rtconf_ringer_enabled()){
+		char *path=rtconf_call_sound_path();
+		if(path) {
+			execute_datapipe(&audio_play_looping_pipe, path);
+			g_free(path);
+		}
 	}
-	
-	utils_external_exec(CONF_ATTR_EXTERNAL_RINGING_ON, dial, NULL);
 }
 
 /*
@@ -239,13 +65,13 @@ void utils_start_ringing(const gchar *dial)
 */
 void utils_stop_ringing(const gchar *dial)
 {
+	(void)dial;
 	if(!utils_ringing_state)
 		return;
 	utils_ringing_state=0;
 	
-	utils_stop_ringing_vibrate();
-	utils_media_stop();
-	utils_external_exec(CONF_ATTR_EXTERNAL_RINGING_OFF,dial,NULL);
+	execute_datapipe(&vibrate_pipe, GINT_TO_POINTER(SPHONE_VIBRATE_STOP));
+	execute_datapipe(&audio_stop_pipe, NULL);
 }
 
 /*
@@ -253,7 +79,7 @@ void utils_stop_ringing(const gchar *dial)
  */
 int utils_ringing_status(void)
 {
-	return utils_ringing_state && (conf_ringer_enabled() || conf_vibration_enabled());
+	return utils_ringing_state && (rtconf_ringer_enabled() || rtconf_vibration_enabled());
 }
 
 /*
@@ -263,245 +89,15 @@ int utils_ringing_status(void)
 */
 void utils_sms_notify(void)
 {
-	if(conf_ringer_enabled()) {
-		char *path = conf_sms_sound_path();
+	if(rtconf_ringer_enabled()) {
+		char *path = rtconf_sms_sound_path();
 
 		if(path) {
-			utils_media_play_once(path);
+			execute_datapipe(&audio_play_once_pipe, path);
 			g_free(path);
 		}
 	}
 	
-	if(conf_vibration_enabled())
-		utils_vibrate_message();
-}
-
-static GdkPixbuf *photo_default=NULL;
-static GdkPixbuf *photo_unknown=NULL;
-
-GdkPixbuf *utils_get_photo_default(void)
-{
-	if(!photo_default){
-		sphone_log(LL_DEBUG, "utils_get_photo_default load %s\n",ICONS_PATH "contact-person.png");
-		photo_default=gdk_pixbuf_new_from_file(ICONS_PATH "contact-person.png", NULL);
-	}
-	g_object_ref(G_OBJECT(photo_default));
-	return photo_default;
-}
-
-GdkPixbuf *utils_get_photo_unknown(void)
-{
-	if(!photo_unknown){
-		sphone_log(LL_DEBUG, "utils_get_photo_unknown load %s\n",ICONS_PATH "contact-person-unknown.png");
-		photo_unknown=gdk_pixbuf_new_from_file(ICONS_PATH "contact-person-unknown.png", NULL);
-	}
-	g_object_ref(G_OBJECT(photo_unknown));
-	return photo_unknown;
-}
-
-GdkPixbuf *utils_get_photo(const gchar *path)
-{
-	//TODO: implement?
-	(void)path;
-	return NULL;
-}
-
-GdkPixbuf *utils_get_icon(const gchar *name)
-{
-	gchar *path=g_build_filename(ICONS_PATH,name,NULL);
-	sphone_log(LL_DEBUG, "utils_get_icon load %s\n",path);
-	GdkPixbuf *icon=gdk_pixbuf_new_from_file(path, NULL);
-	g_free(path);
-	return icon;
-}
-
-/****************************************************
- 	External applications execution
- ****************************************************/
-
-void utils_external_exec(conf_ext_t type, ...)
-{
-	sphone_log(LL_DEBUG, "utils_external_exec %i\n", type);
-	gchar *path=conf_get_external_handler(type);
-	if(!path){
-		sphone_log(LL_DEBUG, "utils_external_exec: No external handler for %i\n", type);
-		return;
-	}
-	signal(SIGCHLD, SIG_IGN);	// Prevent zombie processes
-
-	int pid=fork();
-	if(pid==-1){
-	sphone_log(LL_ERR, "Fork failed\n");
-		g_free(path);
-		return;
-	}
-
-	if(pid){
-		sphone_log(LL_DEBUG, "Fork succeeded\n");
-		g_free(path);
-		
-		return;
-	}
-
-	// we are now the child process
-	gchar *args[10];
-	int args_count=1;
-
-	args[0]=path;
-
-	va_list va;
-	va_start(va, type);
-
-	while(args_count<9){
-		gchar *a=va_arg(va, gchar *);
-		if(!a)
-			break;
-		args[args_count++]=a;
-	}
-	args[args_count]=NULL;
-
-	va_end(va);
-	
-	char* typestr = g_strdup_printf("%i", type);
-	setenv("SPHONE_ACTION", typestr, 1);
-	g_free(typestr);
-	execv(path,args);
-sphone_log(LL_ERR, "utils_external_exec: execv failed %s\n",path);
-	exit(0);
-}
-
-/****************************************************
- 	Audio playback routines using gstreamer
- ****************************************************/
-
-static GstElement *utils_gst_play;
-static int utils_gst_repeat;
-
-static int utils_gst_rewind(void)
-{
-	return gst_element_seek_simple(utils_gst_play, GST_FORMAT_TIME, GST_SEEK_FLAG_FLUSH | GST_SEEK_FLAG_KEY_UNIT, 0);
-}
-
-static gboolean utils_gst_bus_callback (GstBus *bus,GstMessage *message, gpointer    data)
-{
-	GMainLoop *loop=(GMainLoop *)data;
-
-	switch (GST_MESSAGE_TYPE (message)) {
-		case GST_MESSAGE_ERROR: {
-			GError *err;
-			gchar *debug;
-
-			gst_message_parse_error (message, &err, &debug);
-		sphone_log(LL_ERR, "Error: %s\n", err->message);
-			g_error_free (err);
-			g_free (debug);
-
-			g_main_loop_quit (loop);
-			break;
-		}
-		case GST_MESSAGE_EOS:
-			/* end-of-stream */
-			if(utils_gst_repeat)
-				utils_gst_rewind();
-			else{
-				gst_element_set_state (utils_gst_play, GST_STATE_NULL);
-				gst_bus_set_flushing(bus, TRUE);
-				utils_media_stop();
-			}
-			break;
-		default:
-			/* unhandled message */
-			break;
-	}
-
-	return TRUE;
-}
-
-void utils_gst_init(int *argc, char ***argv)
-{
-	gst_init(argc, argv);
-}
-
-static int utils_gst_start(gchar *path)
-{
-	if(utils_gst_play)
-		return 0;
-
-	GstBus *bus;
-	gchar *uri=g_filename_to_uri(path,NULL,NULL);
-
-	if(!uri) {
-	sphone_log(LL_ERR, "%s: unable to get uri for %s", __func__, path);
-		return 1;
-	}
-
-	utils_gst_play = gst_element_factory_make ("playbin", "play");
-	g_object_set (G_OBJECT (utils_gst_play), "uri", uri, NULL);
-
-	bus = gst_pipeline_get_bus (GST_PIPELINE (utils_gst_play));
-	gst_bus_add_watch (bus, utils_gst_bus_callback, NULL);
-	gst_object_unref (bus);
-
-	// Set audio routing
-	utils_audio_route_save();
-	sphone_pa_audio_route_set_playback(&utils_priv.pa_if);
-
-	gst_element_set_state (utils_gst_play, GST_STATE_PLAYING);
-	g_free(uri);
-
-	return 0;
-}
-
-void utils_media_stop(void)
-{
-	if(!utils_gst_play)
-		return ;
-
-	gst_element_set_state (utils_gst_play, GST_STATE_NULL);
-	gst_object_unref (GST_OBJECT (utils_gst_play));
-	utils_gst_play=NULL;
-	utils_gst_repeat=0;
-	
-	utils_audio_route_restore();
-}
-
-int utils_media_play_once(gchar *path)
-{
-	utils_gst_repeat=0;
-	return utils_gst_start(path);
-}
-
-int utils_media_play_repeat(gchar *path)
-{
-	utils_gst_repeat=1;
-	return utils_gst_start(path);
-}
-
-static int utils_audio_route_save(void)
-{
-	return 0;
-}
-
-static int utils_audio_route_restore(void)
-{
-	return 0;
-}
-
-/*
- Change sound routing
- */
-int utils_audio_route_set(utils_audio_route_t route)
-{	
-	//TODO
-	(void)route;
-	return 0;
-}
-
-/*
- Get sound routing
- */
-int utils_audio_route_get(void)
-{
-	//TODO
-	return UTILS_AUDIO_ROUTE_UNKNOWN;
+	if(rtconf_vibration_enabled())
+		execute_datapipe(&vibrate_pipe, GINT_TO_POINTER(SPHONE_VIBRATE_MESSAGE));
 }

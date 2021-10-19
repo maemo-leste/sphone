@@ -43,7 +43,7 @@ static void start_element(GMarkupParseContext *context,
 		for(i=0;attribute_names[i];i++) {
 			if(!strcmp(attribute_names[i],"fileAs")){
 				name=attribute_values[i];
-				sphone_log(LL_DEBUG, "start_element name=%s\n",name);
+				sphone_log(LL_DEBUG, "start_element name=%s",name);
 				break;
 			}
 		}
@@ -54,7 +54,7 @@ static void start_element(GMarkupParseContext *context,
 		// Add dials
 		for(i=0;attribute_names[i];i++){
 			if(g_strrstr(attribute_names[i],"TelephoneNumber")){
-				sphone_log(LL_DEBUG, "start_element dial=%s\n",attribute_values[i]);
+				sphone_log(LL_DEBUG, "start_element dial=%s",attribute_values[i]);
 				store_contact_add_dial(store_contact_add(name),attribute_values[i]);
 			}
 		}
@@ -77,12 +77,12 @@ static int book_import_xml(gchar *text,gsize text_len)
 			p++,text_len--;
 		if(*p=='>' || isspace(*p))p++,text_len--;
 	}
-	sphone_log(LL_DEBUG, "book_import_xml: content=%s\n",p);
+	sphone_log(LL_DEBUG, "book_import_xml: content=%s",p);
 
 	store_bulk_transaction_start();
 	ret=g_markup_parse_context_parse(context,p,text_len,&gerror);
 	if(!ret){
-		sphone_log(LL_ERR, "book_import %s\n",gerror->message);
+		sphone_log(LL_ERR, "book_import %s",gerror->message);
 		g_error_free(gerror);
 		store_transaction_rollback();
 		goto done;
@@ -157,23 +157,23 @@ static int book_import_csv(gchar *text)
 	int dialcolumns=0;
 	char *displayname, *firstname, *lastname;
 
-	sphone_log(LL_DEBUG, "book_import_csv\n");
+	sphone_log(LL_DEBUG, "book_import_csv");
 	// read header text
 	memset(headers,0,sizeof(headers));
 	while(*text && *text!='\n'){
 		gchar *label=csv_next_token(&text);
 		if(label!=NULL){
 			if(strcasestr(label,"E-mail Display Name")) {
-				sphone_log(LL_DEBUG, "book_import_csv: set name column: %d\n",column);
+				sphone_log(LL_DEBUG, "book_import_csv: set name column: %d",column);
 				displaynamecolumn=column;
 			} else if(strcasestr(label,"First Name")) {
-				sphone_log(LL_DEBUG, "book_import_csv: set name column: %d\n", column);
+				sphone_log(LL_DEBUG, "book_import_csv: set name column: %d", column);
 				firstnamecolumn=column;
 			} else if(strcasestr(label,"Last Name")) {
-				sphone_log(LL_DEBUG, "book_import_csv: set name column: %d\n", column);
+				sphone_log(LL_DEBUG, "book_import_csv: set name column: %d", column);
 				lastnamecolumn=column;
 			} else if(strcasestr(label,"Phone") && column < sizeof(headers)) {
-				sphone_log(LL_DEBUG, "book_import_csv: add dial column: %d\n", column);
+				sphone_log(LL_DEBUG, "book_import_csv: add dial column: %d", column);
 				dialcolumns++;
 				headers[column]=1;
 			}
@@ -188,7 +188,7 @@ static int book_import_csv(gchar *text)
 		text++;
 
 	if((displaynamecolumn==-1 && firstnamecolumn==-1) || !dialcolumns) {
-		sphone_log(LL_ERR, "book_import_csv: invalid file format\n");
+		sphone_log(LL_ERR, "book_import_csv: invalid file format");
 		return -1;
 	}
 
@@ -222,7 +222,7 @@ static int book_import_csv(gchar *text)
 		if(*text=='\n')
 			text++;
 		if(!displayname && !firstname && !lastname) {
-			sphone_log(LL_DEBUG, "book_import_csv: ignore line with no name\n");
+			sphone_log(LL_DEBUG, "book_import_csv: ignore line with no name");
 			for(unsigned int i = 0; i < sizeof(headers); ++i)
 				g_free(dials[i]);
 			continue;
@@ -239,7 +239,7 @@ static int book_import_csv(gchar *text)
 		
 		for(unsigned int i = 0; i < sizeof(headers); ++i) {
 			if(dials[i]) {
-				sphone_log(LL_DEBUG, "book_import_csv: add name[%s] dial[%s]\n",name,dials[i]);
+				sphone_log(LL_DEBUG, "book_import_csv: add name[%s] dial[%s]",name,dials[i]);
 				store_contact_add_dial(store_contact_add(name),dials[i]);
 			}
 		}
@@ -270,7 +270,7 @@ int book_import(gchar *path)
 
 	ret=g_file_get_contents(path,&text,&text_len,&gerror);
 	if(!ret){
-		sphone_log(LL_ERR, "book_import %s\n",gerror->message);
+		sphone_log(LL_ERR, "book_import %s",gerror->message);
 		g_error_free(gerror);
 		return 0;
 	}

@@ -100,28 +100,28 @@ gint gui_contact_open_by_dial(const gchar *dial)
 
 	store_contact_load_details(contact);
 
-	GtkWidget *window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	if(contact->name)
 		gtk_window_set_title(GTK_WINDOW(window),contact->name);
 	else
 		gtk_window_set_title(GTK_WINDOW(window),"<Unknown>");
 	gtk_window_set_default_size(GTK_WINDOW(window),400,220);
-	GtkWidget *notebook=gtk_notebook_new();
+	GtkWidget *notebook = gtk_notebook_new();
 	GtkWidget *v1=gtk_vbox_new(FALSE,0);
-	GtkWidget *title_bar=gtk_hbox_new(FALSE,0);
-	GdkPixbuf *pixbuf=NULL;
-	if(contact->name==NULL && contact->picture==NULL)
-		pixbuf=utils_get_photo_unknown();
-	else if(contact->picture==NULL)
-		pixbuf=utils_get_photo_default();
+	GtkWidget *title_bar = gtk_hbox_new(FALSE,0);
+	GdkPixbuf *pixbuf = NULL;
+	if(contact->name == NULL && contact->picture == NULL)
+		pixbuf = NULL;//TODO: replace utils_get_photo_unknown();
+	else if(contact->picture == NULL)
+		pixbuf = NULL;//TODO: replace utils_get_photo_default();
 	else
-		pixbuf=utils_get_photo(contact->picture);
+		pixbuf = NULL;//TODO: replace utils_get_photo(contact->picture);
 	GtkWidget *picture=gtk_image_new_from_pixbuf(pixbuf);
 	GtkWidget *name;
 	if(contact->name){
-		name=gtk_label_new (contact->name);
+		name = gtk_label_new (contact->name);
 	}else{
-		name=gtk_label_new ("<Unknown>");
+		name = gtk_label_new ("<Unknown>");
 	}
 
 	gtk_box_pack_start(GTK_BOX(title_bar), picture, FALSE, FALSE, 0);
@@ -139,8 +139,8 @@ gint gui_contact_open_by_dial(const gchar *dial)
 		GtkWidget *button_voice=gtk_button_new ();
 		GtkWidget *h_dial=gtk_hbox_new(FALSE,0);
 
-		GtkWidget *sms=gtk_image_new_from_pixbuf(utils_get_icon("sms.png"));
-		GtkWidget *voice=gtk_image_new_from_pixbuf(utils_get_icon("voice.png"));
+		GtkWidget *sms=gtk_image_new_from_pixbuf(NULL); //TODO: replace utils_get_icon("sms.png")
+		GtkWidget *voice=gtk_image_new_from_pixbuf(NULL); //TODO: replace utils_get_icon("voice.png")
 
 		g_signal_connect(G_OBJECT(button_sms),"clicked", G_CALLBACK(gui_contact_send_sms_callback),label);
 		g_signal_connect(G_OBJECT(button_voice),"clicked", G_CALLBACK(gui_contact_dial_callback),label);

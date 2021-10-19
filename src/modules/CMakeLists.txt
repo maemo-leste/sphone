@@ -1,0 +1,38 @@
+set(MODULE_INCLUDE_DIRS ../modapi)
+
+add_library(test SHARED test.c)
+target_link_libraries(test ${COMMON_LIBRARIES})
+target_include_directories(test PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS test DESTINATION ${SPHONE_MODULE_DIR})
+
+if(DEFINED GSTREAMER_LIBRARIES)
+	add_library(playback-gstreamer SHARED playback-gstreamer.c)
+	target_link_libraries(playback-gstreamer ${COMMON_LIBRARIES} ${GSTREAMER_LIBRARIES})
+	target_include_directories(playback-gstreamer PRIVATE ${COMMON_INCLUDE_DIRS} ${GSTREAMER_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+	install(TARGETS playback-gstreamer DESTINATION ${SPHONE_MODULE_DIR})
+endif(DEFINED GSTREAMER_LIBRARIES)
+
+if(DEFINED PULSE_LIBRARIES)
+	add_library(route-pulseaudio SHARED route-pulseaudio.c)
+	target_link_libraries(route-pulseaudio ${COMMON_LIBRARIES} ${PULSE_LIBRARIES})
+	target_include_directories(route-pulseaudio PRIVATE ${COMMON_INCLUDE_DIRS} ${PULSE_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+	install(TARGETS route-pulseaudio DESTINATION ${SPHONE_MODULE_DIR})
+endif(DEFINED PULSE_LIBRARIES)
+
+add_library(rtconf-ini SHARED rtconf-ini.c)
+target_link_libraries(rtconf-ini ${COMMON_LIBRARIES})
+target_include_directories(rtconf-ini PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS rtconf-ini DESTINATION ${SPHONE_MODULE_DIR})
+
+if(DEFINED LIBPROFILE_LIBRARIES)
+	add_library(rtconf-libprofile SHARED rtconf-libprofile.c)
+	target_link_libraries(rtconf-libprofile ${COMMON_LIBRARIES} ${LIBPROFILE_LIBRARIES})
+	target_include_directories(rtconf-libprofile PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS} ${LIBPROFILE_INCLUDE_DIRS})
+	install(TARGETS rtconf-libprofile DESTINATION ${SPHONE_MODULE_DIR})
+endif(DEFINED LIBPROFILE_LIBRARIES)
+
+add_library(sphone-mce SHARED sphone-mce.c)
+target_link_libraries(sphone-mce ${COMMON_LIBRARIES})
+target_include_directories(sphone-mce PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+install(TARGETS sphone-mce DESTINATION ${SPHONE_MODULE_DIR})
+

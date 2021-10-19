@@ -29,6 +29,8 @@
 #include "gui-calls-manager.h"
 #include "gui-contact-view.h"
 #include "store.h"
+#include "datapipes.h"
+#include "types.h"
 
 struct {
 	SphoneManager *manager;
@@ -65,6 +67,10 @@ static void gui_calls_activate_callback(void);
 static void gui_calls_mute_callback(void);
 static void gui_calls_speaker_callback(void);
 static void gui_calls_handset_callback(void);
+static void gui_calls_audio_route_trigger(gconstpointer data);
+
+static sphone_audio_route_t route = SPHONE_AUDIO_ROUTE_UNKNOWN;
+static int gui_calls_voice_status=0;
 
 static gboolean return_true(void){return TRUE;}
 
@@ -146,13 +152,14 @@ int gui_calls_manager_init(SphoneManager *manager)
 
 	g_signal_connect(G_OBJECT(manager),"call_added", G_CALLBACK(gui_calls_new_call_callback),NULL);
 
+	append_trigger_to_datapipe(&audio_route_pipe, gui_calls_audio_route_trigger);
+
 	return 0;
 }
 
 /*
  check if the voice channel should be enabled
  */
-static int gui_calls_voice_status=0;
 static void gui_calls_check_voice(void)
 {
 	sphone_log(LL_DEBUG, "%s\n", __func__);
@@ -175,23 +182,28 @@ static void gui_calls_check_voice(void)
 
 	if(enable_voice) {
 		sphone_log(LL_DEBUG, "%s: enable\n", __func__);
-		utils_set_call_mode(UTILS_MODE_INCALL);
+		execute_datapipe(&call_mode_pipe, GINT_TO_POINTER(SPHONE_MODE_INCALL));
 		gui_calls_voice_status=1;
 	}
 	else {
 		sphone_log(LL_DEBUG, "%s: disable\n", __func__);
-		utils_set_call_mode(UTILS_MODE_NO_CALL);
+		execute_datapipe(&call_mode_pipe, GINT_TO_POINTER(SPHONE_MODE_NO_CALL));
 		gui_calls_voice_status=0;
 	}
 	
 	//TODO: do routing somehow utils_audio_set(gui_calls_voice_status);
 }
 
+static void gui_calls_audio_route_trigger(gconstpointer data)
+{
+	route = GPOINTER_TO_INT(data);
+}
+
 static void gui_calls_update_global_status(void)
 {
 	if(utils_ringing_status()) {
 		sphone_log(LL_DEBUG, "%s: ", __func__);
-		utils_set_call_mode(UTILS_MODE_RINGING);
+		execute_datapipe(&call_mode_pipe, GINT_TO_POINTER(SPHONE_MODE_RINGING));
 		gtk_widget_show(g_calls_manager.mute_button);
 	}
 	else {
@@ -199,13 +211,12 @@ static void gui_calls_update_global_status(void)
 	}
 
 	if(gui_calls_voice_status){
-		int route=utils_audio_route_get();
-		if(route==UTILS_AUDIO_ROUTE_SPEAKER)
+		if(route == SPHONE_AUDIO_ROUTE_SPEAKER)
 			gtk_widget_hide(g_calls_manager.speaker_button);
 		else
 			gtk_widget_show(g_calls_manager.speaker_button);
 
-		if(route==UTILS_AUDIO_ROUTE_HANDSET)
+		if(route == SPHONE_AUDIO_ROUTE_HANDSET)
 			gtk_widget_hide(g_calls_manager.handset_button);
 		else
 			gtk_widget_show(g_calls_manager.handset_button);
@@ -220,7 +231,11 @@ static void gui_calls_call_status_callback(SphoneCall *call)
 	
 	sphone_log(LL_DEBUG, "%s\n", __func__);
 	
-	g_object_get( G_OBJECT(call), "line_identifier", &dial, "state", &state, "answer_status", &answer_status, "direction", &direction, NULL);
+	g_object_get( G_OBJECT(call),
+				  "line_identifier", &dial,
+				  "state", &state,
+				  "answer_status", &answer_status,
+				  "direction", &direction, NULL);
 	sphone_log(LL_DEBUG, "Update call %s %s\n",dial,state);
 	if(!g_strcmp0 (state,"incoming")) {
 		utils_start_ringing(dial);
@@ -402,14 +417,14 @@ static void gui_calls_utils_add_dial(gchar *dial, gchar *status, SphoneCall *cal
 
 	store_contact_match(&contact, dial);
 	if(contact && (contact->picture || contact->name)){
-		desc=g_strdup_printf("%s\n%s",contact->name, dial);
+		desc = g_strdup_printf("%s\n%s",contact->name, dial);
 		if(contact->picture)
-			photo=utils_get_photo(contact->picture);
+			photo = NULL;//TODO: replace utils_get_photo(contact->picture);
 		else
-			photo=utils_get_photo_default();
+			photo = NULL;//TODO: replace utils_get_photo_default();
 	}else{
-		desc=g_strdup_printf("<Unknown>\n%s\n",dial);
-		photo=utils_get_photo_unknown();
+		desc = g_strdup_printf("<Unknown>\n%s\n",dial);
+		photo = NULL;//TODO: replace utils_get_photo_unknown();
 	}
 	store_contact_free(contact);
 
@@ -462,13 +477,13 @@ static void gui_calls_mute_callback(void)
 
 static void gui_calls_speaker_callback(void)
 {
-	utils_audio_route_set(UTILS_AUDIO_ROUTE_SPEAKER);
+	execute_datapipe(&audio_route_pipe, GINT_TO_POINTER(SPHONE_AUDIO_ROUTE_SPEAKER));
 	gui_calls_update_global_status();
 }
 
 static void gui_calls_handset_callback(void)
 {
-	utils_audio_route_set(UTILS_AUDIO_ROUTE_HANDSET);
+	execute_datapipe(&audio_route_pipe, GINT_TO_POINTER(SPHONE_AUDIO_ROUTE_HANDSET));
 	gui_calls_update_global_status();
 }
 

@@ -200,12 +200,12 @@ void gui_sms_receive_show(const gchar *dial, const gchar *text, gchar *time)
 	if(contact && (contact->picture || contact->name)){
 		desc=g_strdup_printf("%s\n%s",contact->name, dial);
 		if(contact->picture)
-			photo=utils_get_photo(contact->picture);
+			photo = NULL;//TODO: replace utils_get_photo(contact->picture);
 		else
-			photo=utils_get_photo_default();
+			photo = NULL;//TODO: replace utils_get_photo_default();
 	}else{
 		desc=g_strdup_printf("<Unknown>\n%s\n",dial);
-		photo=utils_get_photo_unknown();
+		photo =NULL;//TODO: utils_get_photo_unknown();
 	}
 	store_contact_free(contact);
 
