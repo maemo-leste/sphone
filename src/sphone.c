@@ -67,7 +67,6 @@
 typedef enum {
 	SPHONE_CMD_DIALER_OPEN=1,
 	SPHONE_CMD_SMS_NEW,
-	SPHONE_CMD_HISTORY_CALLS,
 	SPHONE_CMD_HISTORY_SMS,
 	SPHONE_CMD_OPTIONS,
 	SPHONE_CMD_NONE,
@@ -94,9 +93,6 @@ static UniqueResponse main_message_received_callback(UniqueApp *app, gint comman
 			break;
 		case SPHONE_CMD_SMS_NEW:
 			gui_sms_send_show(number,NULL);
-			break;
-		case SPHONE_CMD_HISTORY_CALLS:
-			gui_history_calls();
 			break;
 		case SPHONE_CMD_HISTORY_SMS:
 			gui_history_sms();
@@ -140,7 +136,7 @@ int main (int argc, char *argv[])
 				      "   -h\tDisplay this help\n"
 				      "   -v\tEnable debug\n"
 					  "   -n [number]\topen with number\n"
-				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, sms-new, history-calls, history-sms, options\n"
+				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, sms-new, history-sms, options\n"
 				      "   -i [file]\timport contacts XML\n", argv[0]);
 				return 0;
 			case 'c':
@@ -150,8 +146,6 @@ int main (int argc, char *argv[])
 					command = SPHONE_CMD_SMS_NEW;
 				else if(!g_strcmp0(optarg,"history-sms"))
 					command = SPHONE_CMD_HISTORY_SMS;
-				else if(!g_strcmp0(optarg,"history-calls"))
-					command = SPHONE_CMD_HISTORY_CALLS;
 				else if(!g_strcmp0(optarg,"options"))
 					command = SPHONE_CMD_OPTIONS;
 				break;
@@ -188,7 +182,6 @@ int main (int argc, char *argv[])
 	UniqueApp *unique = unique_app_new_with_commands("org.maemo.sphone", NULL
 	                                               ,"dialer-open", SPHONE_CMD_DIALER_OPEN
 	                                               ,"history-sms", SPHONE_CMD_HISTORY_SMS
-	                                               ,"history-calls", SPHONE_CMD_HISTORY_CALLS
 	                                               ,"sms-new", SPHONE_CMD_SMS_NEW
 	                                               ,"options", SPHONE_CMD_OPTIONS, NULL);
 
@@ -221,12 +214,6 @@ int main (int argc, char *argv[])
 				break;
 			case SPHONE_CMD_SMS_NEW:
 				gui_sms_send_show(number,NULL);
-				break;
-			case SPHONE_CMD_HISTORY_CALLS:
-				gui_history_calls();
-				break;
-			case SPHONE_CMD_HISTORY_SMS:
-				gui_history_calls();
 				break;
 			case SPHONE_CMD_OPTIONS:
 				gui_options_open();

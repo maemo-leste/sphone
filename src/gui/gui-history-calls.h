@@ -1,6 +1,6 @@
 /*
  * sphone
- * Copyright (C) Ahmed Abdel-Hamid 2010 <ahmedam@mail.usa.com>
+ * Copyright (C) Carl Klemm 2021 <carl@uvos.xyz>
  * 
  * sphone is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -15,13 +15,8 @@
  * You should have received a copy of the GNU General Public License along
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#ifndef _GUI_CONTACT_VIEW_H_
-#define _GUI_CONTACT_VIEW_H_
+#pragma once
 
 #include <glib.h>
 
-gint gui_contact_open_by_dial(const gchar *dial);
-gint gui_history_sms(void);
-
-#endif
+gint gui_history_calls(void);

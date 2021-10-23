@@ -18,6 +18,7 @@ set(SPHONE_SRC_FILES 	sphone.c
 	gui/gui-options.c
 	gui/gui-sms.c
 	gui/keypad.c
+	gui/gui-history-calls.c
 	)
 
 add_executable(sphone ${SPHONE_SRC_FILES})
