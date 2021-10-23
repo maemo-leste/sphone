@@ -103,7 +103,7 @@ void utils_sms_notify(void)
 char *sphone_time_to_new_string(time_t time)
 {
 	char *str = g_malloc(256);
-	if(strftime(str, sizeof(256), "%m-%d-%Y %H-%M (mon=%b)", localtime(&time)) == 0)
+	if(strftime(str, 256, "%m-%d-%Y %H-%M (mon=%b)", localtime(&time)) == 0)
 		str[0] = '\0';
 	return str;
 }
