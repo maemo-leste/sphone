@@ -19,7 +19,6 @@
 #include "datapipe.h"
 #include "sphone-log.h"
 
-
 /**
  * Execute the filters of a datapipe
  *
@@ -29,7 +28,7 @@
  */
 static gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer indata)
 {
-	gpointer (*filter)(gpointer input);
+	gpointer (*filter)(gpointer data, gpointer user_data);
 	gpointer data = indata;
 
 	if (datapipe == NULL) {
@@ -37,9 +36,8 @@ static gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, g
 		return NULL;
 	}
 
-	for (int i = 0; (filter = g_slist_nth_data(datapipe->filters,
-					       i)) != NULL; i++) {
-		gpointer tmp = filter(data);
+	for (int i = 0; (filter = g_slist_nth_data(datapipe->filters, i)) != NULL; i++) {
+		gpointer tmp = filter(data, g_slist_nth_data(datapipe->filters_user_data, i));
 
 		data = tmp;
 	}
@@ -55,7 +53,7 @@ static gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, g
  */
 void execute_datapipe_output_triggers(const datapipe_struct *const datapipe, gconstpointer indata)
 {
-	void (*trigger)(gconstpointer input);
+	void (*trigger)(gconstpointer data, gpointer user_data);
 
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
@@ -63,7 +61,7 @@ void execute_datapipe_output_triggers(const datapipe_struct *const datapipe, gco
 	}
 
 	for (int i = 0; (trigger = g_slist_nth_data(datapipe->output_triggers, i)) != NULL; i++)
-		trigger(indata);
+		trigger(indata, g_slist_nth_data(datapipe->triggers_user_data, i));
 }
 
 /**
@@ -99,7 +97,9 @@ gconstpointer execute_datapipe(datapipe_struct *const datapipe, gpointer indata)
  * @param datapipe The datapipe to manipulate
  * @param filter The filter to add to the datapipe
  */
-void append_filter_to_datapipe(datapipe_struct *const datapipe, gpointer (*filter)(gpointer data))
+void append_filter_to_datapipe(datapipe_struct *const datapipe,
+							   gpointer (*filter)(gpointer data, gpointer user_data),
+							   gpointer user_data)
 {
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
@@ -112,6 +112,7 @@ void append_filter_to_datapipe(datapipe_struct *const datapipe, gpointer (*filte
 	}
 
 	datapipe->filters = g_slist_append(datapipe->filters, filter);
+	datapipe->filters_user_data = g_slist_append(datapipe->filters_user_data, user_data);
 }
 
 /**
@@ -121,10 +122,8 @@ void append_filter_to_datapipe(datapipe_struct *const datapipe, gpointer (*filte
  * @param datapipe The datapipe to manipulate
  * @param filter The filter to remove from the datapipe
  */
-void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*filter)(gpointer data))
+void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*filter)(gpointer data, gpointer user_data))
 {
-	guint oldlen;
-
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
 		return;
@@ -135,12 +134,18 @@ void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*fil
 		return;
 	}
 
-	oldlen = g_slist_length(datapipe->filters);
-
-	datapipe->filters = g_slist_remove(datapipe->filters, filter);
+	gpointer (*ifilter)(gpointer data, gpointer user_data) = NULL;
+	for (int i = 0; (ifilter = g_slist_nth_data(datapipe->filters, i)) != NULL; i++) {
+		if(ifilter == filter) {
+			datapipe->filters = g_slist_remove(datapipe->filters, filter);
+			datapipe->filters_user_data = 
+				g_slist_remove(datapipe->filters_user_data, g_slist_nth_data(datapipe->filters_user_data, i));
+			break;
+		}
+	}
 
 	/* Did we remove any entry? */
-	if (oldlen == g_slist_length(datapipe->filters))
+	if (!ifilter)
 		sphone_log(LL_WARN, "Trying to remove non-existing filter");
 }
 
@@ -150,7 +155,9 @@ void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*fil
  * @param datapipe The datapipe to manipulate
  * @param trigger The trigger to add to the datapipe
  */
-void append_trigger_to_datapipe(datapipe_struct *const datapipe, void (*trigger)(gconstpointer data))
+void append_trigger_to_datapipe(datapipe_struct *const datapipe,
+								void (*trigger)(gconstpointer data, gpointer user_data),
+								gpointer user_data)
 {
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
@@ -163,7 +170,7 @@ void append_trigger_to_datapipe(datapipe_struct *const datapipe, void (*trigger)
 	}
 
 	datapipe->output_triggers = g_slist_append(datapipe->output_triggers, trigger);
-
+	datapipe->triggers_user_data = g_slist_append(datapipe->triggers_user_data, user_data);
 }
 
 /**
@@ -173,10 +180,8 @@ void append_trigger_to_datapipe(datapipe_struct *const datapipe, void (*trigger)
  * @param datapipe The datapipe to manipulate
  * @param trigger The trigger to remove from the datapipe
  */
-void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigger)(gconstpointer data))
+void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigger)(gconstpointer data, gpointer user_data))
 {
-	guint oldlen;
-
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
 		return;
@@ -187,13 +192,19 @@ void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigge
 		return;
 	}
 
-	oldlen = g_slist_length(datapipe->output_triggers);
-
-	datapipe->output_triggers = g_slist_remove(datapipe->output_triggers, trigger);
+	void (*itrigger)(gconstpointer data, gpointer user_data) = NULL;
+	for (int i = 0; (itrigger = g_slist_nth_data(datapipe->output_triggers, i)) != NULL; i++) {
+		if(itrigger == trigger) {
+			datapipe->output_triggers = g_slist_remove(datapipe->output_triggers, trigger);
+			datapipe->triggers_user_data = 
+				g_slist_remove(datapipe->triggers_user_data, g_slist_nth_data(datapipe->triggers_user_data, i));
+			break;
+		}
+	}
 
 	/* Did we remove any entry? */
-	if (oldlen == g_slist_length(datapipe->output_triggers))
-		sphone_log(LL_WARN, "Trying to remove non-existing output trigger");
+	if (!itrigger)
+		sphone_log(LL_WARN, "Trying to remove non-existing trigger");
 }
 
 /**
@@ -209,7 +220,9 @@ void setup_datapipe(datapipe_struct *const datapipe)
 	}
 
 	datapipe->filters = NULL;
+	datapipe->filters_user_data = NULL;
 	datapipe->output_triggers = NULL;
+	datapipe->triggers_user_data = NULL;
 }
 
 /**

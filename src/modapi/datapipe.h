@@ -27,7 +27,9 @@
  */
 typedef struct {
 	GSList *filters;		//< The filters 
+	GSList *filters_user_data;
 	GSList *output_triggers;	//< Triggers
+	GSList *triggers_user_data;
 } datapipe_struct;
 
 // Datapipe execution
@@ -35,12 +37,18 @@ gconstpointer execute_datapipe(datapipe_struct *const datapipe, gpointer indata)
 void execute_datapipe_output_triggers(const datapipe_struct *const datapipe, gconstpointer indata);
 
 // Filters 
-void append_filter_to_datapipe(datapipe_struct *const datapipe, gpointer (*filter)(gpointer data));
-void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*filter)(gpointer data));
+void append_filter_to_datapipe(datapipe_struct *const datapipe,
+							   gpointer (*filter)(gpointer data, gpointer user_data),
+							   gpointer user_data);
+void remove_filter_from_datapipe(datapipe_struct *const datapipe,
+								 gpointer (*filter)(gpointer data, gpointer user_data));
 
 // triggers
-void append_trigger_to_datapipe(datapipe_struct *const datapipe, void (*trigger)(gconstpointer data));
-void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigger)(gconstpointer data));
+void append_trigger_to_datapipe(datapipe_struct *const datapipe,
+								void (*trigger)(gconstpointer data, gpointer user_data),
+								gpointer user_data);
+void remove_trigger_from_datapipe(datapipe_struct *const datapipe,
+								  void (*trigger)(gconstpointer data, gpointer user_data));
 
 void setup_datapipe(datapipe_struct *const datapipe);
 void free_datapipe(datapipe_struct *const datapipe);

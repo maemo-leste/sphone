@@ -27,9 +27,10 @@
 #define ARRAY_SIZE(x)   (sizeof(x)/sizeof(x[0]))
 #define TEST_BIT(x,addr) (1UL & (addr[x/8] >> (x & 0xff)))
 
-void utils_start_ringing(const gchar *dial);
-void utils_stop_ringing(const gchar *dial);
+void utils_start_ringing(void);
+void utils_stop_ringing(void);
 int utils_ringing_status(void);
 void utils_sms_notify(void);
+char *sphone_time_to_new_string(time_t time);
 
 #endif

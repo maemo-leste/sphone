@@ -51,7 +51,6 @@
 
 #define PRG_NAME			"sphone"
 
-#include "sphone-manager.h"
 #include "gui-calls-manager.h"
 #include "gui-dialer.h"
 #include "gui-options.h"
@@ -120,6 +119,9 @@ int main (int argc, char *argv[])
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
 	textdomain (GETTEXT_PACKAGE);
 #endif
+
+	gtk_set_locale();
+	gtk_init(&argc, &argv);
 
 	sphone_cmd command = SPHONE_CMD_NONE;
 	gboolean is_done=FALSE;
@@ -199,21 +201,16 @@ int main (int argc, char *argv[])
 			sphone_log(LL_ERR,  "sphone_conf_init failed");
 			return -1;
 		}
+		
+		store_init();
+		gui_calls_manager_init();
+		gui_dialer_init();
+		gui_sms_init();
 
 		if(!sphone_modules_init()) {
 			sphone_log(LL_ERR,  "sphone_modules_init failed");
 			return -1;
 		}
-		
-		gtk_set_locale();
-		gtk_init(&argc, &argv);
-
-		SphoneManager *manager=g_object_new(sphone_manager_get_type(),NULL);
-		store_init();
-		gui_calls_manager_init(manager);
-		gui_dialer_init(manager);
-		gui_sms_init(manager);
-		sphone_manager_populate(manager);
 		
 		if(number)
 			sphone_log(LL_DEBUG,  "number: %s", number);
@@ -243,6 +240,8 @@ int main (int argc, char *argv[])
 		
 		gtk_main();
 		
+		gui_sms_exit();
+		gui_calls_manager_exit();
 		sphone_modules_exit();
 		datapipes_exit();
 	} else {

@@ -17,12 +17,16 @@
  */
 
 #include <gtk/gtk.h>
+#include <time.h>
 
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
 #endif
 
-#include "sphone-manager.h"
+#include "comm.h"
+#include "types.h"
+#include "datapipe.h"
+#include "datapipes.h"
 #include "sphone-log.h"
 #include "utils.h"
 #include "store.h"
@@ -34,16 +38,12 @@ static void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window);
 static void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window);
 static void gui_sms_reply_callback(GtkWidget *button);
 
-struct{
-	SphoneManager *manager;
-} g_sms;
-
-static void gui_sms_coming_callback(SphoneManager *manager, gchar *from, gchar *text, gchar *_time)
+static void gui_sms_coming_callback(gconstpointer data, gpointer user_data)
 {
-	(void) manager;
-	sphone_log(LL_DEBUG, "gui_sms_coming_callback %s %s %s\n", from, text, _time);
+	const MessageProperties *message = (const MessageProperties*)data;
+	(void)user_data;
 
-	gui_sms_receive_show(from,text,_time);
+	gui_sms_receive_show(message);
 	utils_sms_notify();
 }
 
@@ -53,12 +53,14 @@ static void gui_sms_open_contact_callback(GtkButton *button)
 	gui_contact_open_by_dial(dial);
 }
 
-int gui_sms_init(SphoneManager *manager)
+void gui_sms_init(void)
 {
-	g_sms.manager=manager;
-	g_signal_connect (G_OBJECT(manager), "sms_arrived", G_CALLBACK (gui_sms_coming_callback), NULL);
+	append_trigger_to_datapipe(&message_recived_pipe, gui_sms_coming_callback, NULL);
+}
 
-	return 0;
+void gui_sms_exit(void)
+{
+	remove_trigger_from_datapipe(&message_recived_pipe, gui_sms_coming_callback);
 }
 
 // The model will always contain only matched entries
@@ -189,25 +191,21 @@ void gui_sms_send_show(const gchar *to, const gchar *text)
 	gui_sms_to_changed_callback(GTK_ENTRY(to_entry));
 }
 
-void gui_sms_receive_show(const gchar *dial, const gchar *text, gchar *time)
+void gui_sms_receive_show(const MessageProperties *message)
 {
-	// Get the corresponding contact
-	store_contact_struct *contact;
 	gchar *desc;
-	GdkPixbuf *photo=NULL;
-	
-	store_contact_match(&contact, dial);
-	if(contact && (contact->picture || contact->name)){
-		desc=g_strdup_printf("%s\n%s",contact->name, dial);
-		if(contact->picture)
-			photo = NULL;//TODO: replace utils_get_photo(contact->picture);
-		else
-			photo = NULL;//TODO: replace utils_get_photo_default();
-	}else{
-		desc=g_strdup_printf("<Unknown>\n%s\n",dial);
-		photo =NULL;//TODO: utils_get_photo_unknown();
+	gchar *time_str;
+	GdkPixbuf *photo = NULL;
+
+	if(message->contact && message->contact->name) {
+		desc = g_strdup_printf("%s\n%s",message->contact->name, message->line_identifier);
+		if(message->contact->photo)
+			photo = message->contact->photo;
+	} else {
+		desc = g_strdup_printf("<Unknown>\n%s\n", message->line_identifier);
 	}
-	store_contact_free(contact);
+	
+	time_str = sphone_time_to_new_string(message->time);
 
 	GtkWidget *main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(main_window),"New SMS");
@@ -217,10 +215,10 @@ void gui_sms_receive_show(const gchar *dial, const gchar *text, gchar *time)
 	GtkWidget *actions_bar=gtk_hbox_new(TRUE,0);
 	GtkWidget *photo_image=gtk_image_new_from_pixbuf(photo);
 	GtkWidget *from_entry=gtk_button_new_with_label(desc);
-	GtkWidget *time_label=gtk_label_new(time);
+	GtkWidget *time_label=gtk_label_new(time_str);
 	GtkWidget *send_button=gtk_button_new_with_label("Reply");
 	GtkWidget *cancel_button=gtk_button_new_with_label("Cancel");
-	GtkWidget *text_edit=gtk_label_new(text);
+	GtkWidget *text_edit=gtk_label_new(message->text);
 	GtkWidget *s = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (s),
 		       GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -245,12 +243,15 @@ void gui_sms_receive_show(const gchar *dial, const gchar *text, gchar *time)
 
 	gtk_widget_show_all(main_window);
 
-	g_object_set_data_full(G_OBJECT(from_entry),"dial",g_strdup(dial),g_free);
-	g_object_set_data_full(G_OBJECT(send_button),"dial",g_strdup(dial),g_free);
+	g_object_set_data_full(G_OBJECT(from_entry), "dial", g_strdup(message->line_identifier), g_free);
+	g_object_set_data_full(G_OBJECT(send_button), "dial", g_strdup(message->line_identifier), g_free);
 	
 	g_signal_connect(G_OBJECT(from_entry),"clicked", G_CALLBACK(gui_sms_open_contact_callback),NULL);
 	g_signal_connect(G_OBJECT(send_button),"clicked", G_CALLBACK(gui_sms_reply_callback),NULL);
 	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_sms_cancel_callback),main_window);
+	
+	g_free(time_str);
+	g_free(desc);
 }
 
 void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
@@ -259,23 +260,18 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 	GtkEntry *to_entry=g_object_get_data(G_OBJECT(main_window),"to_entry");
 	GtkTextBuffer *text_buffer=g_object_get_data(G_OBJECT(main_window),"text_buffer");
 
-	const gchar *to=gtk_entry_get_text(to_entry);
+	const gchar *to = gtk_entry_get_text(to_entry);
 	gchar *text=NULL;
 	g_object_get(G_OBJECT(text_buffer),"text",&text,NULL);
-	sphone_log(LL_DEBUG, "gui_sms_send_callback %s %s\n",to,text);
+	sphone_log(LL_DEBUG, "%s: %s %s",__func__, to, text);
 
-	if(!sphone_manager_sms_send(g_sms.manager, to, text)){
-		gtk_widget_destroy(main_window);	
-	}else{
-		GtkWidget *dialog = gtk_message_dialog_new (GTK_WINDOW(main_window),
-                                  GTK_DIALOG_DESTROY_WITH_PARENT,
-                                  GTK_MESSAGE_ERROR,
-                                  GTK_BUTTONS_CLOSE,
-                                  "SMS send action failed");
-		gtk_dialog_run (GTK_DIALOG (dialog));
-		gtk_widget_destroy (dialog);
-	}
-	g_free(text);
+	MessageProperties *message = g_malloc0(sizeof(*message));
+	message->line_identifier = g_strdup(to);
+	message->text = text;
+	message->backend = sphone_comm_default_backend()->id;
+	message->time = time(NULL);
+	execute_datapipe(&message_send_pipe, message);
+	message_properties_free(message);
 }
 
 void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window)

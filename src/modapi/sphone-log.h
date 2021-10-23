@@ -14,8 +14,7 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with sphone.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef _MCE_LOG_H_
-#define _MCE_LOG_H_
+#pragma once
 
 #include <syslog.h>	/* LOG_DAEMON, LOG_USER */
 
@@ -41,4 +40,3 @@ void sphone_log_set_verbosity(const int verbosity);
 void sphone_log_open(const char *const name, const int facility, const int type);
 void sphone_log_close(void);
 
-#endif /* _MCE_LOG_H_ */

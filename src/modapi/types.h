@@ -1,6 +1,8 @@
 #pragma once
 
 #include <gtk/gtk.h>
+#include <time.h>
+#include <stdbool.h>
 
 typedef enum {
 	SPHONE_AUDIO_ROUTE_UNKNOWN=-1,
@@ -23,33 +25,69 @@ typedef enum {
 	SPHONE_VIBRATE_STOP,
 } sphone_vibrate_type_t;
 
-typedef struct _CallProperties{
+typedef enum {
+	SPHONE_CALL_INVALID=0,
+	SPHONE_CALL_ACTIVE,
+	SPHONE_CALL_HELD,
+	SPHONE_CALL_DIALING,
+	SPHONE_CALL_ALERTING,
+	SPHONE_CALL_INCOMING,
+	SPHONE_CALL_WATING,
+	SPHONE_CALL_DISCONNECTED,
+} sphone_call_state_t;
+
+const char *sphone_get_state_string(sphone_call_state_t state);
+
+typedef struct _Contact {
 	gchar *name;
-	gchar *path;
+	GdkPixbuf *photo;
 	gchar *line_identifier;
-	gchar *state;
+} Contact;
+
+void contact_free(Contact *contact);
+
+Contact *contact_copy(const Contact *contact);
+
+typedef struct _CallProperties{
+	Contact *contact;
+	gchar *line_identifier;
+	sphone_call_state_t state;
 	gchar *technology;
 	gint backend;
-	gchar *start_time;
+	gchar *backend_data;
+	time_t start_time;
 	gboolean emergency;
+	gboolean awnserd;
 } CallProperties;
 
+void call_properties_free(CallProperties *properties);
+
+bool call_properties_comp(const CallProperties *a, const CallProperties *b);
+
+CallProperties *call_properties_copy(const CallProperties *properties);
+
 typedef struct _MessageProperties{
-	gchar *name;
+	Contact *contact;
 	gchar *line_identifier;
 	gchar *technology;
+	gchar *text;
 	gint backend;
-	gchar *time;
+	gchar *backend_data;
+	time_t time;
 } MessageProperties;
+
+MessageProperties *message_properties_copy(const MessageProperties *properties);
+
+void message_properties_free(MessageProperties *properties);
 
 typedef struct _Notification{
 	gchar *title;
 	gchar *text;
 } Notification;
 
-typedef struct _Contact {
-	gchar *name;
-	GdkPixbuf *photo;
-	gchar *line_identifier;
-	gint backend;
-} Contact;
+void notification_free(Notification *notification);
+
+struct str_list {
+  char **data;
+  int count;
+};

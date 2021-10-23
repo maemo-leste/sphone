@@ -19,7 +19,7 @@
 #ifndef _GUI_DIALER_H_
 #define _GUI_DIALER_H_
 
-extern int gui_dialer_init(SphoneManager *manager);
-extern void gui_dialer_show(const gchar *dial);
+void gui_dialer_init(void);
+void gui_dialer_show(const gchar *dial);
 
 #endif

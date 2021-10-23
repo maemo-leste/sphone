@@ -24,7 +24,10 @@
 #include <hildon/hildon-pannable-area.h>
 #endif
 
-#include "sphone-manager.h"
+#include "datapipes.h"
+#include "datapipe.h"
+#include "comm.h"
+#include "types.h"
 #include "sphone-log.h"
 #include "keypad.h"
 #include "utils.h"
@@ -33,7 +36,6 @@
 #include "sphone-store-tree-model.h"
 
 struct{
-	SphoneManager *manager;
 	GtkWidget *display;
 	GtkWidget *main_window;
 	GtkWidget *dials_view;
@@ -81,21 +83,16 @@ static void gui_call_callback(GtkButton button)
 	(void)button;
 
 	const gchar *dial=gtk_entry_get_text(GTK_ENTRY(g_gui_calls.display));
-	if(!sphone_manager_dial(g_gui_calls.manager,dial)){
-		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display),"");
-		gtk_widget_hide(g_gui_calls.main_window);
-	}else{
-		GtkWidget *dialog = gtk_message_dialog_new (GTK_WINDOW(g_gui_calls.main_window),
-                                  GTK_DIALOG_DESTROY_WITH_PARENT,
-                                  GTK_MESSAGE_ERROR,
-                                  GTK_BUTTONS_CLOSE,
-                                  "Dialing failed");
-		gtk_dialog_run (GTK_DIALOG (dialog));
-		gtk_widget_destroy (dialog);
-		
-		gtk_widget_grab_focus(g_gui_calls.display);
-		gtk_editable_set_position(GTK_EDITABLE(g_gui_calls.display),-1);
-	}
+
+	CallProperties *call = g_malloc0(sizeof(*call));
+	call->line_identifier = g_strdup(dial);
+	call->backend = sphone_comm_default_backend()->id;
+	call->state = SPHONE_CALL_DIALING;
+	execute_datapipe(&call_dial_pipe, call);
+	call_properties_free(call);
+
+	gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display),"");
+	gtk_widget_hide(g_gui_calls.main_window);
 }
 
 static void gui_dialer_cancel_callback(void)
@@ -231,7 +228,7 @@ static void gui_dialer_validate_callback(GtkEntry *entry,const gchar *text,gint 
 	g_free (result);
 }
 
-int gui_dialer_init(SphoneManager *manager)
+void gui_dialer_init(void)
 {
 	g_gui_calls.main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(g_gui_calls.main_window),"Dialer");
@@ -249,7 +246,6 @@ int gui_dialer_init(SphoneManager *manager)
 	GtkWidget *cancel_button=gtk_button_new_with_label("\nCancel\n");
 	GdkColor white, black;
 	GtkWidget *e=gtk_event_box_new ();
-	g_gui_calls.manager=manager;
 	g_gui_calls.display=display;
 	GtkWidget *book = gui_dialer_build_book();
 	
@@ -286,8 +282,6 @@ int gui_dialer_init(SphoneManager *manager)
 	g_signal_connect(G_OBJECT(g_gui_calls.main_window),"delete-event", G_CALLBACK(gtk_widget_hide_on_delete),NULL);
 	g_signal_connect(G_OBJECT(display_back), "clicked", G_CALLBACK(gui_dialer_back_presses_callback), display);
 	g_signal_connect(G_OBJECT(display), "insert_text", G_CALLBACK(gui_dialer_validate_callback),NULL);
-
-	return 0;
 }
 
 void gui_dialer_show(const gchar *dial)

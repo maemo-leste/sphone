@@ -18,9 +18,12 @@
 
 #ifndef _GUI_SMS_H_
 #define _GUI_SMS_H_
+
+#include "types.h"
  
-int gui_sms_init(SphoneManager *manager);
+void gui_sms_init(void);
+void gui_sms_exit(void);
 void gui_sms_send_show(const gchar *to, const gchar *text);
-void gui_sms_receive_show(const gchar *from, const gchar *text, gchar *time);
+void gui_sms_receive_show(const MessageProperties *message);
 
 #endif

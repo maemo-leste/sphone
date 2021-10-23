@@ -23,7 +23,7 @@ G_MODULE_EXPORT module_info_struct module_info = {
 static GstElement *utils_gst_play;
 static int utils_gst_repeat;
 
-static void audio_stop_trigger(gconstpointer data);
+static void audio_stop_trigger(gconstpointer data, gpointer user_data);
 
 static int utils_gst_rewind(void)
 {
@@ -54,7 +54,7 @@ static gboolean utils_gst_bus_callback (GstBus *bus,GstMessage *message, gpointe
 			else{
 				gst_element_set_state (utils_gst_play, GST_STATE_NULL);
 				gst_bus_set_flushing(bus, TRUE);
-				audio_stop_trigger(NULL);
+				audio_stop_trigger(NULL, NULL);
 			}
 			break;
 		default:
@@ -91,9 +91,10 @@ static int utils_gst_start(const gchar *path)
 	return 0;
 }
 
-static void audio_stop_trigger(gconstpointer data)
+static void audio_stop_trigger(gconstpointer data, gpointer user_data)
 {
 	(void)data;
+	(void)user_data;
 
 	if(!utils_gst_play)
 		return;
@@ -104,8 +105,9 @@ static void audio_stop_trigger(gconstpointer data)
 	utils_gst_repeat=0;
 }
 
-static void audio_play_looping_trigger(gconstpointer data)
+static void audio_play_looping_trigger(gconstpointer data, gpointer user_data)
 {
+	(void)user_data;
 	const char *filename = (const char*)data;
 	
 	if(!filename) {
@@ -118,8 +120,9 @@ static void audio_play_looping_trigger(gconstpointer data)
 		sphone_module_log(LL_ERR, "failed to play %s", filename);
 }
 
-static void audio_play_once_trigger(gconstpointer data)
+static void audio_play_once_trigger(gconstpointer data, gpointer user_data)
 {
+	(void)user_data;
 	const char *filename = (const char*)data;
 	
 	if(!filename) {
@@ -136,9 +139,9 @@ static void audio_play_once_trigger(gconstpointer data)
 G_MODULE_EXPORT const gchar *sphone_module_init(void);
 const gchar *sphone_module_init(void)
 {
-	append_trigger_to_datapipe(&audio_stop_pipe, audio_stop_trigger);
-	append_trigger_to_datapipe(&audio_play_once_pipe, audio_play_once_trigger);
-	append_trigger_to_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger);
+	append_trigger_to_datapipe(&audio_stop_pipe, audio_stop_trigger, NULL);
+	append_trigger_to_datapipe(&audio_play_once_pipe, audio_play_once_trigger, NULL);
+	append_trigger_to_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger, NULL);
 	
 	gst_init(NULL, NULL);
 	
@@ -150,7 +153,7 @@ void g_module_unload(GModule *module)
 {
 	(void)module;
 	
-	append_trigger_to_datapipe(&audio_stop_pipe, audio_stop_trigger);
-	append_trigger_to_datapipe(&audio_play_once_pipe, audio_play_once_trigger);
-	append_trigger_to_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger);
+	remove_trigger_from_datapipe(&audio_stop_pipe, audio_stop_trigger);
+	remove_trigger_from_datapipe(&audio_play_once_pipe, audio_play_once_trigger);
+	remove_trigger_from_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger);
 }

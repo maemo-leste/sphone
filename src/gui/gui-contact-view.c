@@ -23,7 +23,6 @@
 #include <gtk/gtk.h>
 #include "utils.h"
 #include "store.h"
-#include "sphone-manager.h"
 #include "sphone-log.h"
 #include "gui-sms.h"
 #include "gui-dialer.h"

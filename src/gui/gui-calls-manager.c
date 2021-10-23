@@ -17,13 +17,12 @@
  */
 
 #include <gtk/gtk.h>
+#include <signal.h>
 
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
 #endif
 
-#include "sphone-manager.h"
-#include "sphone-call.h"
 #include "sphone-log.h"
 #include "utils.h"
 #include "gui-calls-manager.h"
@@ -33,7 +32,6 @@
 #include "types.h"
 
 struct {
-	SphoneManager *manager;
 	GtkWidget *main_window;
 	GtkListStore *dials_store;
 	GtkWidget *dials_view;
@@ -44,22 +42,23 @@ struct {
 	GtkWidget *mute_button;
 	GtkWidget *speaker_button;
 	GtkWidget *handset_button;
-}g_calls_manager;
+} g_calls_manager;
 
 enum{
+	GUI_CALLS_COLUMN_CALL,
 	GUI_CALLS_COLUMN_STATUS,
 	GUI_CALLS_COLUMN_DIAL,
-	GUI_CALLS_COLUMN_CALL,
 	GUI_CALLS_COLUMN_DESC,
-	GUI_CALLS_COLUMN_PHOTO
+	GUI_CALLS_COLUMN_PHOTO,
 };
 
 static void gui_calls_select_callback(void);
 static void gui_calls_double_click_callback(void);
-static void gui_calls_utils_add_dial(gchar *dial, gchar *status, SphoneCall *call);
-static void gui_calls_new_call_callback(SphoneManager *manager, SphoneCall *call);
-static void gui_calls_utils_update_dial(gchar *dial, gchar *status);
-static void gui_calls_utils_delete_dial(gchar *dial);
+static void gui_calls_utils_add_call(const CallProperties *call);
+static void gui_calls_new_call_callback(gconstpointer data, void *object);
+static void gui_calls_call_status_callback(gconstpointer data, void *object);
+static void gui_calls_utils_delete_call(const CallProperties *call);
+static void gui_calls_utils_update_call(const CallProperties *call);
 static void gui_calls_answer_callback(void);
 static void gui_calls_hangup_callback(void);
 static void gui_calls_answer_waiting_callback(void);
@@ -67,16 +66,18 @@ static void gui_calls_activate_callback(void);
 static void gui_calls_mute_callback(void);
 static void gui_calls_speaker_callback(void);
 static void gui_calls_handset_callback(void);
-static void gui_calls_audio_route_trigger(gconstpointer data);
+static void gui_calls_audio_route_trigger(gconstpointer data, gpointer user_data);
 
 static sphone_audio_route_t route = SPHONE_AUDIO_ROUTE_UNKNOWN;
-static int gui_calls_voice_status=0;
+static int gui_calls_voice_status = 0;
 
-static gboolean return_true(void){return TRUE;}
-
-int gui_calls_manager_init(SphoneManager *manager)
+static gboolean return_true(void)
 {
-	g_calls_manager.manager=manager;
+	return TRUE;
+}
+
+void gui_calls_manager_init(void)
+{
 	g_calls_manager.main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(g_calls_manager.main_window),"Active Calls");
 	gtk_window_set_deletable(GTK_WINDOW(g_calls_manager.main_window),FALSE);
@@ -109,7 +110,7 @@ int gui_calls_manager_init(SphoneManager *manager)
 	column = gtk_tree_view_column_new_with_attributes("Status", renderer, "text", GUI_CALLS_COLUMN_STATUS, NULL);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(g_calls_manager.dials_view), column);
 
-	g_calls_manager.dials_store = gtk_list_store_new(5, G_TYPE_STRING, G_TYPE_STRING, SPHONE_TYPE_CALL, G_TYPE_STRING, GDK_TYPE_PIXBUF);
+	g_calls_manager.dials_store = gtk_list_store_new(5, G_TYPE_POINTER, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, GDK_TYPE_PIXBUF);
 
 	gtk_tree_view_set_model(GTK_TREE_VIEW(g_calls_manager.dials_view), GTK_TREE_MODEL(g_calls_manager.dials_store));
 
@@ -150,11 +151,16 @@ int gui_calls_manager_init(SphoneManager *manager)
 	g_signal_connect(G_OBJECT(g_calls_manager.handset_button),"clicked", G_CALLBACK(gui_calls_handset_callback),NULL);
 	g_signal_connect(G_OBJECT(g_calls_manager.main_window),"delete-event", G_CALLBACK(return_true),NULL);
 
-	g_signal_connect(G_OBJECT(manager),"call_added", G_CALLBACK(gui_calls_new_call_callback),NULL);
+	append_trigger_to_datapipe(&audio_route_pipe, gui_calls_audio_route_trigger, NULL);
+	append_trigger_to_datapipe(&call_new_pipe, gui_calls_new_call_callback, NULL);
+	append_trigger_to_datapipe(&call_properties_changed_pipe, gui_calls_call_status_callback, NULL);
+}
 
-	append_trigger_to_datapipe(&audio_route_pipe, gui_calls_audio_route_trigger);
-
-	return 0;
+void gui_calls_manager_exit(void)
+{
+	remove_trigger_from_datapipe(&audio_route_pipe, gui_calls_audio_route_trigger);
+	remove_trigger_from_datapipe(&call_new_pipe, gui_calls_new_call_callback);
+	remove_trigger_from_datapipe(&call_properties_changed_pipe, gui_calls_call_status_callback);
 }
 
 /*
@@ -162,40 +168,35 @@ int gui_calls_manager_init(SphoneManager *manager)
  */
 static void gui_calls_check_voice(void)
 {
-	sphone_log(LL_DEBUG, "%s\n", __func__);
-	int enable_voice=FALSE;
-	GValue value={0};
+	int enable_voice = FALSE;
+	GValue value = {0};
 	GtkTreeIter iter;	
 	
 	int r=gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter);
 	while(r){
-		gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,0,&value);
-		const gchar *state=g_value_get_string(&value);
-		if(!g_strcmp0(state,"active")
-		   || !g_strcmp0(state,"dialing")
-		   || !g_strcmp0(state,"alerting")){
-			enable_voice=TRUE;
-		}
+		gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter, GUI_CALLS_COLUMN_CALL, &value);
+		CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
+		if(call->state == SPHONE_CALL_ACTIVE || call->state == SPHONE_CALL_DIALING || call->state == SPHONE_CALL_ALERTING)
+			enable_voice = TRUE;
 		g_value_unset(&value);
 		r=gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter);
 	}
 
 	if(enable_voice) {
-		sphone_log(LL_DEBUG, "%s: enable\n", __func__);
+		sphone_log(LL_DEBUG, "%s: enable", __func__);
 		execute_datapipe(&call_mode_pipe, GINT_TO_POINTER(SPHONE_MODE_INCALL));
 		gui_calls_voice_status=1;
 	}
 	else {
-		sphone_log(LL_DEBUG, "%s: disable\n", __func__);
+		sphone_log(LL_DEBUG, "%s: disable", __func__);
 		execute_datapipe(&call_mode_pipe, GINT_TO_POINTER(SPHONE_MODE_NO_CALL));
 		gui_calls_voice_status=0;
 	}
-	
-	//TODO: do routing somehow utils_audio_set(gui_calls_voice_status);
 }
 
-static void gui_calls_audio_route_trigger(gconstpointer data)
+static void gui_calls_audio_route_trigger(gconstpointer data, gpointer user_data)
 {
+	(void)user_data;
 	route = GPOINTER_TO_INT(data);
 }
 
@@ -223,111 +224,110 @@ static void gui_calls_update_global_status(void)
 	}
 }
 
-static void gui_calls_call_status_callback(SphoneCall *call)
+static CallProperties *gui_calls_find_call(const CallProperties *call, GtkTreeIter *iter)
 {
-	gchar *dial=NULL;
-	gchar *state=NULL;
-	gint answer_status, direction;
-	
-	sphone_log(LL_DEBUG, "%s\n", __func__);
-	
-	g_object_get( G_OBJECT(call),
-				  "line_identifier", &dial,
-				  "state", &state,
-				  "answer_status", &answer_status,
-				  "direction", &direction, NULL);
-	sphone_log(LL_DEBUG, "Update call %s %s\n",dial,state);
-	if(!g_strcmp0 (state,"incoming")) {
-		utils_start_ringing(dial);
-	}
-	else {
-		utils_stop_ringing(dial);
-	}
-
-	if(!g_strcmp0 (state,"disconnected")){
-		gui_calls_utils_delete_dial(dial);
-		if(answer_status==STORE_INTERACTION_CALL_STATUS_MISSED && direction==STORE_INTERACTION_DIRECTION_INCOMING){
-			//TODO: replace notification_add("missed_call.png",gui_history_calls);
+	GValue value = {0};
+	do {
+		gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),iter, GUI_CALLS_COLUMN_CALL, &value);
+		CallProperties *icall = g_value_get_pointer(&value);
+		if(call_properties_comp(call, icall)){
+			return icall;
 		}
-	}else
-		gui_calls_utils_update_dial(dial,state);
-
-	gui_calls_check_voice();
-
-	gui_calls_update_global_status();
-	
-	g_free(state);
-	g_free(dial);
+		g_value_unset(&value);
+	} while(gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), iter));
+	sphone_log(LL_ERR, "%s: got invalid call %p", __func__, call);
+	return NULL;
 }
 
-static void gui_calls_new_call_callback(SphoneManager *manager, SphoneCall *call)
+static void gui_calls_call_status_callback(gconstpointer data, void *object)
 {
-	(void)manager;
-	gchar *dial=NULL;
-	gchar *state=NULL;
-	
-	sphone_log(LL_DEBUG, "%s\n", __func__);
-	
-	g_object_get( G_OBJECT(call), "line_identifier", &dial, "state", &state, NULL);
-	sphone_log(LL_DEBUG, "Add new call %s %s\n",dial,state);
-	gui_calls_utils_add_dial(dial,state,call);
-	g_signal_connect(G_OBJECT(call), "status_changed", G_CALLBACK(gui_calls_call_status_callback), NULL);
+	const CallProperties *call = (const CallProperties*)data;
+	GtkTreeIter iter;
+	(void)object;
+
+	sphone_log(LL_DEBUG, "%s: Update call %s %s", __func__, call->line_identifier, sphone_get_state_string(call->state));
+
+	if(call->state == SPHONE_CALL_DISCONNECTED) {
+		if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter))
+			return;
+		CallProperties *icall = gui_calls_find_call(call, &iter);
+		if(icall && !icall->awnserd){
+			//TODO: replace notification_add("missed_call.png",gui_history_calls);
+			sphone_log(LL_DEBUG, "%s: call ended unwanserd %s", __func__, call->line_identifier);
+		}
+		gui_calls_utils_delete_call(call);
+	} else {
+		gui_calls_utils_update_call(call);
+	}
+
 	gui_calls_check_voice();
 
-	if(!g_strcmp0 (state,"incoming"))
-		utils_start_ringing(dial);
+	gui_calls_update_global_status();
+}
+
+static void gui_calls_new_call_callback(gconstpointer data, void *object)
+{
+	const CallProperties *call = (const CallProperties*)data;
+	(void)object;
+	
+	sphone_log(LL_DEBUG, "%s: Add new call to: %s state: %s",
+			   __func__, call->line_identifier, sphone_get_state_string(call->state));
+	gui_calls_utils_add_call(call);
+	gui_calls_check_voice();
+
+	if(call->state == SPHONE_CALL_INCOMING)
+		utils_start_ringing();
 	else
-		utils_stop_ringing(dial);
+		utils_stop_ringing();
 
 	gui_calls_update_global_status();
-	
-	g_free(state);
-	g_free(dial);
 }
 
 static void gui_calls_select_callback(void)
 {
-	sphone_log(LL_DEBUG, "%s\n", __func__);
+	sphone_log(LL_DEBUG, "%s", __func__);
 	GtkTreePath *path;
 	gtk_tree_view_get_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),&path,NULL);
 	GtkTreeIter iter;
-	GValue value={0};
+	GValue value = {0};
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,path);
 	gtk_tree_path_free(path);
-	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,0,&value);
-	const gchar *status=g_value_get_string(&value);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter, GUI_CALLS_COLUMN_CALL, &value);
+	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
 
-	if(!g_strcmp0(status,"active")){
+	sphone_log(LL_DEBUG, "%s: found call %p", __func__, call);
+
+	if(call->state == SPHONE_CALL_ACTIVE) {
 		gtk_widget_hide(g_calls_manager.activate_button);
 		gtk_widget_hide(g_calls_manager.answer_waiting_button);
 		gtk_widget_hide(g_calls_manager.answer_button);
 		gtk_widget_show(g_calls_manager.hangup_button);
-	}else if(!g_strcmp0(status,"held")){
+	} else if(call->state == SPHONE_CALL_HELD) {
 		gtk_widget_show(g_calls_manager.activate_button);
 		gtk_widget_hide(g_calls_manager.answer_waiting_button);
 		gtk_widget_hide(g_calls_manager.answer_button);
 		gtk_widget_show(g_calls_manager.hangup_button);
-	}else if(!g_strcmp0(status,"dialing")){
+	} else if(call->state == SPHONE_CALL_DIALING) {
 		gtk_widget_hide(g_calls_manager.activate_button);
 		gtk_widget_hide(g_calls_manager.answer_waiting_button);
 		gtk_widget_hide(g_calls_manager.answer_button);
 		gtk_widget_show(g_calls_manager.hangup_button);
-	}else if(!g_strcmp0(status,"alerting")){
+	} else if(call->state == SPHONE_CALL_ALERTING) {
 		gtk_widget_hide(g_calls_manager.activate_button);
 		gtk_widget_hide(g_calls_manager.answer_waiting_button);
 		gtk_widget_hide(g_calls_manager.answer_button);
 		gtk_widget_show(g_calls_manager.hangup_button);
-	}else if(!g_strcmp0(status,"incoming")){
+	} else if(call->state == SPHONE_CALL_INCOMING) {
 		gtk_widget_hide(g_calls_manager.activate_button);
 		gtk_widget_hide(g_calls_manager.answer_waiting_button);
 		gtk_widget_show(g_calls_manager.answer_button);
 		gtk_widget_show(g_calls_manager.hangup_button);
-	}else if(!g_strcmp0(status,"waiting")){
+	} else if(call->state == SPHONE_CALL_WATING) {
 		gtk_widget_hide(g_calls_manager.activate_button);
 		gtk_widget_show(g_calls_manager.answer_waiting_button);
 		gtk_widget_hide(g_calls_manager.answer_button);
 		gtk_widget_show(g_calls_manager.hangup_button);
-	}else{
+	} else {
 		gtk_widget_hide(g_calls_manager.activate_button);
 		gtk_widget_hide(g_calls_manager.answer_waiting_button);
 		gtk_widget_hide(g_calls_manager.answer_button);
@@ -340,101 +340,99 @@ static void gui_calls_select_callback(void)
 
 static void gui_calls_double_click_callback(void)
 {
-	sphone_log(LL_DEBUG, "%s\n", __func__);
+	sphone_log(LL_DEBUG, "%s", __func__);
 	GtkTreePath *path;
 	gtk_tree_view_get_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),&path,NULL);
 	GtkTreeIter iter;
 	GValue value={0};
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,path);
 	gtk_tree_path_free(path);
-	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,GUI_CALLS_COLUMN_DIAL,&value);
-	const gchar *dial=g_value_get_string(&value);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter, GUI_CALLS_COLUMN_CALL, &value);
+	CallProperties *call = (CallProperties*)g_value_get_string(&value);
 
-	gui_contact_open_by_dial(dial);
+	if(call->contact)
+		execute_datapipe(&contact_show_pipe, call->contact);
 	
 	g_value_unset(&value);
-	                         
 }
 
-static void gui_calls_utils_delete_dial(gchar *dial)
+static void gui_calls_utils_delete_call(const CallProperties *call)
 {
 	GtkTreeIter iter;
-	GValue value={0};
 
 	if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter)){
 		return;
 	}
-	do {
-		gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,1,&value);
-		const gchar *idial=g_value_get_string(&value);
-		if(!g_strcmp0(dial,idial)){
-			gtk_list_store_remove(g_calls_manager.dials_store, &iter);
-		}
-		g_value_unset(&value);
-	} while(gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter));
+
+	CallProperties *icall = gui_calls_find_call(call, &iter);
+	if(icall){
+		gtk_list_store_remove(g_calls_manager.dials_store, &iter);
+		call_properties_free(icall);
+	}
 
 	// Hide the window if no active calls
 	if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter)) {
 		gtk_widget_hide(g_calls_manager.main_window);
 	}
 	else {
-		GtkTreePath *path=gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter);
-		gtk_tree_view_set_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),path,NULL,FALSE);
+		GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter);
+		gtk_tree_view_set_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view), path, NULL, FALSE);
 		gtk_tree_path_free(path);
 	}
 }
 
-static void gui_calls_utils_update_dial(gchar *dial, gchar *status)
+static void gui_calls_utils_update_call(const CallProperties *call)
 {
 	GtkTreeIter iter;
-	GValue value={0};
 
-	sphone_log(LL_DEBUG, "try update dial %s %s \n",dial,status);
+	sphone_log(LL_DEBUG, "%s: try update call %s %s", __func__, call->line_identifier, sphone_get_state_string(call->state));
 	if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter))
 	   return;
-	do{
-		gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,1,&value);
-		const gchar *idial=g_value_get_string(&value);
-		if(!g_strcmp0(dial,idial)) {
-			gtk_list_store_set(g_calls_manager.dials_store, &iter, 0, status, -1);
-			GtkTreePath *path=gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter);
-			gtk_tree_view_set_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),path,NULL,FALSE);
-			gtk_tree_path_free(path);
-			gui_calls_select_callback();
-		}
-		g_value_unset(&value);
-	} while(gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter));
-	
+
+	CallProperties *icall = gui_calls_find_call(call, &iter);
+	if(icall) {
+		sphone_log(LL_DEBUG, "%s: found call %p", __func__, icall);
+		icall->state = call->state;
+		gtk_list_store_set(g_calls_manager.dials_store, &iter, GUI_CALLS_COLUMN_STATUS, sphone_get_state_string(icall->state), -1);
+		GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter);
+		gtk_tree_view_set_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view), path, NULL, FALSE);
+		gtk_tree_path_free(path);
+		gui_calls_select_callback();
+	}
 }
 
-static void gui_calls_utils_add_dial(gchar *dial, gchar *status, SphoneCall *call)
+static void gui_calls_utils_add_call(const CallProperties *call)
 {
 	GtkTreeIter iter;
-	gui_calls_utils_delete_dial(dial);
-	store_contact_struct *contact;
 	gchar *desc;
-	GdkPixbuf *photo=NULL;
+	GdkPixbuf *photo = NULL;
 
-	store_contact_match(&contact, dial);
-	if(contact && (contact->picture || contact->name)){
-		desc = g_strdup_printf("%s\n%s",contact->name, dial);
-		if(contact->picture)
-			photo = NULL;//TODO: replace utils_get_photo(contact->picture);
-		else
-			photo = NULL;//TODO: replace utils_get_photo_default();
-	}else{
-		desc = g_strdup_printf("<Unknown>\n%s\n",dial);
-		photo = NULL;//TODO: replace utils_get_photo_unknown();
+	if(call->contact && call->contact->name) {
+		desc = g_strdup_printf("%s\n%s",call->contact->name, call->line_identifier);
+		if(call->contact->photo) {
+			photo = call->contact->photo;
+			g_object_ref(G_OBJECT(photo));
+		}
+	} else {
+		desc = g_strdup_printf("<Unknown>\n%s\n", call->line_identifier);
 	}
-	store_contact_free(contact);
+
+	CallProperties *new_call = call_properties_copy(call);
+	sphone_log(LL_DEBUG, "%s: register new call %p", __func__, new_call);
 
 	gtk_list_store_append(g_calls_manager.dials_store, &iter);
-	gtk_list_store_set(g_calls_manager.dials_store, &iter, GUI_CALLS_COLUMN_STATUS, status,GUI_CALLS_COLUMN_DIAL , dial, GUI_CALLS_COLUMN_CALL, call, GUI_CALLS_COLUMN_DESC, desc, GUI_CALLS_COLUMN_PHOTO, photo, -1);
-	g_object_unref(G_OBJECT(photo));
+	gtk_list_store_set(g_calls_manager.dials_store, &iter,
+					GUI_CALLS_COLUMN_STATUS, sphone_get_state_string(call->state),
+					GUI_CALLS_COLUMN_DIAL, call->line_identifier,
+					GUI_CALLS_COLUMN_CALL, new_call,
+					GUI_CALLS_COLUMN_DESC, desc,
+					GUI_CALLS_COLUMN_PHOTO, photo, -1);
+	if(photo)
+		g_object_unref(G_OBJECT(photo));
 	g_free(desc);
 
-	GtkTreePath *path=gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter);
-	gtk_tree_view_set_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),path,NULL,FALSE);
+	GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter);
+	gtk_tree_view_set_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view), path, NULL, FALSE);
 	gtk_tree_path_free(path);
 	gtk_widget_show(g_calls_manager.main_window);
 }
@@ -444,34 +442,32 @@ static void gui_calls_answer_callback(void)
 	GtkTreePath *path;
 	gtk_tree_view_get_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),&path,NULL);
 	GtkTreeIter iter;
-	GValue value={0};
+	GValue value = {0};
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,path);
 	gtk_tree_path_free(path);
-	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,2,&value);
-	SphoneCall *call=g_value_get_object(&value);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter, GUI_CALLS_COLUMN_CALL, &value);
+	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
+	call->awnserd = TRUE;
 	
-	gchar *dial=NULL;
-	g_object_get( G_OBJECT(call), "line_identifier", &dial, NULL);
-	
-	utils_stop_ringing(dial);
-	sphone_call_answer(call);
+	utils_stop_ringing();
+	execute_datapipe(&call_accept_pipe, call);
 	
 	g_value_unset(&value);
 }
 
 static void gui_calls_answer_waiting_callback(void)
 {
-	sphone_manager_call_hold_and_answer();
+	//TODO
 }
 
 static void gui_calls_activate_callback(void)
 {
-	sphone_manager_call_swap();
+	//TODO
 }
 
 static void gui_calls_mute_callback(void)
 {
-	utils_stop_ringing(NULL);
+	utils_stop_ringing();
 	gui_calls_update_global_status();
 }
 
@@ -488,17 +484,22 @@ static void gui_calls_handset_callback(void)
 }
 
 static void gui_calls_hangup_callback(void)
-{
+{	
 	GtkTreePath *path;
-	gtk_tree_view_get_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view),&path,NULL);
+	gtk_tree_view_get_cursor(GTK_TREE_VIEW(g_calls_manager.dials_view), &path, NULL);
 	GtkTreeIter iter;
-	GValue value={0};
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,path);
+	GValue value = {0};
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter, path);
 	gtk_tree_path_free(path);
-	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,2,&value);
-	SphoneCall *call=g_value_get_object(&value);
-
-	sphone_call_hangup(call);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter, GUI_CALLS_COLUMN_CALL, &value);
+	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
+	
+	if(!call) {
+		sphone_log(LL_ERR, "%s: failed find get call", __func__);
+	} else {
+		sphone_log(LL_DEBUG, "%s: hangup call %p from %s", __func__, call, call->line_identifier);
+		execute_datapipe(&call_hangup_pipe, call);
+	}
 
 	g_value_unset(&value);
 }

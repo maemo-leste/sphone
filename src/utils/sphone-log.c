@@ -45,7 +45,9 @@ void sphone_log(const loglevel_t loglevel, const char *const fmt, ...)
 		if (logtype == SPHONE_LOG_STDERR) {
 			fprintf(stderr, "%s: ", logname);
 			vfprintf(stderr, fmt, args);
-			fprintf(stderr, "\n");
+			size_t len = strlen(fmt);
+			if(len == 0 || fmt[strlen(fmt)-1] != '\n')
+				fprintf(stderr, "\n");
 		} else {
 			switch (loglevel) {
 				case LL_DEBUG:

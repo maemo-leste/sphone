@@ -77,10 +77,11 @@ static GDBusConnection *get_dbus_connection(void)
 	return s_bus_conn_l;
 }
 
-static void call_mode_trigger(gconstpointer data)
+static void call_mode_trigger(gconstpointer data, gpointer user_data)
 {
+	(void)user_data;
 	sphone_call_mode_t mode = (sphone_vibrate_type_t)data;
-	GVariant *val;
+	GVariant *val = NULL;
 	GVariant *result;
 	GError *error = NULL;
 
@@ -96,11 +97,13 @@ static void call_mode_trigger(gconstpointer data)
 		sphone_module_log(LL_DEBUG, "%s: %s", __func__, MCE_CALL_STATE_ACTIVE);
 	}
 
-	result = g_dbus_connection_call_sync(s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
-		MCE_REQUEST_IF, "req_call_state_change", val, NULL,
-		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+	if(val) {
+		result = g_dbus_connection_call_sync(s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+			MCE_REQUEST_IF, "req_call_state_change", val, NULL,
+			G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 
-	g_variant_unref(result);
+		g_variant_unref(result);
+	}
 
 	if(error) {
 		sphone_module_log(LL_ERR, "g_dbus_connection_call_sync faied with %s", error->message);
@@ -108,11 +111,12 @@ static void call_mode_trigger(gconstpointer data)
 	}
 }
 
-static void vibration_trigger(gconstpointer data)
+static void vibration_trigger(gconstpointer data, gpointer user_data)
 {
+	(void)user_data;
 	sphone_vibrate_type_t type = (sphone_vibrate_type_t)data;
-	GVariant *val;
-	GVariant *result;
+	GVariant *val = NULL;
+	GVariant *result = NULL;
 	GError *error = NULL;
 	
 	if(type != SPHONE_VIBRATE_STOP) {
@@ -122,9 +126,11 @@ static void vibration_trigger(gconstpointer data)
 			val = g_variant_new("(s)", "PatternIncomingMessage");
 		}
 		
-		result = g_dbus_connection_call_sync(s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
-		MCE_REQUEST_IF, "req_vibrator_pattern_activate", val, NULL,
-		G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+		if(val) {
+			result = g_dbus_connection_call_sync(s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
+			MCE_REQUEST_IF, "req_vibrator_pattern_activate", val, NULL,
+			G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
+		}
 	} else {
 		val = g_variant_new("(s)", "PatternIncomingCall");
 		result = g_dbus_connection_call_sync(s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
@@ -132,7 +138,8 @@ static void vibration_trigger(gconstpointer data)
 			G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
 	}
 
-	g_variant_unref(result);
+	if(result)
+		g_variant_unref(result);
 
 	if(error) {
 		sphone_module_log(LL_ERR, "dbus call to mce faied with %s", error->message);
@@ -147,8 +154,8 @@ const gchar *sphone_module_init(void)
 	if(!s_bus_conn)
 		return "Failed to connect dbus system bus";
 	
-	append_trigger_to_datapipe(&vibrate_pipe, vibration_trigger);
-	append_trigger_to_datapipe(&call_mode_pipe, call_mode_trigger);
+	append_trigger_to_datapipe(&vibrate_pipe, vibration_trigger, NULL);
+	append_trigger_to_datapipe(&call_mode_pipe, call_mode_trigger, NULL);
 	
 	return NULL;
 }

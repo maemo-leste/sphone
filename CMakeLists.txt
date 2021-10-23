@@ -33,6 +33,8 @@ else()
 	set(SPHONE_DESKTOP_DIR /usr/share/applications/)
 endif(DEFINED LIBHILDON_LIBRARIES)
 
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+
 add_compile_options( 
 	-Wextra
 	-Wall

@@ -38,9 +38,8 @@ static int utils_ringing_state=0;
  - Start ringtone playing (if enabled)
  - Execute external application handler
 */
-void utils_start_ringing(const gchar *dial)
+void utils_start_ringing(void)
 {
-	(void)dial;
 	if(utils_ringing_state)
 		return;
 	utils_ringing_state=1;
@@ -63,9 +62,8 @@ void utils_start_ringing(const gchar *dial)
  - Stop ringtone playing
  - Execute external application handler
 */
-void utils_stop_ringing(const gchar *dial)
+void utils_stop_ringing(void)
 {
-	(void)dial;
 	if(!utils_ringing_state)
 		return;
 	utils_ringing_state=0;
@@ -100,4 +98,12 @@ void utils_sms_notify(void)
 	
 	if(rtconf_vibration_enabled())
 		execute_datapipe(&vibrate_pipe, GINT_TO_POINTER(SPHONE_VIBRATE_MESSAGE));
+}
+
+char *sphone_time_to_new_string(time_t time)
+{
+	char *str = g_malloc(256);
+	if(strftime(str, sizeof(256), "%m-%d-%Y %H-%M (mon=%b)", localtime(&time)) == 0)
+		str[0] = '\0';
+	return str;
 }
