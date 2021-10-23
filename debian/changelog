@@ -1,3 +1,10 @@
+sphone (0.2.0) unstable; urgency=medium
+
+  * modularize sphone
+  * masively overhauls everything 
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sat, 23 Oct 2021 15:30:00 +0200
+
 sphone (0.1.5) unstable; urgency=medium
 
   * add inital audio routing support via pulse profiles
