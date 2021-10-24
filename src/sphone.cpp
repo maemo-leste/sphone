@@ -17,13 +17,14 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+extern "C" {
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
 #include <gtk/gtk.h>
 #include <unique/unique.h>
 
@@ -63,6 +64,11 @@
 #include "sphone-conf.h"
 #include "sphone-modules.h"
 #include "datapipes.h"
+}
+
+#include <QApplication>
+#include <QAbstractEventDispatcher>
+#undef signals
 
 typedef enum {
 	SPHONE_CMD_DIALER_OPEN=1,
@@ -118,6 +124,8 @@ int main (int argc, char *argv[])
 
 	gtk_set_locale();
 	gtk_init(&argc, &argv);
+	QApplication app(argc, argv);
+	app.setQuitOnLastWindowClosed(false);
 
 	sphone_cmd command = SPHONE_CMD_NONE;
 	gboolean is_done=FALSE;
@@ -166,6 +174,12 @@ int main (int argc, char *argv[])
 	
 	sphone_log_open(PRG_NAME, LOG_USER, SPHONE_LOG_STDERR);
 	sphone_log_set_verbosity(verbosity);
+	
+	QAbstractEventDispatcher *dispatcher = QCoreApplication::eventDispatcher();
+	if(!dispatcher && dispatcher->inherits("QEventDispatcherGlib")) {
+		sphone_log(LL_CRIT, "CRITICAL FAILURE: qt-glib support is required!!");
+		return -1;
+	}
 	
 	gchar** numbersplit = NULL;
 	if(number) {
@@ -225,7 +239,8 @@ int main (int argc, char *argv[])
 
 		g_signal_connect(G_OBJECT(unique), "message-received", G_CALLBACK(main_message_received_callback), NULL);
 		
-		gtk_main();
+		sphone_log(LL_DEBUG, "Starting main loop");
+		app.exec();
 		
 		gui_sms_exit();
 		gui_calls_manager_exit();

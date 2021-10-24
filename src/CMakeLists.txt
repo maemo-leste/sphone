@@ -1,4 +1,4 @@
-set(SPHONE_SRC_FILES 	sphone.c 
+set(SPHONE_SRC_FILES 	sphone.cpp
 	utils/book-import.c
 	utils/rtconf.c
 	utils/dbus-marshalers.c 
@@ -22,7 +22,7 @@ set(SPHONE_SRC_FILES 	sphone.c
 	)
 
 add_executable(sphone ${SPHONE_SRC_FILES})
-target_link_libraries(sphone ${COMMON_LIBRARIES})
+target_link_libraries(sphone ${COMMON_LIBRARIES} Qt${QT_VERSION_MAJOR}::Widgets)
 target_include_directories(sphone SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 target_include_directories(sphone PRIVATE . utils gui modapi)
 install(TARGETS sphone DESTINATION bin)

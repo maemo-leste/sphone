@@ -1,7 +1,7 @@
 set(MODULE_INCLUDE_DIRS ../modapi)
 
-add_library(test SHARED test.c)
-target_link_libraries(test ${COMMON_LIBRARIES})
+add_library(test SHARED test.cpp)
+target_link_libraries(test ${COMMON_LIBRARIES} Qt${QT_VERSION_MAJOR}::Widgets)
 target_include_directories(test PRIVATE ${COMMON_INCLUDE_DIRS})
 target_include_directories(test PRIVATE ${MODULE_INCLUDE_DIRS})
 install(TARGETS test DESTINATION ${SPHONE_MODULE_DIR})

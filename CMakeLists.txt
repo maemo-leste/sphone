@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(sphone LANGUAGES C VERSION 0.1)
+project(sphone LANGUAGES C CXX VERSION 0.2)
+
+set(CMAKE_AUTOMOC ON)
 
 set(CMAKE_INSTALL_PREFIX "/usr")
 
@@ -14,6 +16,8 @@ add_definitions(-DSPHONE_SYSCONF_DIR=${SPHONE_SYSCONF_DIR})
 add_definitions(-DSPHONE_SYSCONF_OVR_DIR=${SPHONE_SYSCONF_OVR_DIR})
 add_definitions(-DSPHONE_SYSCONF_INI=sphone.ini)
 
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(GTK REQUIRED gtk+-2.0)
