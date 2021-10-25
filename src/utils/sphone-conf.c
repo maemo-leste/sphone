@@ -60,7 +60,7 @@ static gpointer sphone_conf_decide_keyfile_to_use(const gchar *group, const gcha
 		struct sphone_conf_file *conf_file;
 		conf_file = sphone_conf_find_key_in_files(group, key);
 		if (conf_file == NULL)
-			sphone_log(LL_WARN, "sphone-conf: Could not get config key %s/%s", group, key);
+			sphone_log(LL_DEBUG, "sphone-conf: Could not get config key %s/%s", group, key);
 		else
 			keyfile = conf_file->keyfile;
 	}
@@ -92,7 +92,7 @@ gboolean sphone_conf_get_bool(const gchar *group, const gchar *key,
 	tmp = g_key_file_get_boolean(keyfileptr, group, key, &error);
 
 	if (error != NULL) {
-		sphone_log(LL_WARN, "sphone-conf: "
+		sphone_log(LL_DEBUG, "sphone-conf: "
 			"Could not get config key %s/%s; %s; "
 			"defaulting to `%d'",
 			group, key, error->message, defaultval);
@@ -129,7 +129,7 @@ gint sphone_conf_get_int(const gchar *group, const gchar *key,
 	tmp = g_key_file_get_integer(keyfileptr, group, key, &error);
 
 	if (error != NULL) {
-		sphone_log(LL_WARN, "sphone-conf: "
+		sphone_log(LL_DEBUG, "sphone-conf: "
 			"Could not get config key %s/%s; %s; "
 			"defaulting to `%d'",
 			group, key, error->message, defaultval);
@@ -167,7 +167,7 @@ gint *sphone_conf_get_int_list(const gchar *group, const gchar *key,
 					  length, &error);
 
 	if (error != NULL) {
-		sphone_log(LL_WARN, "sphone-conf: "
+		sphone_log(LL_DEBUG, "sphone-conf: "
 			"Could not get config key %s/%s; %s",
 			group, key, error->message);
 		*length = 0;
@@ -204,7 +204,7 @@ gchar *sphone_conf_get_string(const gchar *group, const gchar *key,
 	tmp = g_key_file_get_string(keyfileptr, group, key, &error);
 
 	if (error != NULL) {
-		sphone_log(LL_WARN, "sphone-conf: "
+		sphone_log(LL_DEBUG, "sphone-conf: "
 			"Could not get config key %s/%s; %s; %s%s%s",
 			group, key, error->message,
 			defaultval ? "defaulting to `" : "no default set",
@@ -246,7 +246,7 @@ gchar **sphone_conf_get_string_list(const gchar *group, const gchar *key,
 					 length, &error);
 
 	if (error != NULL) {
-		sphone_log(LL_WARN, "sphone-conf: "
+		sphone_log(LL_DEBUG, "sphone-conf: "
 			"Could not get config key %s/%s; %s",
 			group, key, error->message);
 		*length = 0;
@@ -308,7 +308,7 @@ gpointer sphone_conf_read_conf_file(const gchar *const conffile)
 				      G_KEY_FILE_NONE, &error) == FALSE) {
 		sphone_conf_free_conf_file(keyfileptr);
 		keyfileptr = NULL;
-		sphone_log(LL_WARN, "sphone-conf: Could not load %s; %s",
+		sphone_log(LL_DEBUG, "sphone-conf: Could not load %s; %s",
 			conffile, error->message);
 		goto EXIT;
 	}
@@ -351,7 +351,7 @@ gboolean sphone_conf_init(void)
 		}
 		rewinddir(dir);
 	} else {
-		sphone_log(LL_WARN, "sphone-conf: Could not open config overide dir %s",
+		sphone_log(LL_DEBUG, "sphone-conf: Could not open config overide dir %s",
 				   override_dir_path);
 	}
 	g_free(override_dir_path);

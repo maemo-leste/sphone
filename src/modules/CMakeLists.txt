@@ -12,6 +12,12 @@ target_include_directories(manager SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 target_include_directories(manager PRIVATE ${MODULE_INCLUDE_DIRS})
 install(TARGETS manager DESTINATION ${SPHONE_MODULE_DIR})
 
+add_library(external-exec SHARED external-exec.c)
+target_link_libraries(external-exec ${COMMON_LIBRARIES})
+target_include_directories(external-exec SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(external-exec PRIVATE ${MODULE_INCLUDE_DIRS})
+install(TARGETS external-exec DESTINATION ${SPHONE_MODULE_DIR})
+
 if(DEFINED GSTREAMER_LIBRARIES)
 	add_library(playback-gstreamer SHARED playback-gstreamer.c)
 	target_link_libraries(playback-gstreamer ${COMMON_LIBRARIES} ${GSTREAMER_LIBRARIES})
