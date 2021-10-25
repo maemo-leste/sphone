@@ -26,9 +26,9 @@ void contact_free(Contact *contact)
 {
 	if(!contact)
 		return;
-	g_free(contact->line_identifier);
 	g_free(contact->name);
-	g_object_unref(G_OBJECT(contact->photo));
+	if(contact->photo)
+		g_object_unref(G_OBJECT(contact->photo));
 	g_free(contact);
 }
 
@@ -37,7 +37,6 @@ Contact *contact_copy(const Contact *contact)
 	if(!contact)
 		return NULL;
 	Contact *new_contact = g_malloc0(sizeof(*new_contact));
-	new_contact->line_identifier = g_strdup(contact->line_identifier);
 	new_contact->name = g_strdup(contact->name);
 	if(contact->photo) {
 		new_contact->photo = contact->photo;

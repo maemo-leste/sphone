@@ -42,7 +42,6 @@ const char *sphone_get_state_string(sphone_call_state_t state);
 typedef struct _Contact {
 	gchar *name;
 	GdkPixbuf *photo;
-	gchar *line_identifier;
 } Contact;
 
 void contact_free(Contact *contact);
