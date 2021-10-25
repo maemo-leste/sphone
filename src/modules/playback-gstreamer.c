@@ -1,5 +1,6 @@
 #include <glib.h>
 #include <gst/gst.h>
+#include <stdbool.h>
 #include "sphone-modules.h"
 #include "sphone-log.h"
 #include "datapipes.h"
@@ -69,14 +70,21 @@ static int utils_gst_start(const gchar *path)
 {
 	if(utils_gst_play)
 		return 0;
+	
+	if(!g_file_test(path, G_FILE_TEST_EXISTS)) {
+		sphone_module_log(LL_WARN, "%s is not a valid file", path);
+		return 0;
+	}
 
 	GstBus *bus;
 	gchar *uri = g_filename_to_uri(path, NULL, NULL);
 
 	if(!uri) {
-		sphone_module_log(LL_ERR, "%s: unable to get uri for %s", __func__, path);
+		sphone_module_log(LL_ERR, "unable to get uri for %s", path);
 		return 1;
 	}
+	
+	sphone_module_log(LL_DEBUG, "playing %s", uri);
 
 	utils_gst_play = gst_element_factory_make ("playbin", "play");
 	g_object_set (G_OBJECT (utils_gst_play), "uri", uri, NULL);
@@ -135,6 +143,14 @@ static void audio_play_once_trigger(gconstpointer data, gpointer user_data)
 		sphone_module_log(LL_ERR, "failed to play %s", filename);
 }
 
+static gpointer audio_playing_filter(gpointer data, gpointer user_data)
+{
+	(void)user_data;
+	bool *playing = (bool*)data;
+	if(utils_gst_play)
+		*playing = true;
+	return playing;
+}
 
 G_MODULE_EXPORT const gchar *sphone_module_init(void);
 const gchar *sphone_module_init(void)
@@ -142,6 +158,7 @@ const gchar *sphone_module_init(void)
 	append_trigger_to_datapipe(&audio_stop_pipe, audio_stop_trigger, NULL);
 	append_trigger_to_datapipe(&audio_play_once_pipe, audio_play_once_trigger, NULL);
 	append_trigger_to_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger, NULL);
+	append_filter_to_datapipe(&audio_playing_pipe, audio_playing_filter, NULL);
 	
 	gst_init(NULL, NULL);
 	
@@ -156,4 +173,5 @@ void g_module_unload(GModule *module)
 	remove_trigger_from_datapipe(&audio_stop_pipe, audio_stop_trigger);
 	remove_trigger_from_datapipe(&audio_play_once_pipe, audio_play_once_trigger);
 	remove_trigger_from_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger);
+	remove_filter_from_datapipe(&audio_playing_pipe, audio_playing_filter);
 }

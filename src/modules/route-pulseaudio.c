@@ -106,7 +106,7 @@ static int sphone_pa_audio_route_set_in_call(struct sphone_pa_if *pa_if_l)
 											(void*)"set ucm profile to Voice Call");
 
 	if (!operation) {
-		sphone_module_log(LL_DEBUG, "pulse create operation failed %s.",
+		sphone_module_log(LL_ERR, "pulse create operation failed %s.",
 			  pa_strerror(pa_context_errno(pa_if_l->context)));
 		return -1;
 	}
@@ -126,7 +126,7 @@ static int sphone_pa_audio_route_set_playback(struct sphone_pa_if *pa_if_l)
 											(void*)"set ucm profile to HiFi");
 
 	if (!operation) {
-		sphone_module_log(LL_DEBUG, "pulse create operation failed %s.",
+		sphone_module_log(LL_ERR, "pulse create operation failed %s.",
 			  pa_strerror(pa_context_errno(pa_if_l->context)));
 		return -1;
 	}

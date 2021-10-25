@@ -185,7 +185,7 @@ int main (int argc, char *argv[])
 	                                               ,"options", SPHONE_CMD_OPTIONS, NULL);
 
 	if (!is_done && !unique_app_is_running(unique)) {
-		sphone_log(LL_INFO,  "Staring new instance");
+		sphone_log(LL_INFO,  "Starting new instance");
 		
 		datapipes_init();
 		
@@ -203,9 +203,6 @@ int main (int argc, char *argv[])
 			sphone_log(LL_ERR,  "sphone_modules_init failed");
 			return -1;
 		}
-		
-		if(number)
-			sphone_log(LL_DEBUG,  "number: %s", number);
 		
 		switch (command) {
 			case SPHONE_CMD_DIALER_OPEN:
@@ -232,8 +229,6 @@ int main (int argc, char *argv[])
 		datapipes_exit();
 	} else {
 		sphone_log(LL_DEBUG, "Instance is already running, sending commands ...");
-		if(number)
-			sphone_log(LL_DEBUG,  "number: %s", number);
 		if(command != SPHONE_CMD_NONE) {
 			UniqueMessageData *message = NULL;
 			if(number) {
