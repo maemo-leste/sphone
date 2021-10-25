@@ -156,10 +156,12 @@ const gchar *sphone_module_init(void)
 	ESource *address_book_src;
 	gchar *source_uid = sphone_conf_get_string("ContactsEvolution", "ContactsSource", NULL, NULL);
 	
-	if(source_uid)
+	if(source_uid) {
 		address_book_src = e_source_registry_ref_source(regestry, source_uid);
-	else
+		g_free(source_uid);
+	} else {
 		address_book_src = e_source_registry_ref_default_address_book(regestry);
+	}
 
     g_object_unref(regestry);
 
