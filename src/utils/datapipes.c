@@ -4,6 +4,7 @@ datapipe_struct audio_play_once_pipe;
 datapipe_struct audio_play_looping_pipe;
 datapipe_struct audio_stop_pipe;
 datapipe_struct audio_route_pipe;
+datapipe_struct audio_playing_pipe;
 
 datapipe_struct call_mode_pipe;
 datapipe_struct call_new_pipe;
@@ -27,6 +28,7 @@ void datapipes_init(void)
 	setup_datapipe(&audio_play_once_pipe);
 	setup_datapipe(&audio_play_looping_pipe);
 	setup_datapipe(&audio_stop_pipe);
+	setup_datapipe(&audio_playing_pipe);
 	setup_datapipe(&audio_route_pipe);
 	setup_datapipe(&call_mode_pipe);
 	setup_datapipe(&call_new_pipe);
@@ -47,6 +49,7 @@ void datapipes_exit(void)
 	free_datapipe(&audio_play_once_pipe);
 	free_datapipe(&audio_play_looping_pipe);
 	free_datapipe(&audio_stop_pipe);
+	free_datapipe(&audio_playing_pipe);
 	free_datapipe(&audio_route_pipe);
 	free_datapipe(&call_mode_pipe);
 	free_datapipe(&call_new_pipe);

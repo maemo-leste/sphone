@@ -87,12 +87,13 @@ static void call_mode_trigger(gconstpointer data, gpointer user_data)
 
 	if(mode == SPHONE_MODE_NO_CALL) {
 		val = g_variant_new("(ss)", MCE_CALL_STATE_NONE, MCE_NORMAL_CALL);
+		sphone_module_log(LL_DEBUG, "%s: %s", __func__, MCE_CALL_STATE_NONE);
 	}
 	else if(mode == SPHONE_MODE_RINGING) {
 		val = g_variant_new("(ss)", MCE_CALL_STATE_RINGING, MCE_NORMAL_CALL);
 		sphone_module_log(LL_DEBUG, "%s: %s", __func__, MCE_CALL_STATE_RINGING);
 	}
-	else if(mode == SPHONE_MODE_INCALL) {
+	else if(mode == SPHONE_MODE_INCALL || mode == SPHONE_MODE_INCALL_NO_ROUTE) {
 		val = g_variant_new("(ss)", MCE_CALL_STATE_ACTIVE, MCE_NORMAL_CALL);
 		sphone_module_log(LL_DEBUG, "%s: %s", __func__, MCE_CALL_STATE_ACTIVE);
 	}

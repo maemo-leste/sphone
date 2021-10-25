@@ -73,6 +73,7 @@ CallProperties *call_properties_copy(const CallProperties *properties)
 	new_props->awnserd = properties->awnserd;
 	new_props->backend = properties->backend;
 	new_props->state = properties->state;
+	new_props->needs_route = properties->needs_route;
 	return new_props;
 }
 

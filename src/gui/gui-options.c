@@ -18,7 +18,6 @@
 
 #include <gtk/gtk.h>
 #include <gio/gio.h>
-#include "utils.h"
 #include "rtconf.h"
 #include "gui-options.h"
 #include "datapipes.h"

@@ -11,6 +11,9 @@ extern datapipe_struct audio_play_looping_pipe;
 //input: ignored
 extern datapipe_struct audio_stop_pipe;
 
+//input: bool
+extern datapipe_struct audio_playing_pipe;
+
 //input: sphone_audio_route_t
 extern datapipe_struct audio_route_pipe;
 

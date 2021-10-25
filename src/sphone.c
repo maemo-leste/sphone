@@ -54,7 +54,6 @@
 #include "gui-calls-manager.h"
 #include "gui-dialer.h"
 #include "gui-options.h"
-#include "utils.h"
 #include "gui-sms.h"
 #include "store.h"
 #include "book-import.h"

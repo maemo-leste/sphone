@@ -19,7 +19,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <glib.h>
-#include "utils.h"
 #include "sphone-log.h"
 #include "store.h"
 #include "book-import.h"

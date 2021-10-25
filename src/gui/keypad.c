@@ -17,7 +17,6 @@
  */
 
 #include <gtk/gtk.h>
-#include "utils.h"
 #include "keypad.h"
 
 struct key {

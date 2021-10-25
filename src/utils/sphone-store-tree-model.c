@@ -20,7 +20,6 @@
 #include <gtk/gtk.h>
 #include <sqlite3.h>
 #include "store.h"
-#include "utils.h"
 #include "sphone-store-tree-model.h"
 #include "sphone-log.h"
 

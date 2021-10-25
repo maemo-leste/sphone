@@ -30,7 +30,6 @@
 #include "types.h"
 #include "sphone-log.h"
 #include "keypad.h"
-#include "utils.h"
 #include "gui-dialer.h"
 #include "sphone-store-tree-model.h"
 #include "gui-history-calls.h"

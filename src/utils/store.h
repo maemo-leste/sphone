@@ -19,6 +19,8 @@
 #ifndef _STORE_H_
 #define _STORE_H_
 
+#include <glib-object.h>
+
 typedef enum { STORE_INTERACTION_TYPE_SMS=0, STORE_INTERACTION_TYPE_VOICE=1} store_interaction_type_enum;
 typedef enum { STORE_INTERACTION_DIRECTION_INCOMING=0, STORE_INTERACTION_DIRECTION_OUTGOING=1} store_interaction_direction_enum;
 typedef enum { STORE_INTERACTION_CALL_STATUS_MISSED=0, STORE_INTERACTION_CALL_STATUS_ESTABLISHED=1} store_interaction_call_status_enum;

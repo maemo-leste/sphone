@@ -457,12 +457,16 @@ static void call_added_cb(GDBusConnection *connection,
 	
 	CallProperties *call = g_malloc0(sizeof(*call));
 	call->backend = ofono_if_priv.backend_id;
+	call->needs_route = true;
 	GVariantIter *info_iter;
 	char *path;
 
 	g_variant_get(parameters, "(oa{sv})", &path, &info_iter);
 	sphone_module_log(LL_DEBUG, "%s: %s", __func__, path);
 	ofono_voice_call_decode_properties(call, info_iter, path);
+	
+	if(call->state != SPHONE_CALL_INCOMING)
+		call->awnserd = true;
 	
 	ofono_voice_call_properties_add_handler(path);
 
@@ -483,16 +487,23 @@ static void call_hold_trigger(gconstpointer data, gpointer user_data)
 
 static void call_accept_trigger(gconstpointer data, gpointer user_data)
 {
-	const CallProperties *call = (const CallProperties*)data;
+	const CallProperties *icall = (const CallProperties*)data;
 	struct ofono_if_priv_s *priv = (struct ofono_if_priv_s*)user_data;
 
-	if(call->backend == priv->backend_id && ofono_init_valid()) {
+	if(icall->backend == priv->backend_id && ofono_init_valid()) {
+		CallProperties *call = ofono_find_call(&ofono_if_priv, icall->backend_data);
+
+		if(!call) 
+			return;
+
 		GVariant *result;
 		GError *gerror = NULL;
 		
 		result = g_dbus_connection_call_sync(priv->s_bus_conn, OFONO_SERVICE, call->backend_data,
 			OFONO_VOICECALL_IFACE, "Answer", NULL, NULL,
 			G_DBUS_CALL_FLAGS_NONE, -1, NULL, &gerror);
+
+		call->awnserd = true;
 
 		g_variant_unref(result);
 

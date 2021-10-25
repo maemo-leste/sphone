@@ -88,7 +88,19 @@ gconstpointer execute_datapipe(datapipe_struct *const datapipe, gpointer indata)
 
 	execute_datapipe_output_triggers(datapipe, data);
 
+	datapipe->last_data = data;
+
 	return data;
+}
+
+
+int datapipe_get_last_data_int(datapipe_struct *const datapipe)
+{
+	if (datapipe == NULL) {
+		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
+		return -1;
+	}
+	return GPOINTER_TO_INT(datapipe->last_data);
 }
 
 /**
@@ -223,6 +235,7 @@ void setup_datapipe(datapipe_struct *const datapipe)
 	datapipe->filters_user_data = NULL;
 	datapipe->output_triggers = NULL;
 	datapipe->triggers_user_data = NULL;
+	datapipe->last_data = NULL;
 }
 
 /**

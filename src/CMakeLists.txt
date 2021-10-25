@@ -1,15 +1,13 @@
 set(SPHONE_SRC_FILES 	sphone.c 
 	utils/book-import.c
 	utils/rtconf.c
-	utils/dbus-marshalers.c 
 	utils/sphone-log.c
 	utils/sphone-modules.c 
 	utils/sphone-conf.c 
 	utils/datapipe.c 
 	utils/datapipes.c
 	utils/sphone-store-tree-model.c 
-	utils/store.c 
-	utils/utils.c
+	utils/store.c
 	utils/types.c
 	utils/comm.c
 	gui/gui-calls-manager.c

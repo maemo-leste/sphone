@@ -5,8 +5,8 @@
 #include <stdbool.h>
 
 typedef enum {
-	SPHONE_AUDIO_ROUTE_UNKNOWN=-1,
-	SPHONE_AUDIO_ROUTE_SPEAKER=0,
+	SPHONE_AUDIO_ROUTE_UNKNOWN=0,
+	SPHONE_AUDIO_ROUTE_SPEAKER,
 	SPHONE_AUDIO_ROUTE_HANDSET,
 	SPHONE_AUDIO_ROUTE_HEADSET,
 	SPHONE_AUDIO_ROUTE_BT,
@@ -17,12 +17,13 @@ typedef enum {
 	SPHONE_MODE_NO_CALL=0,
 	SPHONE_MODE_RINGING,
 	SPHONE_MODE_INCALL,
+	SPHONE_MODE_INCALL_NO_ROUTE,
 } sphone_call_mode_t;
 
 typedef enum {
-	SPHONE_VIBRATE_CALL=0,
+	SPHONE_VIBRATE_STOP=0,
+	SPHONE_VIBRATE_CALL,
 	SPHONE_VIBRATE_MESSAGE,
-	SPHONE_VIBRATE_STOP,
 } sphone_vibrate_type_t;
 
 typedef enum {
@@ -56,8 +57,9 @@ typedef struct _CallProperties{
 	gint backend;
 	gchar *backend_data;
 	time_t start_time;
-	gboolean emergency;
-	gboolean awnserd;
+	bool emergency;
+	bool awnserd;
+	bool needs_route;
 } CallProperties;
 
 void call_properties_free(CallProperties *properties);

@@ -24,7 +24,6 @@
 #endif
 
 #include "sphone-log.h"
-#include "utils.h"
 #include "gui-calls-manager.h"
 #include "gui-contact-view.h"
 #include "store.h"
@@ -67,9 +66,6 @@ static void gui_calls_mute_callback(void);
 static void gui_calls_speaker_callback(void);
 static void gui_calls_handset_callback(void);
 static void gui_calls_audio_route_trigger(gconstpointer data, gpointer user_data);
-
-static sphone_audio_route_t route = SPHONE_AUDIO_ROUTE_UNKNOWN;
-static int gui_calls_voice_status = 0;
 
 static gboolean return_true(void)
 {
@@ -163,65 +159,33 @@ void gui_calls_manager_exit(void)
 	remove_trigger_from_datapipe(&call_properties_changed_pipe, gui_calls_call_status_callback);
 }
 
-/*
- check if the voice channel should be enabled
- */
-static void gui_calls_check_voice(void)
+static void gui_calls_update_global_status(void)
 {
-	int enable_voice = FALSE;
-	GValue value = {0};
-	GtkTreeIter iter;	
-	
-	int r=gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter);
-	while(r){
-		gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter, GUI_CALLS_COLUMN_CALL, &value);
-		CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
-		if(call->state == SPHONE_CALL_ACTIVE || call->state == SPHONE_CALL_DIALING || call->state == SPHONE_CALL_ALERTING)
-			enable_voice = TRUE;
-		g_value_unset(&value);
-		r=gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter);
+	if(datapipe_get_last_data_int(&call_mode_pipe) == SPHONE_MODE_RINGING) {
+		gtk_widget_show(g_calls_manager.mute_button);
+	} else {
+		gtk_widget_hide(g_calls_manager.mute_button);
 	}
 
-	if(enable_voice) {
-		sphone_log(LL_DEBUG, "%s: enable", __func__);
-		execute_datapipe(&call_mode_pipe, GINT_TO_POINTER(SPHONE_MODE_INCALL));
-		gui_calls_voice_status=1;
-	}
-	else {
-		sphone_log(LL_DEBUG, "%s: disable", __func__);
-		execute_datapipe(&call_mode_pipe, GINT_TO_POINTER(SPHONE_MODE_NO_CALL));
-		gui_calls_voice_status=0;
+	if(datapipe_get_last_data_int(&call_mode_pipe) == SPHONE_MODE_INCALL ||
+		datapipe_get_last_data_int(&call_mode_pipe) == SPHONE_MODE_INCALL_NO_ROUTE) {
+		if(datapipe_get_last_data_int(&audio_route_pipe) == SPHONE_AUDIO_ROUTE_SPEAKER)
+			gtk_widget_hide(g_calls_manager.speaker_button);
+		else
+			gtk_widget_show(g_calls_manager.speaker_button);
+
+		if(datapipe_get_last_data_int(&audio_route_pipe) == SPHONE_AUDIO_ROUTE_HANDSET)
+			gtk_widget_hide(g_calls_manager.handset_button);
+		else
+			gtk_widget_show(g_calls_manager.handset_button);
 	}
 }
 
 static void gui_calls_audio_route_trigger(gconstpointer data, gpointer user_data)
 {
 	(void)user_data;
-	route = GPOINTER_TO_INT(data);
-}
-
-static void gui_calls_update_global_status(void)
-{
-	if(utils_ringing_status()) {
-		sphone_log(LL_DEBUG, "%s: ", __func__);
-		execute_datapipe(&call_mode_pipe, GINT_TO_POINTER(SPHONE_MODE_RINGING));
-		gtk_widget_show(g_calls_manager.mute_button);
-	}
-	else {
-		gtk_widget_hide(g_calls_manager.mute_button);
-	}
-
-	if(gui_calls_voice_status){
-		if(route == SPHONE_AUDIO_ROUTE_SPEAKER)
-			gtk_widget_hide(g_calls_manager.speaker_button);
-		else
-			gtk_widget_show(g_calls_manager.speaker_button);
-
-		if(route == SPHONE_AUDIO_ROUTE_HANDSET)
-			gtk_widget_hide(g_calls_manager.handset_button);
-		else
-			gtk_widget_show(g_calls_manager.handset_button);
-	}
+	(void)data;
+	gui_calls_update_global_status();
 }
 
 static CallProperties *gui_calls_find_call(const CallProperties *call, GtkTreeIter *iter)
@@ -260,8 +224,6 @@ static void gui_calls_call_status_callback(gconstpointer data, void *object)
 		gui_calls_utils_update_call(call);
 	}
 
-	gui_calls_check_voice();
-
 	gui_calls_update_global_status();
 }
 
@@ -273,12 +235,6 @@ static void gui_calls_new_call_callback(gconstpointer data, void *object)
 	sphone_log(LL_DEBUG, "%s: Add new call to: %s state: %s",
 			   __func__, call->line_identifier, sphone_get_state_string(call->state));
 	gui_calls_utils_add_call(call);
-	gui_calls_check_voice();
-
-	if(call->state == SPHONE_CALL_INCOMING)
-		utils_start_ringing();
-	else
-		utils_stop_ringing();
 
 	gui_calls_update_global_status();
 }
@@ -448,8 +404,7 @@ static void gui_calls_answer_callback(void)
 	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter, GUI_CALLS_COLUMN_CALL, &value);
 	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
 	call->awnserd = TRUE;
-	
-	utils_stop_ringing();
+
 	execute_datapipe(&call_accept_pipe, call);
 	
 	g_value_unset(&value);
@@ -467,7 +422,8 @@ static void gui_calls_activate_callback(void)
 
 static void gui_calls_mute_callback(void)
 {
-	utils_stop_ringing();
+	execute_datapipe(&vibrate_pipe, GINT_TO_POINTER(SPHONE_VIBRATE_STOP));
+	execute_datapipe(&audio_stop_pipe, NULL);
 	gui_calls_update_global_status();
 }
 
@@ -495,7 +451,7 @@ static void gui_calls_hangup_callback(void)
 	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
 	
 	if(!call) {
-		sphone_log(LL_ERR, "%s: failed find get call", __func__);
+		sphone_log(LL_ERR, "%s: failed find call", __func__);
 	} else {
 		sphone_log(LL_DEBUG, "%s: hangup call %p from %s", __func__, call, call->line_identifier);
 		execute_datapipe(&call_hangup_pipe, call);

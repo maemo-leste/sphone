@@ -2,9 +2,15 @@ set(MODULE_INCLUDE_DIRS ../modapi)
 
 add_library(test SHARED test.c)
 target_link_libraries(test ${COMMON_LIBRARIES})
-target_include_directories(test PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(test SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 target_include_directories(test PRIVATE ${MODULE_INCLUDE_DIRS})
 install(TARGETS test DESTINATION ${SPHONE_MODULE_DIR})
+
+add_library(manager SHARED manager.c)
+target_link_libraries(manager ${COMMON_LIBRARIES})
+target_include_directories(manager SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(manager PRIVATE ${MODULE_INCLUDE_DIRS})
+install(TARGETS manager DESTINATION ${SPHONE_MODULE_DIR})
 
 if(DEFINED GSTREAMER_LIBRARIES)
 	add_library(playback-gstreamer SHARED playback-gstreamer.c)
@@ -37,7 +43,8 @@ endif(DEFINED LIBPROFILE_LIBRARIES)
 
 add_library(sphone-mce SHARED sphone-mce.c)
 target_link_libraries(sphone-mce ${COMMON_LIBRARIES})
-target_include_directories(sphone-mce PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
+target_include_directories(sphone-mce SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(sphone-mce PRIVATE ${MODULE_INCLUDE_DIRS})
 install(TARGETS sphone-mce DESTINATION ${SPHONE_MODULE_DIR})
 
 add_library(comm-ofono SHARED comm-ofono.c)
