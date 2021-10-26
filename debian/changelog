@@ -1,3 +1,12 @@
+sphone (0.2.1) unstable; urgency=medium
+
+  * add evolution-contacts module
+  * add external-exec module for external scripting
+  * move call and alerting state managment from gui-calls-manager to a new manager module
+  * remove book-import
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sat, 26 Oct 2021 10:30:00 +0200
+
 sphone (0.2.0) unstable; urgency=medium
 
   * modularize sphone
