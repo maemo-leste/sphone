@@ -1,6 +1,6 @@
 Source: sphone
 Priority: optional
-Maintainer: Merlijn Wajer <merlijn@wizzup.org>
+Maintainer: Carl Klemm <carl@uvos.xyz>
 Build-Depends: debhelper (>> 10), cmake,
   libgtk2.0-dev, libdbus-glib-1-dev, libunique-dev, libsqlite3-dev,
   libgstreamer1.0-dev, libasound2-dev, intltool,
