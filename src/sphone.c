@@ -56,7 +56,6 @@
 #include "gui-options.h"
 #include "gui-sms.h"
 #include "store.h"
-#include "book-import.h"
 #include "gui-contact-view.h"
 #include "sphone-log.h"
 #include "sphone-conf.h"
@@ -119,13 +118,12 @@ int main (int argc, char *argv[])
 	gtk_init(&argc, &argv);
 
 	sphone_cmd command = SPHONE_CMD_NONE;
-	gboolean is_done=FALSE;
 	int c;
 	int verbosity = LL_DEFAULT;
 
 	gchar *number = NULL;
 	
-	while ((c = getopt (argc, argv, ":hn:vc:i:")) != -1) {
+	while ((c = getopt (argc, argv, ":hn:vc:")) != -1) {
 		switch (c) {
 			case '?':
 				if (optopt == 'n')
@@ -134,9 +132,9 @@ int main (int argc, char *argv[])
 				printf("SPhone \n%s [hvc] \n"
 				      "   -h\tDisplay this help\n"
 				      "   -v\tEnable debug\n"
-					  "   -n [number]\topen with number\n"
+				      "   -n [number]\topen with number\n"
 				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, sms-new, history-sms, options\n"
-				      "   -i [file]\timport contacts XML\n", argv[0]);
+				      , argv[0]);
 				return 0;
 			case 'c':
 				if(!g_strcmp0(optarg,"dialer-open"))
@@ -147,11 +145,6 @@ int main (int argc, char *argv[])
 					command = SPHONE_CMD_HISTORY_SMS;
 				else if(!g_strcmp0(optarg,"options"))
 					command = SPHONE_CMD_OPTIONS;
-				break;
-			case 'i':
-				store_init();
-				book_import(optarg);
-				is_done=TRUE;
 				break;
 			case 'v':
 				verbosity = LL_DEBUG;
@@ -184,7 +177,7 @@ int main (int argc, char *argv[])
 	                                               ,"sms-new", SPHONE_CMD_SMS_NEW
 	                                               ,"options", SPHONE_CMD_OPTIONS, NULL);
 
-	if (!is_done && !unique_app_is_running(unique)) {
+	if (!unique_app_is_running(unique)) {
 		sphone_log(LL_INFO,  "Starting new instance");
 		
 		datapipes_init();

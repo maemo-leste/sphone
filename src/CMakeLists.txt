@@ -1,5 +1,4 @@
 set(SPHONE_SRC_FILES 	sphone.c 
-	utils/book-import.c
 	utils/rtconf.c
 	utils/sphone-log.c
 	utils/sphone-modules.c 
