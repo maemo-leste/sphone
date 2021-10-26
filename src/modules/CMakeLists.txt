@@ -67,3 +67,9 @@ target_include_directories(comm-ofono SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 target_include_directories(comm-ofono PRIVATE ${MODULE_INCLUDE_DIRS})
 install(TARGETS comm-ofono DESTINATION ${SPHONE_MODULE_DIR})
 
+add_library(comm-error-gtk SHARED comm-error-gtk.c)
+target_link_libraries(comm-error-gtk ${COMMON_LIBRARIES})
+target_include_directories(comm-error-gtk SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(comm-error-gtk PRIVATE ${MODULE_INCLUDE_DIRS})
+install(TARGETS comm-error-gtk DESTINATION ${SPHONE_MODULE_DIR})
+

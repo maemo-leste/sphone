@@ -513,6 +513,9 @@ static void call_accept_trigger(gconstpointer data, gpointer user_data)
 			execute_datapipe(&call_backend_error_pipe, message);
 			return;
 		}
+	} else if(!ofono_init_valid() && icall->backend == priv->backend_id) {
+		gchar message[] = "Ofono is not ready";
+		execute_datapipe(&call_backend_error_pipe, message);
 	}
 }
 
@@ -537,6 +540,9 @@ static void call_hangup_trigger(gconstpointer data, gpointer user_data)
 		}
 
 		g_variant_unref(result);
+	} else if(!ofono_init_valid() && call->backend == priv->backend_id) {
+		gchar message[] = "Ofono is not ready";
+		execute_datapipe(&call_backend_error_pipe, message);
 	}
 }
 
@@ -623,6 +629,9 @@ static void call_dial_trigger(gconstpointer data, gpointer user_data)
 		}
 	
 		g_variant_unref(result);
+	} else if(!ofono_init_valid() && call->backend == priv->backend_id) {
+		gchar message[] = "Ofono is not ready";
+		execute_datapipe(&call_backend_error_pipe, message);
 	}
 }
 
@@ -649,6 +658,9 @@ static void message_send_trigger(gconstpointer data, gpointer user_data)
 		}
 
 		g_variant_unref(result);
+	} else if(!ofono_init_valid() && message->backend == priv->backend_id) {
+		gchar message_text[] = "Ofono is not ready";
+		execute_datapipe(&call_backend_error_pipe, message_text);
 	}
 }
 
