@@ -278,6 +278,7 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 	message->time = time(NULL);
 	execute_datapipe(&message_send_pipe, message);
 	message_properties_free(message);
+	gtk_widget_destroy(main_window);
 }
 
 void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window)
