@@ -29,6 +29,7 @@
 #include "datapipes.h"
 #include "sphone-log.h"
 #include "store.h"
+#include "string.h"
 #include "gui-contact-view.h"
 #include "sphone-store-tree-model.h"
 #include "gui-sms.h"
@@ -268,17 +269,29 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 
 	const gchar *to = gtk_entry_get_text(to_entry);
 	gchar *text=NULL;
-	g_object_get(G_OBJECT(text_buffer),"text",&text,NULL);
-	sphone_log(LL_DEBUG, "%s: %s %s",__func__, to, text);
-
-	MessageProperties *message = g_malloc0(sizeof(*message));
-	message->line_identifier = g_strdup(to);
-	message->text = text;
-	message->backend = sphone_comm_default_backend()->id;
-	message->time = time(NULL);
-	execute_datapipe(&message_send_pipe, message);
-	message_properties_free(message);
-	gtk_widget_destroy(main_window);
+	g_object_get(G_OBJECT(text_buffer),"text", &text, NULL);
+	
+	if(strlen(text) > 0 && strlen(to) > 0) {
+		MessageProperties *message = g_malloc0(sizeof(*message));
+		message->line_identifier = g_strdup(to);
+		message->text = text;
+		message->backend = sphone_comm_default_backend()->id;
+		message->time = time(NULL);
+		execute_datapipe(&message_send_pipe, message);
+		message_properties_free(message);
+		gtk_widget_destroy(main_window);
+	} else {
+		GtkWidget *dialog = gtk_dialog_new_with_buttons ("Error", main_window,
+			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "Ok",
+			GTK_RESPONSE_NONE, NULL);
+		g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_destroy), dialog);
+		const gchar *message =
+			strlen(text) > 0 ? "Can not send message without to field" :
+			"Can not send message without text";
+		GtkWidget *label = gtk_label_new(message);
+		gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), label);
+		gtk_widget_show_all(dialog);
+	}
 }
 
 void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window)
