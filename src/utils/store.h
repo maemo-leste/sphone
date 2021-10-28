@@ -21,49 +21,34 @@
 
 #include <glib-object.h>
 
-typedef enum { STORE_INTERACTION_TYPE_SMS=0, STORE_INTERACTION_TYPE_VOICE=1} store_interaction_type_enum;
-typedef enum { STORE_INTERACTION_DIRECTION_INCOMING=0, STORE_INTERACTION_DIRECTION_OUTGOING=1} store_interaction_direction_enum;
-typedef enum { STORE_INTERACTION_CALL_STATUS_MISSED=0, STORE_INTERACTION_CALL_STATUS_ESTABLISHED=1} store_interaction_call_status_enum;
+#include "types.h"
 
-typedef struct{
-	int id;
-	gchar *dial;
-}store_dial_struct;
+typedef enum { 
+	STORE_INTERACTION_TYPE_MESSAGE,
+	STORE_INTERACTION_TYPE_VOICE=1
+} store_interaction_type_enum;
+
+typedef enum {
+	STORE_INTERACTION_DIRECTION_INCOMING=0,
+	STORE_INTERACTION_DIRECTION_OUTGOING=1
+} store_interaction_direction_enum;
 
 typedef struct{
 	int id;
 	store_interaction_type_enum type;
 	store_interaction_direction_enum direction;
-	time_t date;
-	gchar *dial;
-	union{
-		struct{
-			store_interaction_call_status_enum status;
-			int duration;
-	    }call;
-		struct{
-			gchar *content;
-		}sms;
-	};
-}store_interaction_struct;
+	union {
+		MessageProperties *message;
+		CallProperties *call;
+	}
+} store_interaction_struct;
 
-typedef struct{
-	int id;
-	gchar *name;
-	gchar *picture;
-	GList *dials;				// store_dial_struct
-}store_contact_struct;
 
 typedef struct sqlite3_stmt sqlite3_stmt;
 
 int store_init(void);
-int store_call_add(store_interaction_direction_enum direction, time_t date, const gchar *dial, store_interaction_call_status_enum status, int duration);
-int store_sms_add(store_interaction_direction_enum direction, time_t date, const gchar *dial, const gchar *content);
-int store_contact_match(store_contact_struct **contact, const gchar *dial);
-int store_contact_match_fuzzy(GPtrArray **contact, gchar *dial);
-int store_contact_load_details(store_contact_struct *contact);
+int store_add(const store_interaction_struct *inter);
 int store_contact_load_interactions(store_contact_struct *contact, store_interaction_type_enum type, store_interaction_direction_enum direction, int max_count, time_t from, time_t to);
-void store_contact_free(store_contact_struct *contact);
 int store_interactions_get(GPtrArray **contacts, store_interaction_type_enum type, store_interaction_direction_enum direction, int max_count, time_t from, time_t to);
 int store_sql_exec(const gchar *sql, sqlite3_stmt **ret_stmt, GType t, ...);
 int store_contact_add(const gchar *name);
