@@ -2,6 +2,7 @@
 /*
  * main.c
  * Copyright (C) Ahmed Abdel-Hamid 2010 <ahmedam@mail.usa.com>
+ * Copyright (C) Carl Philipp Klemm 2021 <carl@uvos.xyz>
  * 
  * main.c is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -25,7 +26,6 @@
 #include <stdlib.h>
 
 #include <gtk/gtk.h>
-#include <unique/unique.h>
 
 /*
  * Standard gettext macros.
@@ -51,16 +51,14 @@
 
 #define PRG_NAME			"sphone"
 
-#include "gui-calls-manager.h"
-#include "gui-dialer.h"
-#include "gui-options.h"
-#include "gui-sms.h"
 #include "store.h"
-#include "gui-contact-view.h"
 #include "sphone-log.h"
 #include "sphone-conf.h"
 #include "sphone-modules.h"
 #include "datapipes.h"
+#include "gui.h"
+#include "gtk-gui.h"
+#include "types.h"
 
 typedef enum {
 	SPHONE_CMD_DIALER_OPEN=1,
@@ -70,40 +68,59 @@ typedef enum {
 	SPHONE_CMD_NONE,
 } sphone_cmd;
 
-static UniqueResponse main_message_received_callback(UniqueApp *app, gint command,
-													 UniqueMessageData *message_data,
-													 guint time_, gpointer user_data)
+static GDBusNodeInfo *dbus_introspection_data = NULL;
+
+static const gchar dbus_introspection_xml[] =
+  "<node>"
+  "  <interface name='xyz.uvos.sphone.summon'>"
+  "    <method name='OpenDialer'>"
+  "    </method>"
+  "    <method name='OpenSendMessage'>"
+  "    </method>"
+  "    <method name='OpenOptions'>"
+  "    </method>"
+  "    <method name='OpenMessageHistory'>"
+  "    </method>"
+  "  </interface>"
+  "</node>";
+  
+static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
-	(void)app;
-	(void)time_;
-	(void)user_data;
+  guint registration_id;
 
-	gchar *number = NULL;
-	if(message_data)
-		number = unique_message_data_get_text(message_data);
+  registration_id = g_dbus_connection_register_object(connection,
+													 "/xyz/uvos/sphone/",
+													 introspection_data->interfaces[0],
+													 &interface_vtable,
+													 NULL,  /* user_data */
+													 NULL,  /* user_data_free_func */
+													 NULL); /* GError** */
+  g_assert(registration_id > 0);
+}
+
+static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
+{
+	struct sphone_options *options = user_data;
+	store_init();
+	gtk_gui_register();
+	sphone_modules_init();
 	
-	if(number)
-		sphone_log(LL_DEBUG, "number: %s\n", number);
+}
 
-	switch(command){
-		case SPHONE_CMD_DIALER_OPEN:
-			gui_dialer_show(number);
-			break;
-		case SPHONE_CMD_SMS_NEW:
-			gui_sms_send_show(number,NULL);
-			break;
-		case SPHONE_CMD_HISTORY_SMS:
-			gui_history_sms();
-			break;
-		case SPHONE_CMD_OPTIONS:
-			gui_options_open();
-			break;
-		default:
-			sphone_log(LL_ERR, "Invalid command: %d\n",command);
-			return UNIQUE_RESPONSE_OK;
+static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data)
+{
+	if(!connection) {
+		sphone_log(LL_CRIT, "Can not connect to dbus");
+		exit(-1);
+	} else {
+		sphone_log(LL_CRIT, "should send commands here");
+		exit(0);
 	}
+}
 
-	return UNIQUE_RESPONSE_INVALID;
+struct sphone_options {
+	sphone_cmd command;
+	gchar *number;
 }
 
 int main (int argc, char *argv[])
@@ -117,11 +134,14 @@ int main (int argc, char *argv[])
 	gtk_set_locale();
 	gtk_init(&argc, &argv);
 
-	sphone_cmd command = SPHONE_CMD_NONE;
+	struct sphone_options options;
 	int c;
 	int verbosity = LL_DEFAULT;
-
-	gchar *number = NULL;
+	guint owner_id;
+	GMainLoop *loop;
+	
+	options.command = SPHONE_CMD_NONE;
+	options.number = NULL;
 	
 	while ((c = getopt (argc, argv, ":hn:vc:")) != -1) {
 		switch (c) {
@@ -138,20 +158,20 @@ int main (int argc, char *argv[])
 				return 0;
 			case 'c':
 				if(!g_strcmp0(optarg,"dialer-open"))
-					command = SPHONE_CMD_DIALER_OPEN;
+					options.command = SPHONE_CMD_DIALER_OPEN;
 				else if(!g_strcmp0(optarg,"sms-new"))
-					command = SPHONE_CMD_SMS_NEW;
+					options.command = SPHONE_CMD_SMS_NEW;
 				else if(!g_strcmp0(optarg,"history-sms"))
-					command = SPHONE_CMD_HISTORY_SMS;
+					options.command = SPHONE_CMD_HISTORY_SMS;
 				else if(!g_strcmp0(optarg,"options"))
-					command = SPHONE_CMD_OPTIONS;
+					options.command = SPHONE_CMD_OPTIONS;
 				break;
 			case 'v':
 				verbosity = LL_DEBUG;
 				break;
 			case 'n':
 				printf("num: %s\n", optarg);
-				number = optarg;
+				options.number = optarg;
 				break;
        }
 	}
@@ -160,10 +180,10 @@ int main (int argc, char *argv[])
 	sphone_log_set_verbosity(verbosity);
 	
 	gchar** numbersplit = NULL;
-	if(number) {
-		numbersplit = g_strsplit(number, ":", 2);
+	if(options.number) {
+		numbersplit = g_strsplit(options.number, ":", 2);
 		if(numbersplit[1] != NULL) {
-			number = numbersplit[1];
+			options.number = numbersplit[1];
 		}
 		else {
 			g_strfreev(numbersplit);
@@ -171,68 +191,24 @@ int main (int argc, char *argv[])
 		}
 	}
 
-	UniqueApp *unique = unique_app_new_with_commands("org.maemo.sphone", NULL
-	                                               ,"dialer-open", SPHONE_CMD_DIALER_OPEN
-	                                               ,"history-sms", SPHONE_CMD_HISTORY_SMS
-	                                               ,"sms-new", SPHONE_CMD_SMS_NEW
-	                                               ,"options", SPHONE_CMD_OPTIONS, NULL);
+	g_type_init();
 
-	if (!unique_app_is_running(unique)) {
-		sphone_log(LL_INFO,  "Starting new instance");
-		
-		datapipes_init();
-		
-		if(!sphone_conf_init()) {
-			sphone_log(LL_ERR,  "sphone_conf_init failed");
-			return -1;
-		}
-		
-		store_init();
-		gui_calls_manager_init();
-		gui_dialer_init();
-		gui_sms_init();
-
-		if(!sphone_modules_init()) {
-			sphone_log(LL_ERR,  "sphone_modules_init failed");
-			return -1;
-		}
-		
-		switch (command) {
-			case SPHONE_CMD_DIALER_OPEN:
-				gui_dialer_show(number);
-				break;
-			case SPHONE_CMD_SMS_NEW:
-				gui_sms_send_show(number,NULL);
-				break;
-			case SPHONE_CMD_OPTIONS:
-				gui_options_open();
-				break;
-			case SPHONE_CMD_NONE:
-			default:
-				break;
-		}
-
-		g_signal_connect(G_OBJECT(unique), "message-received", G_CALLBACK(main_message_received_callback), NULL);
-		
-		gtk_main();
-		
-		gui_sms_exit();
-		gui_calls_manager_exit();
-		sphone_modules_exit();
-		datapipes_exit();
-	} else {
-		sphone_log(LL_DEBUG, "Instance is already running, sending commands ...");
-		if(command != SPHONE_CMD_NONE) {
-			UniqueMessageData *message = NULL;
-			if(number) {
-				message = unique_message_data_new();
-				unique_message_data_set_text(message, number, strlen(number));
-			}
-			unique_app_send_message(unique, command, message);
-			if(message)
-				unique_message_data_free(message);
-		}
+	dbus_introspection_data = g_dbus_node_info_new_for_xml(dbus_introspection_xml, NULL);
+	if(!dbus_introspection_data) {
+		sphone_log(LL_CRIT, "Creating dbus introspection data failed");
+		return -1;
 	}
+
+	owner_id = g_bus_own_name (G_BUS_TYPE_SESSION, "xyz.uvos.sphone",
+								G_BUS_NAME_OWNER_FLAGS_NONE,
+								on_bus_acquired,
+								on_name_acquired,
+								on_name_lost,
+								&options,
+								NULL);
+
+	loop = g_main_loop_new (NULL, FALSE);
+	g_main_loop_run(loop);
 
 	if(numbersplit)
 		 g_strfreev(numbersplit);

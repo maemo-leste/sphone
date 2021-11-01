@@ -121,7 +121,7 @@ static void gui_sms_completion_cell_data(GtkCellLayout *cell_layout, GtkCellRend
 	g_value_unset(&name_val);
 }
 
-void gui_sms_send_show(const gchar *to, const gchar *text)
+bool gtk_gui_sms_send_show(const MessageProperties *msg)
 {
 	GtkWidget *main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(main_window),"Send SMS");
@@ -144,10 +144,10 @@ void gui_sms_send_show(const gchar *to, const gchar *text)
 
 	GtkTextBuffer *text_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_edit));
 
-	if(to)
-		gtk_entry_set_text(GTK_ENTRY(to_entry),to);
-	if(text)
-		gtk_text_buffer_set_text (text_buffer, text, -1);
+	if(msg && msg->line_identifier)
+		gtk_entry_set_text(GTK_ENTRY(to_entry), msg->line_identifier);
+	if(msg && msg->text)
+		gtk_text_buffer_set_text(text_buffer, msg->text, -1);
 
 	GtkCellRenderer *renderer;
 	GtkEntryCompletion *completion=gtk_entry_completion_new();
@@ -196,6 +196,7 @@ void gui_sms_send_show(const gchar *to, const gchar *text)
 	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_sms_cancel_callback),main_window);
 	g_signal_connect(G_OBJECT(to_entry),"changed", G_CALLBACK(gui_sms_to_changed_callback_delayed),NULL);
 	gui_sms_to_changed_callback(GTK_ENTRY(to_entry));
+	return true;
 }
 
 void gui_sms_receive_show(const MessageProperties *message)

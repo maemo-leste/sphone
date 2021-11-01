@@ -47,11 +47,11 @@ static void gui_options_stop_callback(GtkButton *button, GtkFileChooser *chooser
 
 static int is_dirty=0;
 
-void gui_options_open(void)
+bool gtk_gui_options_open(void)
 {
 	if(g_options.main_window){
 		gtk_window_present(GTK_WINDOW(g_options.main_window));
-		return;
+		return true;
 	}
 
 	g_options.main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -91,6 +91,7 @@ void gui_options_open(void)
 	gtk_container_add(GTK_CONTAINER(g_options.main_window), v1);
 	
 	gtk_widget_show_all(g_options.main_window);
+	return true;
 }
 
 static GtkWidget *gui_options_build_option_check(const struct b_option option, const gchar *label)

@@ -288,11 +288,11 @@ gint gui_contact_open_by_dial(const gchar *dial)
 	return 0;
 }
 
-static GtkWidget *sms_window=NULL;
-gint gui_history_sms(void)
+bool gtk_gui_history_sms(void)
 {
+	static GtkWidget *sms_window = NULL;
+	static GtkWidget *calls_view = NULL;
 	SphoneStoreTreeModel *calls;
-	static GtkWidget *calls_view=NULL;
 
 	if(sms_window){
 		calls = sphone_store_tree_model_new(&SPHONE_STORE_TREE_MODEL_FILTER_SMS_ALL, NULL);
@@ -377,5 +377,5 @@ gint gui_history_sms(void)
 	
 	gtk_widget_show_all(sms_window);
 
-	return 0;
+	return true;
 }

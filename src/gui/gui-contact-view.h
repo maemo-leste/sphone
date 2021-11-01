@@ -22,6 +22,6 @@
 #include <glib.h>
 
 gint gui_contact_open_by_dial(const gchar *dial);
-gint gui_history_sms(void);
+bool gtk_gui_history_sms(void);
 
 #endif

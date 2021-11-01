@@ -18,8 +18,10 @@
 
 #ifndef _GUI_DIALER_H_
 #define _GUI_DIALER_H_
+#include <stdbool.h>
+#include "types.h"
 
-void gui_dialer_init(void);
-void gui_dialer_show(const gchar *dial);
+void gtk_gui_dialer_init(void);
+bool gtk_gui_dialer_show(const CallProperties* call);
 
 #endif

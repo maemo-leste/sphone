@@ -108,7 +108,7 @@ static void gui_dialer_validate_callback(GtkEntry *entry,const gchar *text,gint 
 	g_free (result);
 }
 
-void gui_dialer_init(void)
+void gtk_gui_dialer_init(void)
 {
 	g_gui_calls.main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(g_gui_calls.main_window),"Dialer");
@@ -168,13 +168,14 @@ void gui_dialer_init(void)
 	g_signal_connect(G_OBJECT(display), "insert_text", G_CALLBACK(gui_dialer_validate_callback),NULL);
 }
 
-void gui_dialer_show(const gchar *dial)
+bool gtk_gui_dialer_show(const CallProperties* call)
 {
 	gtk_window_present(GTK_WINDOW(g_gui_calls.main_window));
 	gtk_widget_grab_focus(g_gui_calls.display);
 
-	if(dial) {
-		sphone_log(LL_DEBUG, "%s: with %s", __func__, dial);
-		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), dial);
+	if(call) {
+		sphone_log(LL_DEBUG, "%s: with %s", __func__, call->line_identifier);
+		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), call->line_identifier);
 	}
+	return true;
 }

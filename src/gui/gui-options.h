@@ -18,7 +18,8 @@
 
 #ifndef _GUI_OPTIONS_H_
 #define _GUI_OPTIONS_H_
+#include <stdbool.h>
 
-void gui_options_open(void);
+bool gtk_gui_options_open(void);
 
  #endif
