@@ -1,3 +1,11 @@
+sphone (0.2.2) unstable; urgency=medium
+
+  * close sms window on send
+  * add feedback about fields in sms window
+  * add comm-error-gtk to report comm backend errors to user
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Mon, 01 Nov 2021 23:20:00 +0200
+
 sphone (0.2.1) unstable; urgency=medium
 
   * add evolution-contacts module
