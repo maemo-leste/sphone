@@ -96,7 +96,7 @@ static void gui_dialer_validate_callback(GtkEntry *entry,const gchar *text, gint
 			continue;
 		result[count++] = text[i];
 	}
-	result[count++] = '\0';
+	result[count] = '\0';
 
 	if (count > 0) {
 		GtkEditable *editable  = GTK_EDITABLE(entry);
