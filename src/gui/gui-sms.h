@@ -21,8 +21,8 @@
 #include <stdbool.h>
 #include "types.h"
  
-void gui_sms_init(void);
-void gui_sms_exit(void);
+void gtk_gui_sms_init(void);
+void gtk_gui_sms_exit(void);
 bool gtk_gui_sms_send_show(const MessageProperties *message);
 void gui_sms_receive_show(const MessageProperties *message);
 

@@ -80,7 +80,7 @@ static GDBusConnection *get_dbus_connection(void)
 static void call_mode_trigger(gconstpointer data, gpointer user_data)
 {
 	(void)user_data;
-	sphone_call_mode_t mode = (sphone_vibrate_type_t)data;
+	sphone_call_mode_t mode = GPOINTER_TO_INT(data);
 	GVariant *val = NULL;
 	GVariant *result;
 	GError *error = NULL;

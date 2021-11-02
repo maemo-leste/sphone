@@ -147,7 +147,7 @@ static struct str_list *ofono_get_modems(GDBusConnection *s_bus_conn)
 	var_resp = g_dbus_connection_call_sync(s_bus_conn,
 			OFONO_SERVICE, OFONO_MANAGER_PATH,
 			OFONO_MANAGER_IFACE, "GetModems", NULL, NULL,
-			G_DBUS_SEND_MESSAGE_FLAGS_NONE, -1, NULL, &gerror);
+			(GDBusCallFlags)G_DBUS_SEND_MESSAGE_FLAGS_NONE, -1, NULL, &gerror);
 
 	if (var_resp == NULL) {
 		sphone_module_log(LL_ERR, "dbus call failed (%s)", gerror->message);

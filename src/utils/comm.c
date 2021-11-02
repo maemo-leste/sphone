@@ -78,3 +78,14 @@ bool sphone_comm_set_default_backend(int id)
 	}
 	return (bool)element;
 }
+
+int sphone_comm_find_backend_id(const char* name)
+{
+	GSList *element;
+	for(element = backends; element; element = element->next) {
+		CommBackend *last_backend = (CommBackend*)element->data;
+		if(g_strcmp0(last_backend->name, name) == 0)
+			return last_backend->id;
+	}
+	return -1;
+}

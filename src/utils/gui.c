@@ -1,21 +1,21 @@
 #include <glib.h>
 
-#include "uicalls.h"
+#include "gui.h"
 #include "sphone-log.h"
 
 struct Ui {
-	bool *(dialer_show)(const CallProperties* call);
-	bool *(sms_send_show)(const MessageProperties* call);
-	bool *(options_open)(void);
-	bool *(history_sms)(void);
-}
+	bool (*dialer_show)(const CallProperties* call);
+	bool (*sms_send_show)(const MessageProperties* call);
+	bool (*options_open)(void);
+	bool (*history_sms)(void);
+};
 
-static GSList uis;
+static GSList *uis;
 
 bool gui_dialer_show(const CallProperties* call)
 {
 	bool backend_avail = false;
-	for(GSList element = uis; element; element = element->next) {
+	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
 		if(ui->dialer_show && !ui->dialer_show(call))
 			return false;
@@ -30,7 +30,7 @@ bool gui_dialer_show(const CallProperties* call)
 bool gui_sms_send_show(const MessageProperties* message)
 {
 	bool backend_avail = false;
-	for(GSList element = uis; element; element = element->next) {
+	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
 		if(ui->sms_send_show && !ui->sms_send_show(message))
 			return false;
@@ -45,7 +45,7 @@ bool gui_sms_send_show(const MessageProperties* message)
 bool gui_options_open(void)
 {
 	bool backend_avail = false;
-	for(GSList element = uis; element; element = element->next) {
+	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
 		if(ui->options_open && !ui->options_open())
 			return false;
@@ -60,7 +60,7 @@ bool gui_options_open(void)
 bool gui_history_sms(void)
 {
 	bool backend_avail = false;
-	for(GSList element = uis; element; element = element->next) {
+	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
 		if(ui->history_sms && !ui->history_sms())
 			return false;
@@ -72,10 +72,10 @@ bool gui_history_sms(void)
 	return true;
 }
 
-int gui_register(bool *(dialer_show)(const CallProperties* call),
-			 bool *(sms_send_show)(const MessageProperties* call),
-			 bool *(options_open)(void),
-			 bool *(history_sms)(void))
+int gui_register(bool (*dialer_show)(const CallProperties* call),
+			 bool (*sms_send_show)(const MessageProperties* call),
+			 bool (*options_open)(void),
+			 bool (*history_sms)(void))
 {
 	struct Ui *ui = g_malloc(sizeof(*ui));
 	int len = g_slist_length(uis);
@@ -85,13 +85,13 @@ int gui_register(bool *(dialer_show)(const CallProperties* call),
 	ui->options_open = options_open;
 	ui->history_sms = history_sms;
 	
-	g_slist_prepend(uis, ui);
+	uis = g_slist_prepend(uis, ui);
 	return len;
 }
 
 void gui_remove(int id)
 {
-	GSList element = g_slist_nth(id);
-	g_slist_remove(element->data);
+	GSList *element = g_slist_nth(uis, id);
+	uis = g_slist_remove(uis, element->data);
 	g_free(element->data);
 }

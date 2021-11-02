@@ -27,18 +27,29 @@
 #include "gui-dialer.h"
 #include "sphone-store-tree-model.h"
 #include "gui-contact-view.h"
+#include "comm.h"
 
 static void gui_contact_send_sms_callback(GtkButton *button, GtkLabel *dial_label)
 {
 	const gchar *dial=gtk_label_get_text (dial_label);
-	gui_sms_send_show(dial,NULL);
+	MessageProperties msg = {0};
+	CommBackend *backend = sphone_comm_default_backend();
+	
+	msg.backend = backend ? backend->id : 0;
+	msg.line_identifier = (char*)dial;
+	gtk_gui_sms_send_show(&msg);
 	gtk_widget_destroy(gtk_widget_get_toplevel(GTK_WIDGET(button)));
 }
 
 static void gui_contact_dial_callback(GtkButton *button, GtkLabel *dial_label)
 {
 	const gchar *dial=gtk_label_get_text (dial_label);
-	gui_dialer_show(dial);
+	CallProperties msg = {0};
+	CommBackend *backend = sphone_comm_default_backend();
+	
+	msg.backend = backend ? backend->id : 0;
+	msg.line_identifier = (char*)dial;
+	gtk_gui_dialer_show(&msg);
 	gtk_widget_destroy(gtk_widget_get_toplevel(GTK_WIDGET(button)));
 }
 

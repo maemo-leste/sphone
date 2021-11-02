@@ -72,7 +72,7 @@ static gboolean return_true(void)
 	return TRUE;
 }
 
-void gui_calls_manager_init(void)
+void gtk_gui_calls_manager_init(void)
 {
 	g_calls_manager.main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(g_calls_manager.main_window),"Active Calls");
@@ -152,7 +152,7 @@ void gui_calls_manager_init(void)
 	append_trigger_to_datapipe(&call_properties_changed_pipe, gui_calls_call_status_callback, NULL);
 }
 
-void gui_calls_manager_exit(void)
+void gtk_gui_calls_manager_exit(void)
 {
 	remove_trigger_from_datapipe(&audio_route_pipe, gui_calls_audio_route_trigger);
 	remove_trigger_from_datapipe(&call_new_pipe, gui_calls_new_call_callback);
