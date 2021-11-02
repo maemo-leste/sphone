@@ -122,19 +122,23 @@ static void run_command(const struct sphone_options *options)
 	
 	switch(options->command) {
 		case SPHONE_CMD_DIALER_OPEN:
+		{
 			CallProperties call = {
 				.line_identifier = options->number,
 				.backend = backend ? backend->id : 0
 			};
 			gui_dialer_show(&call);
 			break;
+		}
 		case SPHONE_CMD_SMS_NEW:
+		{
 			MessageProperties msg = {
 				.line_identifier = options->number,
 				.backend = backend ? backend->id : 0
 			};
 			gui_sms_send_show(&msg);
 			break;
+		}
 		case SPHONE_CMD_HISTORY_SMS:
 			gui_history_sms();
 			break;
@@ -142,6 +146,7 @@ static void run_command(const struct sphone_options *options)
 			gui_options_open();
 			break;
 		default:
+			break;
 	}
 }
 
@@ -185,6 +190,7 @@ static void send_command(GDBusConnection *connection, struct sphone_options *opt
 			break;
 		}
 		default:
+			break;
 	}
 
 	if(error) {
