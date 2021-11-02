@@ -60,12 +60,12 @@ static void gui_sms_open_contact_callback(GtkButton *button)
 	gui_contact_open_by_dial(dial);
 }
 
-void gui_sms_init(void)
+void gtk_gui_sms_init(void)
 {
 	append_trigger_to_datapipe(&message_recived_pipe, gui_sms_coming_callback, NULL);
 }
 
-void gui_sms_exit(void)
+void gtk_gui_sms_exit(void)
 {
 	remove_trigger_from_datapipe(&message_recived_pipe, gui_sms_coming_callback);
 }
@@ -121,7 +121,7 @@ static void gui_sms_completion_cell_data(GtkCellLayout *cell_layout, GtkCellRend
 	g_value_unset(&name_val);
 }
 
-void gui_sms_send_show(const gchar *to, const gchar *text)
+bool gtk_gui_sms_send_show(const MessageProperties *msg)
 {
 	GtkWidget *main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(main_window),"Send SMS");
@@ -144,10 +144,10 @@ void gui_sms_send_show(const gchar *to, const gchar *text)
 
 	GtkTextBuffer *text_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_edit));
 
-	if(to)
-		gtk_entry_set_text(GTK_ENTRY(to_entry),to);
-	if(text)
-		gtk_text_buffer_set_text (text_buffer, text, -1);
+	if(msg && msg->line_identifier)
+		gtk_entry_set_text(GTK_ENTRY(to_entry), msg->line_identifier);
+	if(msg && msg->text)
+		gtk_text_buffer_set_text(text_buffer, msg->text, -1);
 
 	GtkCellRenderer *renderer;
 	GtkEntryCompletion *completion=gtk_entry_completion_new();
@@ -196,6 +196,7 @@ void gui_sms_send_show(const gchar *to, const gchar *text)
 	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_sms_cancel_callback),main_window);
 	g_signal_connect(G_OBJECT(to_entry),"changed", G_CALLBACK(gui_sms_to_changed_callback_delayed),NULL);
 	gui_sms_to_changed_callback(GTK_ENTRY(to_entry));
+	return true;
 }
 
 void gui_sms_receive_show(const MessageProperties *message)
@@ -281,7 +282,7 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 		message_properties_free(message);
 		gtk_widget_destroy(main_window);
 	} else {
-		GtkWidget *dialog = gtk_dialog_new_with_buttons ("Error", main_window,
+		GtkWidget *dialog = gtk_dialog_new_with_buttons ("Error", GTK_WINDOW(main_window),
 			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "Ok",
 			GTK_RESPONSE_NONE, NULL);
 		g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_destroy), dialog);
@@ -303,5 +304,10 @@ void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window)
 void gui_sms_reply_callback(GtkWidget *button)
 {
 	gchar *from=g_object_get_data(G_OBJECT(button),"dial");
-	gui_sms_send_show(from, NULL);
+	MessageProperties msg = {0};
+	CommBackend *backend = sphone_comm_default_backend();
+	
+	msg.backend = backend ? backend->id : 0;
+	msg.line_identifier = from;
+	gtk_gui_sms_send_show(&msg);
 }

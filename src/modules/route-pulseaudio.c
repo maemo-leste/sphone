@@ -146,7 +146,7 @@ static void audio_route_trigger(gconstpointer data, gpointer user_data)
 static void call_mode_trigger(gconstpointer data, gpointer user_data)
 {
 	(void)user_data;
-	sphone_call_mode_t mode = (sphone_vibrate_type_t)data;
+	sphone_call_mode_t mode = GPOINTER_TO_INT(data);
 
 	if(mode == SPHONE_MODE_NO_CALL) {
 		sphone_pa_audio_route_set_playback(&pa_if);

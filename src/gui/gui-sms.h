@@ -18,12 +18,12 @@
 
 #ifndef _GUI_SMS_H_
 #define _GUI_SMS_H_
-
+#include <stdbool.h>
 #include "types.h"
  
-void gui_sms_init(void);
-void gui_sms_exit(void);
-void gui_sms_send_show(const gchar *to, const gchar *text);
+void gtk_gui_sms_init(void);
+void gtk_gui_sms_exit(void);
+bool gtk_gui_sms_send_show(const MessageProperties *message);
 void gui_sms_receive_show(const MessageProperties *message);
 
 #endif

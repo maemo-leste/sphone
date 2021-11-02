@@ -12,6 +12,8 @@
 #include "sphone-store-tree-model.h"
 #include "gui-contact-view.h"
 #include "gui-dialer.h"
+#include "gui.h"
+#include "comm.h"
 
 struct{
 	GtkWidget *window;
@@ -39,11 +41,14 @@ static void gui_history_list_double_click_callback(GtkTreeView *view, GtkTreePat
 	if(path){
 		GtkTreeModel *model=gtk_tree_view_get_model (view);
 		GtkTreeIter iter;
+		CallProperties msg = {0};
+		CommBackend *backend = sphone_comm_default_backend();
 		GValue value={0};
 		gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path);
 		gtk_tree_model_get_value(model,&iter,SPHONE_STORE_TREE_MODEL_COLUMN_DIAL,&value);
-		const gchar *dial = g_value_get_string(&value);
-		gui_dialer_show(g_strdup(dial));
+		msg.backend = backend ? backend->id : 0;
+		msg.line_identifier = (char*)g_value_get_string(&value);
+		gui_dialer_show(&msg);
 		g_value_unset(&value);
 	}
 }

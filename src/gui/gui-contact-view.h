@@ -20,8 +20,9 @@
 #define _GUI_CONTACT_VIEW_H_
 
 #include <glib.h>
+#include <stdbool.h>
 
 gint gui_contact_open_by_dial(const gchar *dial);
-gint gui_history_sms(void);
+bool gtk_gui_history_sms(void);
 
 #endif

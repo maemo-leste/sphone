@@ -19,7 +19,6 @@ pkg_search_module(GLIB REQUIRED glib-2.0)
 pkg_search_module(GTK REQUIRED gtk+-2.0)
 pkg_search_module(GMODULE REQUIRED gmodule-2.0)
 pkg_search_module(DBUS REQUIRED dbus-glib-1)
-pkg_search_module(UNIQUE REQUIRED unique-1.0)
 pkg_search_module(SQL REQUIRED sqlite3)
 
 pkg_search_module(GSTREAMER gstreamer-1.0)
@@ -75,7 +74,6 @@ set(COMMON_INCLUDE_DIRS
 	${GMODULE_INCLUDE_DIRS} 
 	${DBUS_INCLUDE_DIRS} 
 	${GDBUS_INCLUDE_DIRS}
-	${UNIQUE_INCLUDE_DIRS}
 	${SQL_INCLUDE_DIRS}
 	${GTK_INCLUDE_DIRS}
 	${LIBHILDON_INCLUDE_DIRS})
@@ -86,7 +84,6 @@ set(COMMON_LIBRARIES
 	${GMODULE_LIBRARIES} 
 	${DBUS_LIBRARIES} 
 	${GDBUS_LIBRARIES}
-	${UNIQUE_LIBRARIES}
 	${SQL_LIBRARIES}
 	${GTK_LIBRARIES}
 	${LIBHILDON_LIBRARIES})

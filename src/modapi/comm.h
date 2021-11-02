@@ -18,3 +18,5 @@ CommBackend *sphone_comm_default_backend(void);
 CommBackend *sphone_comm_get_backend(int id);
 
 bool sphone_comm_set_default_backend(int id);
+
+int sphone_comm_find_backend_id(const char* name);

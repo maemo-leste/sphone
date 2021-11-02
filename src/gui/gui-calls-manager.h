@@ -19,7 +19,7 @@
 #ifndef _GUI_CALLS_MANAGER_H_
 #define _GUI_CALLS_MANAGER_H_
 
-void gui_calls_manager_init(void);
-void gui_calls_manager_exit(void);
+void gtk_gui_calls_manager_init(void);
+void gtk_gui_calls_manager_exit(void);
 
 #endif

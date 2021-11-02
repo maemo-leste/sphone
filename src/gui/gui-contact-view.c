@@ -27,18 +27,29 @@
 #include "gui-dialer.h"
 #include "sphone-store-tree-model.h"
 #include "gui-contact-view.h"
+#include "comm.h"
 
 static void gui_contact_send_sms_callback(GtkButton *button, GtkLabel *dial_label)
 {
 	const gchar *dial=gtk_label_get_text (dial_label);
-	gui_sms_send_show(dial,NULL);
+	MessageProperties msg = {0};
+	CommBackend *backend = sphone_comm_default_backend();
+	
+	msg.backend = backend ? backend->id : 0;
+	msg.line_identifier = (char*)dial;
+	gtk_gui_sms_send_show(&msg);
 	gtk_widget_destroy(gtk_widget_get_toplevel(GTK_WIDGET(button)));
 }
 
 static void gui_contact_dial_callback(GtkButton *button, GtkLabel *dial_label)
 {
 	const gchar *dial=gtk_label_get_text (dial_label);
-	gui_dialer_show(dial);
+	CallProperties msg = {0};
+	CommBackend *backend = sphone_comm_default_backend();
+	
+	msg.backend = backend ? backend->id : 0;
+	msg.line_identifier = (char*)dial;
+	gtk_gui_dialer_show(&msg);
 	gtk_widget_destroy(gtk_widget_get_toplevel(GTK_WIDGET(button)));
 }
 
@@ -288,11 +299,11 @@ gint gui_contact_open_by_dial(const gchar *dial)
 	return 0;
 }
 
-static GtkWidget *sms_window=NULL;
-gint gui_history_sms(void)
+bool gtk_gui_history_sms(void)
 {
+	static GtkWidget *sms_window = NULL;
+	static GtkWidget *calls_view = NULL;
 	SphoneStoreTreeModel *calls;
-	static GtkWidget *calls_view=NULL;
 
 	if(sms_window){
 		calls = sphone_store_tree_model_new(&SPHONE_STORE_TREE_MODEL_FILTER_SMS_ALL, NULL);
@@ -377,5 +388,5 @@ gint gui_history_sms(void)
 	
 	gtk_widget_show_all(sms_window);
 
-	return 0;
+	return true;
 }

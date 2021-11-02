@@ -9,11 +9,13 @@ set(SPHONE_SRC_FILES 	sphone.c
 	utils/store.c
 	utils/types.c
 	utils/comm.c
+	utils/gui.c
 	gui/gui-calls-manager.c
 	gui/gui-contact-view.c
 	gui/gui-dialer.c
 	gui/gui-options.c
 	gui/gui-sms.c
+	gui/gtk-gui.c
 	gui/keypad.c
 	gui/gui-history-calls.c
 	)
