@@ -1,3 +1,11 @@
+sphone (0.3) unstable; urgency=medium
+
+  * add dbus interface
+  * drop libunique usage
+  * fix use after free error in dialer ui
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Tue, 02 Nov 2021 15:20:00 +0200
+
 sphone (0.2.2) unstable; urgency=medium
 
   * close sms window on send
