@@ -45,7 +45,7 @@ static void gui_call_callback(GtkButton button)
 {
 	(void)button;
 
-	const gchar *dial=gtk_entry_get_text(GTK_ENTRY(g_gui_calls.display));
+	const gchar *dial = gtk_entry_get_text(GTK_ENTRY(g_gui_calls.display));
 
 	CallProperties *call = g_malloc0(sizeof(*call));
 	call->line_identifier = g_strdup(dial);
@@ -54,13 +54,13 @@ static void gui_call_callback(GtkButton button)
 	execute_datapipe(&call_dial_pipe, call);
 	call_properties_free(call);
 
-	gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display),"");
+	gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), "");
 	gtk_widget_hide(g_gui_calls.main_window);
 }
 
 static void gui_dialer_cancel_callback(void)
 {
-	gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display),"");
+	gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), "");
 	gtk_widget_hide(g_gui_calls.main_window);
 }
 
@@ -86,19 +86,20 @@ static void gui_history_show(void)
 	gui_history_calls();
 }
 
-static void gui_dialer_validate_callback(GtkEntry *entry,const gchar *text,gint length,gint *position,gpointer data)
+static void gui_dialer_validate_callback(GtkEntry *entry,const gchar *text, gint length, gint *position,gpointer data)
 {
-	int i, count=0;
-	gchar *result = g_new (gchar, length);
+	int count = 0;
+	gchar *result = g_new(gchar, length+1);
 
-	for (i=0; i < length; i++) {
-		if (!isdigit(text[i]) && text[i]!='*' && text[i]!='#'  && text[i]!='+')
+	for (int i = 0; i < length && text[i]; ++i) {
+		if (!isdigit(text[i]) && text[i] != '*' && text[i] != '#'  && text[i] != '+')
 			continue;
 		result[count++] = text[i];
 	}
+	result[count++] = '\0';
 
 	if (count > 0) {
-		GtkEditable *editable=GTK_EDITABLE(entry);
+		GtkEditable *editable  = GTK_EDITABLE(entry);
 		g_signal_handlers_block_by_func (G_OBJECT (editable),	G_CALLBACK (gui_dialer_validate_callback),data);
 		gtk_editable_insert_text (editable, result, count, position);
 		g_signal_handlers_unblock_by_func (G_OBJECT (editable),	G_CALLBACK (gui_dialer_validate_callback),data);
@@ -134,7 +135,7 @@ void gtk_gui_dialer_init(void)
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_gui_calls.main_window), HILDON_PORTRAIT_MODE_REQUEST);
 #endif
 	
-	gtk_widget_modify_font(display,pango_font_description_from_string("Monospace 24"));
+	gtk_widget_modify_font(display, pango_font_description_from_string("Monospace 24"));
 	gtk_entry_set_alignment(GTK_ENTRY(display),1.0);
 	gtk_entry_set_has_frame(GTK_ENTRY(display),FALSE);
 		
@@ -173,7 +174,7 @@ bool gtk_gui_dialer_show(const CallProperties* call)
 	gtk_window_present(GTK_WINDOW(g_gui_calls.main_window));
 	gtk_widget_grab_focus(g_gui_calls.display);
 
-	if(call) {
+	if(call && call->line_identifier) {
 		sphone_log(LL_DEBUG, "%s: with %s", __func__, call->line_identifier);
 		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), call->line_identifier);
 	}

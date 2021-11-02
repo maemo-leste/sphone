@@ -18,6 +18,7 @@
 
 #include <gtk/gtk.h>
 #include "keypad.h"
+#include "sphone-log.h"
 
 struct key {
 	const gchar *text;
@@ -42,9 +43,9 @@ struct key keys[]={
 static void key_presses_callback(GtkWidget *button, GtkWidget *target)
 {
 	gtk_editable_set_position(GTK_EDITABLE(target),-1);
-	gint position=gtk_editable_get_position(GTK_EDITABLE(target));
-	gchar *value=g_object_get_data(G_OBJECT(button),"key_value");
-	gtk_editable_insert_text(GTK_EDITABLE(target),value,-1, &position);
+	gint position = gtk_editable_get_position(GTK_EDITABLE(target));
+	const gchar *value = g_object_get_data(G_OBJECT(button), "key_value");
+	gtk_editable_insert_text(GTK_EDITABLE(target), value,-1, &position);
 
 	gtk_widget_grab_focus(target);
 	gtk_editable_set_position(GTK_EDITABLE(target),position);
@@ -65,9 +66,7 @@ GtkWidget *gui_keypad_setup(GtkWidget *target)
 			//gtk_widget_set_can_focus(button,FALSE);
 			gtk_table_attach_defaults(GTK_TABLE(ret),button,column,column+1,row,row+1);
 			g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(key_presses_callback), target);
-			gchar *value = g_strdup(keys[i].value);
-			g_object_set_data(G_OBJECT(button),"key_value", value);
-			g_free(value);
+			g_object_set_data(G_OBJECT(button),"key_value", (gpointer)keys[i].value);
 			++i;
 		}
 
