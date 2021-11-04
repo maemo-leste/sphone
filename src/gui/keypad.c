@@ -63,7 +63,7 @@ GtkWidget *gui_keypad_setup(GtkWidget *target)
 			gtk_label_set_markup(GTK_LABEL(label), keys[i].text);
 			GtkWidget *button = gtk_button_new();
 			gtk_container_add (GTK_CONTAINER(button),label);
-			//gtk_widget_set_can_focus(button,FALSE);
+			gtk_widget_set_can_focus(button, FALSE);
 			gtk_table_attach_defaults(GTK_TABLE(ret),button,column,column+1,row,row+1);
 			g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(key_presses_callback), target);
 			g_object_set_data(G_OBJECT(button),"key_value", (gpointer)keys[i].value);

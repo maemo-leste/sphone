@@ -22,6 +22,7 @@
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
+#include <hildon/hildon-picker-button.h>
 #endif
 
 #include "datapipes.h"
@@ -39,23 +40,67 @@ struct{
 	GtkWidget *main_window;
 	GtkWidget *dials_view;
 	GtkWidget *book;
+	GtkWidget *backend_combo;
+	GtkWidget *selector;
 }g_gui_calls;
+
+#ifdef ENABLE_LIBHILDON
+static GtkWidget *gui_dialer_create_selector(void)
+{
+	GtkWidget *selector = hildon_touch_selector_new_text();
+	GSList *list = sphone_comm_get_backends();
+
+	for(GSList *element = list; element; element = element->next) {
+		CommBackend *backend = element->data; 
+		hildon_touch_selector_append_text(HILDON_TOUCH_SELECTOR(selector), backend->name);
+	}
+
+	hildon_touch_selector_set_active(HILDON_TOUCH_SELECTOR(selector), 0, 0);
+
+	return selector;
+}
+
+#else
+
+static GtkWidget *gui_dialer_create_backend_combo(void)
+{
+	GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
+	GSList *list = sphone_comm_get_backends();
+
+	for(GSList *element = list; element; element = element->next) {
+		CommBackend *backend = element->data; 
+		gtk_combo_box_text_append_text(combo, backend->name);
+	}
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
+
+	return GTK_WIDGET(combo);
+}
+#endif
 
 static void gui_call_callback(GtkButton button)
 {
 	(void)button;
 
 	const gchar *dial = gtk_entry_get_text(GTK_ENTRY(g_gui_calls.display));
+	char *backend_name = NULL;
+	
+#ifdef ENABLE_LIBHILDON
+	backend_name = hildon_touch_selector_get_current_text(HILDON_TOUCH_SELECTOR(g_gui_calls.selector));
+#else
+	backend_name = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(g_gui_calls.backend_combo));
+#endif
 
-	CallProperties *call = g_malloc0(sizeof(*call));
-	call->line_identifier = g_strdup(dial);
-	call->backend = sphone_comm_default_backend()->id;
-	call->state = SPHONE_CALL_DIALING;
-	execute_datapipe(&call_dial_pipe, call);
-	call_properties_free(call);
+	if(strlen(dial) > 0 && backend_name) {
+		CallProperties *call = g_malloc0(sizeof(*call));
+		call->line_identifier = g_strdup(dial);
+		call->backend = sphone_comm_find_backend_id(backend_name);
+		call->state = SPHONE_CALL_DIALING;
+		execute_datapipe(&call_dial_pipe, call);
+		call_properties_free(call);
 
-	gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), "");
-	gtk_widget_hide(g_gui_calls.main_window);
+		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), "");
+		gtk_widget_hide(g_gui_calls.main_window);
+	}
 }
 
 static void gui_dialer_cancel_callback(void)
@@ -127,20 +172,28 @@ void gtk_gui_dialer_init(void)
 	GtkWidget *cancel_button = gtk_button_new_with_label("\nCancel\n");
 	GtkWidget *contacts_button = gtk_button_new_with_label("\nContacts\n");
 	GtkWidget *recents_button = gtk_button_new_with_label("\nRecent\n");
+	
+#ifdef ENABLE_LIBHILDON
+	g_gui_calls.selector = gui_dialer_create_selector();
+	g_gui_calls.backend_combo = hildon_picker_button_new (HILDON_SIZE_AUTO, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
+	hildon_button_set_title (HILDON_BUTTON(g_gui_calls.backend_combo), "\nBackend\n");
+	hildon_picker_button_set_selector(HILDON_PICKER_BUTTON(g_gui_calls.backend_combo),
+	                                 HILDON_TOUCH_SELECTOR(g_gui_calls.selector));
+	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_gui_calls.main_window), HILDON_PORTRAIT_MODE_REQUEST);
+#else
+	g_gui_calls.backend_combo = gui_dialer_create_backend_combo();
+#endif
+	
 	GdkColor white, black;
 	GtkWidget *e = gtk_event_box_new ();
 	g_gui_calls.display=display;
-	
-#ifdef ENABLE_LIBHILDON
-	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_gui_calls.main_window), HILDON_PORTRAIT_MODE_REQUEST);
-#endif
 	
 	gtk_widget_modify_font(display, pango_font_description_from_string("Monospace 24"));
 	gtk_entry_set_alignment(GTK_ENTRY(display),1.0);
 	gtk_entry_set_has_frame(GTK_ENTRY(display),FALSE);
 		
-	gdk_color_parse ("black",&black);
-	gdk_color_parse ("white",&white);
+	gdk_color_parse("black", &black);
+	gdk_color_parse("white", &white);
 	
 	gtk_widget_modify_bg(e,GTK_STATE_NORMAL,&black);
 	
@@ -151,6 +204,7 @@ void gtk_gui_dialer_init(void)
 	gtk_container_add(GTK_CONTAINER(contacts_bar), contacts_button);
 	gtk_container_add(GTK_CONTAINER(contacts_bar), recents_button);
 	gtk_box_pack_start(GTK_BOX(v1), contacts_bar, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(v1), g_gui_calls.backend_combo, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(v1), keypad, TRUE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(actions_bar), call_button);
 	gtk_container_add(GTK_CONTAINER(actions_bar), cancel_button);

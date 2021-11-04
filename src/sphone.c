@@ -296,8 +296,11 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
 	struct sphone_options *options = user_data;
 	sphone_log(LL_INFO, "Starting new instance");
 	store_init();
-	gtk_gui_register();
+	sphone_log(LL_DEBUG, "Store initalized");
 	sphone_modules_init();
+	sphone_log(LL_DEBUG, "Modules initalized");
+	gtk_gui_register();
+	sphone_log(LL_DEBUG, "GUI initalized");
 	run_command(options);
 	sphone_log(LL_DEBUG, "Instance setup finished");
 }
