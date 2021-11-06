@@ -73,3 +73,8 @@ target_include_directories(comm-error-gtk SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 target_include_directories(comm-error-gtk PRIVATE ${MODULE_INCLUDE_DIRS})
 install(TARGETS comm-error-gtk DESTINATION ${SPHONE_MODULE_DIR})
 
+add_library(contacts-ui-exec SHARED contacts-ui-exec.c)
+target_link_libraries(contacts-ui-exec ${COMMON_LIBRARIES})
+target_include_directories(contacts-ui-exec SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(contacts-ui-exec PRIVATE ${MODULE_INCLUDE_DIRS})
+install(TARGETS contacts-ui-exec DESTINATION ${SPHONE_MODULE_DIR})
