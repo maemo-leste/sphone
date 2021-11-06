@@ -39,6 +39,7 @@ struct{
 	GtkWidget *display;
 	GtkWidget *main_window;
 	GtkWidget *dials_view;
+	GtkWidget *keypad;
 	GtkWidget *book;
 	GtkWidget *backend_combo;
 	GtkWidget *selector;
@@ -101,6 +102,16 @@ static void gui_call_callback(GtkButton button)
 		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), "");
 		gtk_widget_hide(g_gui_calls.main_window);
 	}
+}
+
+static void expose_event(GdkScreen *screen, gpointer user_data)
+{
+	gint width, height;
+	gtk_window_get_size (GTK_WINDOW(g_gui_calls.main_window), &width, &height);
+	if(height < 500)
+		gtk_widget_hide(g_gui_calls.keypad);
+	else
+		gtk_widget_show(g_gui_calls.keypad);
 }
 
 static void gui_dialer_cancel_callback(void)
@@ -167,7 +178,7 @@ void gtk_gui_dialer_init(void)
 	GtkWidget *display_back = gtk_button_new_with_label ("\n    <    \n");
 	GtkWidget *display = gtk_entry_new();
 	GtkWidget *display_bar = gtk_hbox_new(FALSE,4);
-	GtkWidget *keypad = gui_keypad_setup(display);
+	g_gui_calls.keypad = gui_keypad_setup(display);
 	GtkWidget *call_button = gtk_button_new_with_label("\nCall\n");
 	GtkWidget *cancel_button = gtk_button_new_with_label("\nCancel\n");
 	GtkWidget *contacts_button = gtk_button_new_with_label("\nContacts\n");
@@ -179,7 +190,7 @@ void gtk_gui_dialer_init(void)
 	hildon_button_set_title (HILDON_BUTTON(g_gui_calls.backend_combo), "\nBackend\n");
 	hildon_picker_button_set_selector(HILDON_PICKER_BUTTON(g_gui_calls.backend_combo),
 	                                 HILDON_TOUCH_SELECTOR(g_gui_calls.selector));
-	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_gui_calls.main_window), HILDON_PORTRAIT_MODE_REQUEST);
+	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_gui_calls.main_window), HILDON_PORTRAIT_MODE_SUPPORT);
 #else
 	g_gui_calls.backend_combo = gui_dialer_create_backend_combo();
 #endif
@@ -189,8 +200,8 @@ void gtk_gui_dialer_init(void)
 	g_gui_calls.display=display;
 	
 	gtk_widget_modify_font(display, pango_font_description_from_string("Monospace 24"));
-	gtk_entry_set_alignment(GTK_ENTRY(display),1.0);
-	gtk_entry_set_has_frame(GTK_ENTRY(display),FALSE);
+	gtk_entry_set_alignment(GTK_ENTRY(display), 1.0);
+	gtk_entry_set_has_frame(GTK_ENTRY(display), FALSE);
 		
 	gdk_color_parse("black", &black);
 	gdk_color_parse("white", &white);
@@ -205,7 +216,7 @@ void gtk_gui_dialer_init(void)
 	gtk_container_add(GTK_CONTAINER(contacts_bar), recents_button);
 	gtk_box_pack_start(GTK_BOX(v1), contacts_bar, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(v1), g_gui_calls.backend_combo, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(v1), keypad, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(v1), g_gui_calls.keypad, TRUE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(actions_bar), call_button);
 	gtk_container_add(GTK_CONTAINER(actions_bar), cancel_button);
 	gtk_box_pack_start(GTK_BOX(v1), actions_bar, FALSE, FALSE, 0);
@@ -213,6 +224,9 @@ void gtk_gui_dialer_init(void)
 
 	gtk_widget_show_all(v1);
 	gtk_widget_grab_focus(display);
+	
+	expose_event(NULL, GTK_WINDOW(g_gui_calls.main_window));
+	g_signal_connect_after(GTK_WINDOW(g_gui_calls.main_window), "expose-event", G_CALLBACK(expose_event), NULL);
 	
 	g_signal_connect(G_OBJECT(call_button),"clicked", G_CALLBACK(gui_call_callback),NULL);
 	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_dialer_cancel_callback),NULL);
