@@ -1,3 +1,12 @@
+sphone (0.3.1) unstable; urgency=medium
+
+  * add contacts-ui-exec module
+  * add feedback to contacts window lauch in dialer
+  * make dialer work in landscape
+  * gtk-gui: add backend selection combo box
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sat, 06 Nov 2021 15:20:00 +0200
+
 sphone (0.3) unstable; urgency=medium
 
   * add dbus interface
