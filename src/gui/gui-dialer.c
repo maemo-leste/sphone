@@ -43,6 +43,8 @@ struct{
 	GtkWidget *book;
 	GtkWidget *backend_combo;
 	GtkWidget *selector;
+	GtkWidget *spinner;
+	GtkWidget *contacts_button;
 }g_gui_calls;
 
 #ifdef ENABLE_LIBHILDON
@@ -114,6 +116,13 @@ static void expose_event(GdkScreen *screen, gpointer user_data)
 		gtk_widget_show(g_gui_calls.keypad);
 }
 
+static void focus_out(GdkScreen *screen, gpointer user_data)
+{
+	gtk_widget_hide(g_gui_calls.spinner);
+	gtk_widget_show(g_gui_calls.contacts_button);
+	gtk_spinner_stop(GTK_SPINNER(g_gui_calls.spinner));
+}
+
 static void gui_dialer_cancel_callback(void)
 {
 	gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), "");
@@ -132,13 +141,14 @@ static void gui_dialer_back_presses_callback(GtkWidget *button, GtkWidget *targe
 
 static void gui_contacts_callback(void)
 {
-	sphone_log(LL_DEBUG, "%s", __func__);
 	execute_datapipe(&contact_show_pipe, NULL);
+	gtk_widget_show(g_gui_calls.spinner);
+	gtk_widget_hide(g_gui_calls.contacts_button);
+	gtk_spinner_start(GTK_SPINNER(g_gui_calls.spinner));
 }
 
 static void gui_history_show(void)
 {
-	sphone_log(LL_DEBUG, "%s", __func__);
 	gui_history_calls();
 }
 
@@ -181,8 +191,9 @@ void gtk_gui_dialer_init(void)
 	g_gui_calls.keypad = gui_keypad_setup(display);
 	GtkWidget *call_button = gtk_button_new_with_label("\nCall\n");
 	GtkWidget *cancel_button = gtk_button_new_with_label("\nCancel\n");
-	GtkWidget *contacts_button = gtk_button_new_with_label("\nContacts\n");
+	g_gui_calls.contacts_button = gtk_button_new_with_label("\nContacts\n");
 	GtkWidget *recents_button = gtk_button_new_with_label("\nRecent\n");
+	g_gui_calls.spinner = gtk_spinner_new();
 	
 #ifdef ENABLE_LIBHILDON
 	g_gui_calls.selector = gui_dialer_create_selector();
@@ -212,7 +223,8 @@ void gtk_gui_dialer_init(void)
 	gtk_box_pack_start(GTK_BOX(display_bar), e, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(display_bar), display_back, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(v1),display_bar,FALSE, FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(contacts_bar), contacts_button);
+	gtk_container_add(GTK_CONTAINER(contacts_bar), g_gui_calls.spinner);
+	gtk_container_add(GTK_CONTAINER(contacts_bar), g_gui_calls.contacts_button);
 	gtk_container_add(GTK_CONTAINER(contacts_bar), recents_button);
 	gtk_box_pack_start(GTK_BOX(v1), contacts_bar, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(v1), g_gui_calls.backend_combo, FALSE, FALSE, 0);
@@ -223,14 +235,16 @@ void gtk_gui_dialer_init(void)
 	gtk_container_add(GTK_CONTAINER(g_gui_calls.main_window), v1);
 
 	gtk_widget_show_all(v1);
+	gtk_widget_hide(g_gui_calls.spinner);
 	gtk_widget_grab_focus(display);
 	
-	expose_event(NULL, GTK_WINDOW(g_gui_calls.main_window));
+	expose_event(NULL, NULL);
 	g_signal_connect_after(GTK_WINDOW(g_gui_calls.main_window), "expose-event", G_CALLBACK(expose_event), NULL);
+	g_signal_connect_after(GTK_WINDOW(g_gui_calls.main_window), "focus-out-event", G_CALLBACK(focus_out), NULL);
 	
 	g_signal_connect(G_OBJECT(call_button),"clicked", G_CALLBACK(gui_call_callback),NULL);
 	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_dialer_cancel_callback),NULL);
-	g_signal_connect(G_OBJECT(contacts_button),"clicked", G_CALLBACK(gui_contacts_callback),NULL);
+	g_signal_connect(G_OBJECT(g_gui_calls.contacts_button),"clicked", G_CALLBACK(gui_contacts_callback),NULL);
 	g_signal_connect(G_OBJECT(recents_button),"clicked", G_CALLBACK(gui_history_show),NULL);
 	g_signal_connect(G_OBJECT(g_gui_calls.main_window),"delete-event", G_CALLBACK(gtk_widget_hide_on_delete),NULL);
 	g_signal_connect(G_OBJECT(display_back), "clicked", G_CALLBACK(gui_dialer_back_presses_callback), display);
