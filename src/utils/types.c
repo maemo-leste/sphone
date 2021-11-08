@@ -51,7 +51,6 @@ void call_properties_free(CallProperties *properties)
 		return;
 	contact_free(properties->contact);
 	g_free(properties->line_identifier);
-	g_free(properties->technology);
 	g_free(properties->backend_data);
 	g_free(properties);
 }
@@ -66,13 +65,13 @@ CallProperties *call_properties_copy(const CallProperties *properties)
 	CallProperties *new_props = g_malloc0(sizeof(*new_props));
 	new_props->contact = contact_copy(properties->contact);
 	new_props->line_identifier = g_strdup(properties->line_identifier);
-	new_props->technology = g_strdup(properties->technology);
 	new_props->backend_data = g_strdup(properties->backend_data);
 	new_props->start_time = properties->start_time;
 	new_props->awnserd = properties->awnserd;
 	new_props->backend = properties->backend;
 	new_props->state = properties->state;
 	new_props->needs_route = properties->needs_route;
+	new_props->outbound = properties->outbound;
 	return new_props;
 }
 

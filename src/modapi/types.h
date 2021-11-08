@@ -52,13 +52,13 @@ typedef struct _CallProperties{
 	Contact *contact;
 	gchar *line_identifier;
 	sphone_call_state_t state;
-	gchar *technology;
 	gint backend;
 	gchar *backend_data;
 	time_t start_time;
 	bool emergency;
 	bool awnserd;
 	bool needs_route;
+	bool outbound;
 } CallProperties;
 
 void call_properties_free(CallProperties *properties);
