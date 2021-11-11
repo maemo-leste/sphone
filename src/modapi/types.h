@@ -42,11 +42,15 @@ const char *sphone_get_state_string(sphone_call_state_t state);
 typedef struct _Contact {
 	gchar *name;
 	GdkPixbuf *photo;
+	gchar *line_identifier;
+	gint backend;
 } Contact;
 
 void contact_free(Contact *contact);
 
 Contact *contact_copy(const Contact *contact);
+
+void contact_print(const Contact *contact, const char *module_name);
 
 typedef struct _CallProperties{
 	Contact *contact;
@@ -55,11 +59,14 @@ typedef struct _CallProperties{
 	gint backend;
 	gchar *backend_data;
 	time_t start_time;
+	time_t end_time;
 	bool emergency;
 	bool awnserd;
 	bool needs_route;
 	bool outbound;
 } CallProperties;
+
+void call_properties_print(const CallProperties *call, const char *module_name);
 
 void call_properties_free(CallProperties *properties);
 
@@ -75,9 +82,12 @@ typedef struct _MessageProperties{
 	gint backend;
 	gchar *backend_data;
 	time_t time;
+	bool outbound;
 } MessageProperties;
 
 MessageProperties *message_properties_copy(const MessageProperties *properties);
+
+void message_properties_print(const MessageProperties *call, const char *module_name);
 
 void message_properties_free(MessageProperties *properties);
 
