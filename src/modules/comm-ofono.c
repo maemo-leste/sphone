@@ -362,6 +362,7 @@ static void ofono_voice_call_properties_remove_handler(const gchar *path)
 			ofono_if_priv.call_prop_sig_ids = g_slist_remove(ofono_if_priv.call_prop_sig_ids, element->data);
 			g_free(watcher->path);
 			g_free(watcher);
+			break;
 		}
 	}
 }
