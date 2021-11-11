@@ -107,6 +107,9 @@ static void call_changed_trigger(const void *data, void *user_data)
 		if(call->state == SPHONE_CALL_DISCONNECTED) {
 			call_properties_free(call);
 			calls = g_slist_remove(calls, call);
+			element = calls;
+			if(!element)
+				break;
 		}
 		check_needed_state();
 	}
