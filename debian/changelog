@@ -1,3 +1,11 @@
+sphone (0.3.2) unstable; urgency=medium
+
+  * new store modapi
+  * use new api in call history
+  * finish store-rtco
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Thu, 11 Nov 2021 14:40:00 +0100
+
 sphone (0.3.1) unstable; urgency=medium
 
   * add contacts-ui-exec module
