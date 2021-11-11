@@ -403,12 +403,18 @@ static void call_properties_cb(GDBusConnection *connection,
 		
 		if(g_strcmp0(key, "State") == 0) {
 			call->state = ofono_string_to_call_state(g_variant_get_string(value, NULL));
+			
+			if(call->state == SPHONE_CALL_ACTIVE)
+				call->start_time = time(NULL);
+			else if(call->state == SPHONE_CALL_DISCONNECTED)
+				call->end_time = time(NULL);
 			execute_datapipe(&call_properties_changed_pipe, call);
+
 			if(call->state == SPHONE_CALL_DISCONNECTED) {
 				ofono_if_priv.calls = g_slist_remove(ofono_if_priv.calls, call);
 				ofono_voice_call_properties_remove_handler(object_path);
 				call_properties_free(call);
-			}
+			} 
 		}
 	}
 }
@@ -465,8 +471,12 @@ static void call_added_cb(GDBusConnection *connection,
 	sphone_module_log(LL_DEBUG, "%s: %s", __func__, path);
 	ofono_voice_call_decode_properties(call, info_iter, path);
 	
-	if(call->state != SPHONE_CALL_INCOMING)
+	if(call->state != SPHONE_CALL_INCOMING) {
 		call->awnserd = true;
+		call->outbound = false;
+	} else {
+		call->outbound = true;
+	}
 	
 	ofono_voice_call_properties_add_handler(path);
 
