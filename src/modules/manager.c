@@ -102,17 +102,16 @@ static void call_changed_trigger(const void *data, void *user_data)
 	GSList *element;
 	for(element = calls; element; element = element->next) {
 		CallProperties *call = element->data;
-		if(call_properties_comp(icall, call))
+		if(call_properties_comp(icall, call)) {
 			call->state = icall->state;
-		if(call->state == SPHONE_CALL_DISCONNECTED) {
-			call_properties_free(call);
-			calls = g_slist_remove(calls, call);
-			element = calls;
-			if(!element)
-				break;
+			if(call->state == SPHONE_CALL_DISCONNECTED) {
+				call_properties_free(call);
+				calls = g_slist_remove(calls, call);
+			}
+			break;
 		}
-		check_needed_state();
 	}
+	check_needed_state();
 }
 
 static void message_recived_trigger(const void *data, void *user_data)
