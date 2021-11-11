@@ -36,6 +36,7 @@ typedef struct {
 // Datapipe execution
 gconstpointer execute_datapipe(datapipe_struct *const datapipe, gpointer indata);
 void execute_datapipe_output_triggers(const datapipe_struct *const datapipe, gconstpointer indata);
+gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer indata);
 
 // Cached data only use on numeric types encoded as pointer!
 int datapipe_get_last_data_int(datapipe_struct *const datapipe);

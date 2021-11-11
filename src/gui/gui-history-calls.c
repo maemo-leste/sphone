@@ -7,13 +7,14 @@
 
 #include <gtk/gtk.h>
 
-#include "store.h"
 #include "sphone-log.h"
 #include "sphone-store-tree-model.h"
 #include "gui-contact-view.h"
 #include "gui-dialer.h"
 #include "gui.h"
 #include "comm.h"
+#include "gui-gtk-utils.h"
+#include "storage.h"
 
 struct{
 	GtkWidget *window;
@@ -63,7 +64,7 @@ static GtkWidget *gui_dialer_build_list(void)
 
 	renderer = gtk_cell_renderer_text_new();
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_END, NULL);
-	column = gtk_tree_view_column_new_with_attributes("Name", renderer, "text", SPHONE_STORE_TREE_MODEL_COLUMN_NAME, NULL);
+	column = gtk_tree_view_column_new_with_attributes("Name", renderer, "text", GTK_UI_MOD_NAME, NULL);
 	gtk_tree_view_column_set_sizing(column,GTK_TREE_VIEW_COLUMN_FIXED);
 	gtk_tree_view_column_set_expand(column,TRUE);
 	gtk_tree_view_column_set_min_width(column,100);
@@ -71,7 +72,7 @@ static GtkWidget *gui_dialer_build_list(void)
 
 	renderer = gtk_cell_renderer_text_new();
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
-	column = gtk_tree_view_column_new_with_attributes("Dial", renderer, "text", SPHONE_STORE_TREE_MODEL_COLUMN_DIAL, NULL);
+	column = gtk_tree_view_column_new_with_attributes("Dial", renderer, "text", GTK_UI_MOD_LINE_ID, NULL);
 	gtk_tree_view_column_set_sizing(column,GTK_TREE_VIEW_COLUMN_FIXED);
 	gtk_tree_view_column_set_expand(column,TRUE);
 	gtk_tree_view_column_set_min_width(column,120);
@@ -79,7 +80,7 @@ static GtkWidget *gui_dialer_build_list(void)
 	
 	renderer = gtk_cell_renderer_text_new();
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_NONE, "wrap-width", 140, "wrap-mode", PANGO_WRAP_WORD, NULL);
-	column = gtk_tree_view_column_new_with_attributes("Date", renderer, "text", SPHONE_STORE_TREE_MODEL_COLUMN_INTERACTION_DATE, NULL);
+	column = gtk_tree_view_column_new_with_attributes("Date", renderer, "text", GTK_UI_MOD_TIME, NULL);
 	gtk_tree_view_column_set_sizing(column,GTK_TREE_VIEW_COLUMN_FIXED);
 	gtk_tree_view_column_set_expand(column, FALSE);
 	gtk_tree_view_column_set_min_width(column,140);
@@ -104,10 +105,12 @@ static GtkWidget *gui_dialer_build_list(void)
 gint gui_history_calls(void)
 {
 	sphone_log(LL_DEBUG, "gui_history_calls\n");
-	SphoneStoreTreeModel *calls;
+	GtkTreeModel *calls;
 
 	if(g_history_calls.window){
-		calls = sphone_store_tree_model_new(&SPHONE_STORE_TREE_MODEL_FILTER_CALLS_ALL, NULL);
+		GList *calls_list = store_get_all_calls();
+		calls = gtk_gui_new_model_from_calls(calls_list);
+		store_free_call_list(calls_list);
 		gtk_tree_view_set_model(GTK_TREE_VIEW(g_history_calls.dials_view), GTK_TREE_MODEL(calls));
 		g_object_unref(G_OBJECT(calls));
 		gtk_window_present(GTK_WINDOW(g_history_calls.window));
@@ -130,7 +133,9 @@ gint gui_history_calls(void)
 
 	g_signal_connect(G_OBJECT(g_history_calls.window),"delete-event", G_CALLBACK(gui_history_make_null), &g_history_calls.window);
 
-	calls = sphone_store_tree_model_new(&SPHONE_STORE_TREE_MODEL_FILTER_CALLS_ALL, NULL);
+	GList *calls_list = store_get_all_calls();
+	calls = gtk_gui_new_model_from_calls(calls_list);
+	store_free_call_list(calls_list);
 	gtk_tree_view_set_model(GTK_TREE_VIEW(g_history_calls.dials_view), GTK_TREE_MODEL(calls));
 	g_object_unref(G_OBJECT(calls));
 	

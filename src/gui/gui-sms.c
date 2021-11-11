@@ -33,18 +33,11 @@
 #include "gui-contact-view.h"
 #include "sphone-store-tree-model.h"
 #include "gui-sms.h"
+#include "gui-gtk-utils.h"
 
 static void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window);
 static void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window);
 static void gui_sms_reply_callback(GtkWidget *button);
-
-static char *sphone_time_to_new_string(time_t time)
-{
-	char *str = g_malloc(256);
-	if(strftime(str, 256, "%m-%d-%Y %H-%M (mon=%b)", localtime(&time)) == 0)
-		str[0] = '\0';
-	return str;
-}
 
 static void gui_sms_coming_callback(gconstpointer data, gpointer user_data)
 {

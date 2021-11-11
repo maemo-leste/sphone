@@ -26,7 +26,7 @@
  * @param indata The input data to run through the datapipe
  * @return The processed data
  */
-static gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer indata)
+gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer indata)
 {
 	gpointer (*filter)(gpointer data, gpointer user_data);
 	gpointer data = indata;

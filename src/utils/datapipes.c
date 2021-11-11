@@ -39,6 +39,7 @@ void datapipes_init(void)
 	setup_datapipe(&call_properties_changed_pipe);
 	setup_datapipe(&vibrate_pipe);
 	setup_datapipe(&message_send_pipe);
+	setup_datapipe(&message_recived_pipe);
 	setup_datapipe(&notification_raise_pipe);
 	setup_datapipe(&call_accept_pipe);
 	setup_datapipe(&contact_show_pipe);
@@ -60,6 +61,7 @@ void datapipes_exit(void)
 	free_datapipe(&call_properties_changed_pipe);
 	free_datapipe(&vibrate_pipe);
 	free_datapipe(&message_send_pipe);
+	free_datapipe(&message_recived_pipe);
 	free_datapipe(&notification_raise_pipe);
 	free_datapipe(&call_accept_pipe);
 	free_datapipe(&contact_show_pipe);
