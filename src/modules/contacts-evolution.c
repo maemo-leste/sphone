@@ -93,7 +93,6 @@ static bool fill_contact(EBookClient *ebook, const char *line_id, Contact *conta
 		}
 		
 		if(!contacts) {
-			sphone_module_log(LL_DEBUG, "no contacts for: %s", query_string);
 			g_free(query_string);
 			return false;
 		}
@@ -103,6 +102,9 @@ static bool fill_contact(EBookClient *ebook, const char *line_id, Contact *conta
 		EContact *econtact = contacts->data;
 		contact->name = g_strdup(e_contact_get_const(econtact, E_CONTACT_FULL_NAME));
 		e_client_util_free_object_slist(contacts);
+		
+		contact->line_identifier = g_strdup(line_id);
+		contact->backend = id;
 		
 		return (bool)contact->name;
 	}
