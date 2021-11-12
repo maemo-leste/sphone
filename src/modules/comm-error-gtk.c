@@ -25,12 +25,8 @@ static void backend_error_trigger(gconstpointer data, gpointer user_data)
 {
 	(void)user_data;
 	const char *msg = data;
-	GtkWidget *dialog = gtk_dialog_new_with_buttons ("Error", NULL,
-		GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "Ok",
-		GTK_RESPONSE_NONE, NULL);
+	GtkWidget *dialog = gtk_message_dialog_new(NULL, 0, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "%s", msg);
 	g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_destroy), dialog);
-	GtkWidget *label = gtk_label_new(msg);
-	gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), label);
 	gtk_widget_show_all(dialog);
 }
 
