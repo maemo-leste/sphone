@@ -64,7 +64,6 @@ static GtkWidget *gui_dialer_create_selector(void)
 }
 
 #else
-
 static GtkWidget *gui_dialer_create_backend_combo(void)
 {
 	GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());

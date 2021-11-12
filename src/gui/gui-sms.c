@@ -114,6 +114,38 @@ static void gui_sms_completion_cell_data(GtkCellLayout *cell_layout, GtkCellRend
 	g_value_unset(&name_val);
 }
 
+#ifdef ENABLE_LIBHILDON
+static GtkWidget *gui_sms_create_selector(void)
+{
+	GtkWidget *selector = hildon_touch_selector_new_text();
+	GSList *list = sphone_comm_get_backends();
+
+	for(GSList *element = list; element; element = element->next) {
+		CommBackend *backend = element->data; 
+		hildon_touch_selector_append_text(HILDON_TOUCH_SELECTOR(selector), backend->name);
+	}
+
+	hildon_touch_selector_set_active(HILDON_TOUCH_SELECTOR(selector), 0, 0);
+
+	return selector;
+}
+
+#else
+static GtkWidget *gui_sms_create_backend_combo(void)
+{
+	GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
+	GSList *list = sphone_comm_get_backends();
+
+	for(GSList *element = list; element; element = element->next) {
+		CommBackend *backend = element->data; 
+		gtk_combo_box_text_append_text(combo, backend->name);
+	}
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
+
+	return GTK_WIDGET(combo);
+}
+#endif
+
 bool gtk_gui_sms_send_show(const MessageProperties *msg)
 {
 	GtkWidget *main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -275,15 +307,13 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 		message_properties_free(message);
 		gtk_widget_destroy(main_window);
 	} else {
-		GtkWidget *dialog = gtk_dialog_new_with_buttons ("Error", GTK_WINDOW(main_window),
-			GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "Ok",
-			GTK_RESPONSE_NONE, NULL);
-		g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_destroy), dialog);
 		const gchar *message =
 			strlen(text) > 0 ? "Can not send message without to field" :
 			"Can not send message without text";
-		GtkWidget *label = gtk_label_new(message);
-		gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), label);
+		GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(main_window), GTK_DIALOG_DESTROY_WITH_PARENT | GTK_DIALOG_MODAL,
+		                                           GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE, "%s", message);
+		g_signal_connect_swapped(dialog, "response", G_CALLBACK(gtk_widget_destroy), dialog);
+		
 		gtk_widget_show_all(dialog);
 	}
 }
