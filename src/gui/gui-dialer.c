@@ -107,6 +107,8 @@ static void gui_call_callback(GtkButton button)
 
 static void expose_event(GdkScreen *screen, gpointer user_data)
 {
+	(void)screen;
+	(void)user_data;
 	gint width, height;
 	gtk_window_get_size (GTK_WINDOW(g_gui_calls.main_window), &width, &height);
 	if(height < 500)
@@ -117,6 +119,8 @@ static void expose_event(GdkScreen *screen, gpointer user_data)
 
 static void focus_out(GdkScreen *screen, gpointer user_data)
 {
+	(void)screen;
+	(void)user_data;
 	gtk_widget_hide(g_gui_calls.spinner);
 	gtk_widget_show(g_gui_calls.contacts_button);
 	gtk_spinner_stop(GTK_SPINNER(g_gui_calls.spinner));
