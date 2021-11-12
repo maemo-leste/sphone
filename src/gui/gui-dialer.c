@@ -180,8 +180,7 @@ void gtk_gui_dialer_init(void)
 	g_gui_calls.main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(g_gui_calls.main_window),"Dialer");
 	gtk_window_set_deletable(GTK_WINDOW(g_gui_calls.main_window),FALSE);
-	gtk_window_set_default_size(GTK_WINDOW(g_gui_calls.main_window),400,220);
-	gtk_window_maximize(GTK_WINDOW(g_gui_calls.main_window));
+	gtk_window_set_default_size(GTK_WINDOW(g_gui_calls.main_window),400,620);
 	GtkWidget *v1 = gtk_vbox_new(FALSE, 5);
 	GtkWidget *actions_bar = gtk_hbox_new(TRUE,0);
 	GtkWidget *contacts_bar = gtk_hbox_new(TRUE,0);
@@ -231,7 +230,7 @@ void gtk_gui_dialer_init(void)
 	gtk_box_pack_start(GTK_BOX(v1), g_gui_calls.keypad, TRUE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(actions_bar), call_button);
 	gtk_container_add(GTK_CONTAINER(actions_bar), cancel_button);
-	gtk_box_pack_start(GTK_BOX(v1), actions_bar, FALSE, FALSE, 0);
+	gtk_box_pack_end(GTK_BOX(v1), actions_bar, FALSE, FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(g_gui_calls.main_window), v1);
 
 	gtk_widget_show_all(v1);
