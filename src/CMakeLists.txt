@@ -11,6 +11,8 @@ set(SPHONE_SRC_FILES 	sphone.c
 	utils/comm.c
 	utils/gui.c
 	utils/storage.c
+	gui/gtk-gui-message-threads.c
+	gui/gtk-gui-thread-view.c
 	gui/gui-calls-manager.c
 	gui/gui-contact-view.c
 	gui/gui-dialer.c
@@ -19,7 +21,7 @@ set(SPHONE_SRC_FILES 	sphone.c
 	gui/gtk-gui.c
 	gui/keypad.c
 	gui/gui-history-calls.c
-	gui/gui-gtk-utils.c
+	gui/gtk-gui-utils.c
 	)
 
 add_executable(sphone ${SPHONE_SRC_FILES})

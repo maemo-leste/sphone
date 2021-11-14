@@ -13,7 +13,7 @@
 #include "gui-dialer.h"
 #include "gui.h"
 #include "comm.h"
-#include "gui-gtk-utils.h"
+#include "gtk-gui-utils.h"
 #include "storage.h"
 
 struct{

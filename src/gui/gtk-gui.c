@@ -6,6 +6,7 @@
 #include "gui-sms.h"
 #include "gui-calls-manager.h"
 #include "gui-contact-view.h"
+#include "gtk-gui-message-threads.h"
 
 static int gtk_gui_id;
 
@@ -14,7 +15,7 @@ void gtk_gui_register(void)
 	gtk_gui_calls_manager_init();
 	gtk_gui_dialer_init();
 	gtk_gui_sms_init();
-	gtk_gui_id = gui_register(gtk_gui_dialer_show, gtk_gui_sms_send_show, gtk_gui_options_open, gtk_gui_history_sms);
+	gtk_gui_id = gui_register(gtk_gui_dialer_show, gtk_gui_sms_send_show, gtk_gui_options_open, gtk_gui_msg_threads);
 }
 
 void gtk_gui_unregister(void)

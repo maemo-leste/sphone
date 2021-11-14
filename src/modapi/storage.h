@@ -13,6 +13,7 @@ GList *store_get_interacted_msg_contacts(void);
 
 void store_free_call_list(GList *list);
 void store_free_message_list(GList *list);
+void store_free_contacts_list(GList *list);
 
 int store_register_backend(GList *(*get_messages_for_contact)(const Contact *contact),
 						   GList *(*get_calls_for_contact)(const Contact *contact));
