@@ -21,6 +21,8 @@
 
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
+#include <hildon/hildon-pannable-area.h>
+#include <hildon/hildon-picker-button.h>
 #endif
 
 #include "comm.h"
@@ -31,7 +33,7 @@
 #include "string.h"
 #include "gui-contact-view.h"
 #include "gui-sms.h"
-#include "gui-gtk-utils.h"
+
 
 static void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window);
 static void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window);
@@ -47,7 +49,7 @@ static void gui_sms_incoming_callback(gconstpointer data, gpointer user_data)
 
 static void gui_sms_open_contact_callback(GtkButton *button)
 {
-	gchar *dial=g_object_get_data(G_OBJECT(button),"dial");
+	gchar *dial=g_object_get_data(G_OBJECT(button), "dial");
 	gui_contact_open_by_dial(dial);
 }
 
@@ -133,8 +135,8 @@ bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	if(msg && msg->text)
 		gtk_text_buffer_set_text(text_buffer, msg->text, -1);
 	
-	gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text_edit),GTK_TEXT_WINDOW_LEFT,2);
-	gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text_edit),GTK_TEXT_WINDOW_RIGHT,2);
+	gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text_edit), GTK_TEXT_WINDOW_LEFT,2);
+	gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text_edit), GTK_TEXT_WINDOW_RIGHT,2);
 
 	gtk_box_pack_start(GTK_BOX(to_bar), to_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(to_bar), to_entry, TRUE, TRUE, 0);
@@ -171,7 +173,7 @@ void gui_sms_receive_show(const MessageProperties *message)
 		desc = g_strdup_printf("<Unknown>\n%s\n", message->line_identifier);
 	}
 	
-	time_str = sphone_time_to_new_string(message->time);
+	time_str = gtk_gui_date_to_new_string(message->time);
 
 	GtkWidget *main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	gtk_window_set_title(GTK_WINDOW(main_window),"New SMS");
