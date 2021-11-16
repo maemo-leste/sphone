@@ -20,6 +20,8 @@ datapipe_struct vibrate_pipe;
 datapipe_struct message_recived_pipe;
 datapipe_struct message_send_pipe;
 
+datapipe_struct contact_fill_pipe;
+
 datapipe_struct notification_raise_pipe;
 datapipe_struct contact_show_pipe;
 
@@ -43,6 +45,7 @@ void datapipes_init(void)
 	setup_datapipe(&notification_raise_pipe);
 	setup_datapipe(&call_accept_pipe);
 	setup_datapipe(&contact_show_pipe);
+	setup_datapipe(&contact_fill_pipe);
 }
 
 void datapipes_exit(void)
@@ -65,4 +68,5 @@ void datapipes_exit(void)
 	free_datapipe(&notification_raise_pipe);
 	free_datapipe(&call_accept_pipe);
 	free_datapipe(&contact_show_pipe);
+	free_datapipe(&contact_fill_pipe);
 }

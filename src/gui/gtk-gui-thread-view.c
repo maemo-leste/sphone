@@ -105,7 +105,7 @@ static GtkTextBuffer *gtk_gui_build_text_buffer(GList *msg_list)
 	return text;
 }
 
-void gtk_gui_show_thread_for_contact(const Contact *contact)
+void gtk_gui_show_thread_for_contact(Contact *contact)
 {
 	sphone_log(LL_DEBUG, "gtk_gui_thread_calls\n");
 

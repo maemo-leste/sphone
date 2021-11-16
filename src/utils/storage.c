@@ -1,18 +1,20 @@
 #include "storage.h"
 #include "sphone-log.h"
+#include "datapipes.h"
+#include "datapipe.h"
 
-GList *(*get_messages_for_contact_backend)(const Contact *contact);
-GList *(*get_calls_for_contact_backend)(const Contact *contact);
+GList *(*get_messages_for_contact_backend)(Contact *contact);
+GList *(*get_calls_for_contact_backend)(Contact *contact);
 
-int store_register_backend(GList *(*get_messages_for_contact)(const Contact *contact),
-						   GList *(*get_calls_for_contact)(const Contact *contact))
+int store_register_backend(GList *(*get_messages_for_contact)(Contact *contact),
+						   GList *(*get_calls_for_contact)(Contact *contact))
 {
 	get_messages_for_contact_backend = get_messages_for_contact;
 	get_calls_for_contact_backend = get_calls_for_contact;
 	return 0;
 }
 
-GList *store_get_messages_for_contact(const Contact *contact)
+GList *store_get_messages_for_contact(Contact *contact)
 {
 	if(!get_messages_for_contact_backend) {
 		sphone_log(LL_ERR, "%s used without backend", __func__);
@@ -21,7 +23,7 @@ GList *store_get_messages_for_contact(const Contact *contact)
 	return get_messages_for_contact_backend(contact);
 }
 
-GList *store_get_calls_for_contact(const Contact *contact)
+GList *store_get_calls_for_contact(Contact *contact)
 {
 	if(!get_calls_for_contact_backend) {
 		sphone_log(LL_ERR, "%s used without backend", __func__);
@@ -46,14 +48,16 @@ GList *store_get_interacted_msg_contacts(void)
 	GList *contacts = NULL;
 	for(GList *element = messages; element; element = element->next) {
 		MessageProperties* msg = element->data;
-		message_properties_print(msg, __func__);
 		if(!store_is_contact_in_list(contacts, msg->line_identifier, msg->backend)) {
 			if(msg->contact && msg->contact->line_identifier) {
+				if(!msg->contact->name)
+					execute_datapipe_filters(&contact_fill_pipe, msg->contact);
 				contacts = g_list_append(contacts, contact_copy(msg->contact));
 			} else {
 				Contact *contact = g_malloc0(sizeof(*contact));
 				contact->line_identifier = g_strdup(msg->line_identifier);
 				contact->backend = msg->backend;
+				execute_datapipe_filters(&contact_fill_pipe, contact);
 				contacts = g_list_append(contacts, contact);
 			}
 		}

@@ -126,7 +126,51 @@ static void message_send_trigger(const void *data, void *user_data)
 	rtcom_el_event_free(ev);
 }
 
-static GList *get_messages_for_contact(const Contact *contact)
+static MessageProperties *convert_to_message_proparites(RTComElIter *iter, Contact *contact)
+{
+	char *line_identifier;
+	char *local_uid;
+	char *text;
+	char *name;
+	gboolean outbound;
+	MessageProperties *msg = g_malloc0(sizeof(*msg));
+	if(!rtcom_el_iter_get_values(iter, "local-uid", &local_uid,
+									"remote-uid", &line_identifier,
+									"outgoing", &outbound,
+									"start-time", &msg->time,
+									"free-text", &text,
+									"local-name", &name, NULL)) {
+		sphone_module_log(LL_ERR, "Failed to access event by iterator");
+		g_free(msg);
+		return NULL;
+	}
+
+	msg->line_identifier = g_strdup(line_identifier);
+	msg->text = g_strdup(text);
+	msg->outbound = outbound;
+
+	char **tokens = g_strsplit_set(local_uid, "/", 0);
+
+	if(tokens && tokens[1] && g_strcmp0(tokens[0], "sphone") == 0) {
+		msg->backend = sphone_comm_find_backend_id(tokens[1]);
+	} else {
+		g_strfreev(tokens);
+		message_properties_free(msg);
+		return NULL;
+	}
+	g_strfreev(tokens);
+	if(name) {
+		msg->contact = g_malloc0(sizeof(*msg->contact));
+		msg->contact->name = g_strdup(name);
+		msg->contact->line_identifier = g_strdup(line_identifier);
+		msg->contact->backend = msg->backend;
+	} else if(contact && contact->name) {
+		msg->contact = contact_copy(contact);
+	}
+	return msg;
+}
+
+static GList *get_messages_for_contact(Contact *contact)
 {
 	if(!evlog)
 		return NULL;
@@ -145,7 +189,8 @@ static GList *get_messages_for_contact(const Contact *contact)
 			return NULL;
 	} else {
 		CommBackend *backend = sphone_comm_get_backend(contact->backend);
-
+		if(!contact->name)
+			execute_datapipe_filters(&contact_fill_pipe, contact);
 		if(!contact->line_identifier)
 			return NULL;
 		if(!backend)
@@ -173,73 +218,17 @@ static GList *get_messages_for_contact(const Contact *contact)
 
 	if(iterSms) {
 		do {
-			char *line_identifier;
-			char *local_uid;
-			char *text;
-			gboolean outbound;
-			MessageProperties *msg = g_malloc0(sizeof(*msg));
-			if(!rtcom_el_iter_get_values(iterSms, "local-uid", &local_uid,
-											"remote-uid", &line_identifier,
-											"outgoing", &outbound,
-											"start-time", &msg->time,
-											"free-text", &text, NULL)) {
-				sphone_module_log(LL_ERR, "Failed to access event by iterator");
-				g_free(msg);
-				continue;
-			}
-
-			msg->line_identifier = g_strdup(line_identifier);
-			msg->text = g_strdup(text);
-			msg->outbound = outbound;
-
-			char **tokens = g_strsplit_set(local_uid, "/", 0);
-
-			if(tokens && tokens[1] && g_strcmp0(tokens[0], "sphone") == 0) {
-				msg->backend = sphone_comm_find_backend_id(tokens[1]);
-			} else {
-				g_strfreev(tokens);
-				message_properties_free(msg);
-				continue;
-			}
-			g_strfreev(tokens);
-			execute_datapipe_filters(&message_recived_pipe, msg);
-			messages = g_list_append(messages, msg);
+			MessageProperties *msg = convert_to_message_proparites(iterSms, contact);
+			if(msg)
+				messages = g_list_append(messages, msg);
 		} while(rtcom_el_iter_next(iterSms));
 	}
 
 	if(iterChat) {
 		do {
-			char *line_identifier;
-			char *local_uid;
-			char *text;
-			gboolean outbound;
-			MessageProperties *msg = g_malloc0(sizeof(*msg));
-			if(!rtcom_el_iter_get_values(iterChat, "local-uid", &local_uid,
-											"remote-uid", &line_identifier,
-											"outgoing", &outbound,
-											"start-time", &msg->time,
-											"free-text", &text, NULL)) {
-				sphone_module_log(LL_ERR, "Failed to access event by iterator");
-				g_free(msg);
-				continue;
-			}
-
-			msg->line_identifier = g_strdup(line_identifier);
-			msg->text = g_strdup(text);
-			msg->outbound = outbound;
-
-			char **tokens = g_strsplit_set(local_uid, "/", 0);
-
-			if(tokens[0] && tokens[1] && g_strcmp0(tokens[0], "sphone") == 0) {
-				msg->backend = sphone_comm_find_backend_id(tokens[1]);
-			} else {
-				g_strfreev(tokens);
-				message_properties_free(msg);
-				continue;
-			}
-			g_strfreev(tokens);
-			execute_datapipe_filters(&message_recived_pipe, msg);
-			messages = g_list_append(messages, msg);
+			MessageProperties *msg = convert_to_message_proparites(iterChat, contact);
+			if(msg)
+				messages = g_list_append(messages, msg);
 		} while(rtcom_el_iter_next(iterChat));
 	}
 
@@ -249,7 +238,7 @@ static GList *get_messages_for_contact(const Contact *contact)
 	return messages;
 }
 
-static GList *get_calls_for_contact(const Contact *contact)
+static GList *get_calls_for_contact(Contact *contact)
 {
 	if(!evlog)
 		return 0;
@@ -262,6 +251,8 @@ static GList *get_calls_for_contact(const Contact *contact)
 	} else {
 		CommBackend *backend = sphone_comm_get_backend(contact->backend);
 
+		if(!contact->name)
+			execute_datapipe_filters(&contact_fill_pipe, contact);
 		if(!contact->line_identifier)
 			return NULL;
 		if(!backend)
@@ -283,6 +274,7 @@ static GList *get_calls_for_contact(const Contact *contact)
 	do {
 		char *line_identifier;
 		char *local_uid;
+		char *name;
 		int type;
 		gboolean outbound;
 		CallProperties *call = g_malloc0(sizeof(*call));
@@ -292,7 +284,8 @@ static GList *get_calls_for_contact(const Contact *contact)
 			                               "outgoing", &outbound,
 			                               "start-time", &call->start_time,
 			                               "end-time", &call->end_time,
-		                                   "event-type-id", &type, NULL)) {
+			                               "event-type-id", &type,
+			                               "local-name", &name, NULL)) {
 			sphone_module_log(LL_ERR, "Failed to access event by iterator");
 			g_free(call);
 			continue;
@@ -310,7 +303,14 @@ static GList *get_calls_for_contact(const Contact *contact)
 		else
 			call->backend = -1;
 		g_strfreev(tokens);
-		execute_datapipe_filters(&call_new_pipe, call);
+		if(name) {
+			call->contact = g_malloc0(sizeof(*call->contact));
+			call->contact->name = g_strdup(name);
+			call->contact->line_identifier = g_strdup(line_identifier);
+			call->contact->backend = call->backend;
+		} else if(contact && contact->name) {
+			call->contact = contact_copy(contact);
+		}
 		calls = g_list_append(calls, call);
 	} while(rtcom_el_iter_next(iter));
 	

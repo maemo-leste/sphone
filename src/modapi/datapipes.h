@@ -50,6 +50,9 @@ extern datapipe_struct message_recived_pipe;
 //input: MessageProperties
 extern datapipe_struct message_send_pipe;
 
+//input: Contact
+extern datapipe_struct contact_fill_pipe;
+
 //input: NotificationProperties
 extern datapipe_struct notification_raise_pipe;
 
