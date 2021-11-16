@@ -40,6 +40,6 @@ const gchar *sphone_module_init(void)
 G_MODULE_EXPORT void g_module_unload(GModule *module);
 void g_module_unload(GModule *module)
 {
-	remove_trigger_from_datapipe(&call_backend_error_pipe, backend_error_trigger);
+	remove_trigger_from_datapipe(&call_backend_error_pipe, backend_error_trigger, NULL);
 	(void)module;
 }

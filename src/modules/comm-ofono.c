@@ -578,7 +578,7 @@ static void new_sms_cb(GDBusConnection *connection,
 	MessageProperties *message = g_malloc0(sizeof(*message));
 	message->backend = ofono_if_priv.backend_id;
 
-	struct tm tm;
+	struct tm tm = {0};
 
 	g_variant_get(parameters, "(sa{sv})", &message->text, &iter);
 	
@@ -598,7 +598,8 @@ static void new_sms_cb(GDBusConnection *connection,
 				g_free(key);
 				goto error;
 			}
-			strptime(time,"%Y-%m-%dT%H:%M:%S%z", &tm);
+			sphone_module_log(LL_DEBUG, "time: %s", time);
+			strptime(time, "%Y-%m-%dT%H:%M:%S%z", &tm);
 			sphone_module_log(LL_DEBUG, "sms time: %s", time);
 		}
 		g_variant_unref(var);
@@ -704,13 +705,13 @@ void g_module_unload(GModule *module)
 {
 	(void)module;
 	
-	remove_trigger_from_datapipe(&call_dial_pipe,   call_dial_trigger);
-	remove_trigger_from_datapipe(&call_accept_pipe, call_accept_trigger);
-	remove_trigger_from_datapipe(&call_hold_pipe,   call_hold_trigger);
-	remove_trigger_from_datapipe(&call_hangup_pipe, call_hangup_trigger);
-	remove_trigger_from_datapipe(&call_dial_pipe,   call_dial_trigger);
+	remove_trigger_from_datapipe(&call_dial_pipe,   call_dial_trigger, &ofono_if_priv);
+	remove_trigger_from_datapipe(&call_accept_pipe, call_accept_trigger, &ofono_if_priv);
+	remove_trigger_from_datapipe(&call_hold_pipe,   call_hold_trigger, &ofono_if_priv);
+	remove_trigger_from_datapipe(&call_hangup_pipe, call_hangup_trigger, &ofono_if_priv);
+	remove_trigger_from_datapipe(&call_dial_pipe,   call_dial_trigger, &ofono_if_priv);
 	
-	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger);
+	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, &ofono_if_priv);
 
 	if(!ofono_init_valid())
 		return;

@@ -49,6 +49,13 @@ Contact *contact_copy(const Contact *contact)
 	return new_contact;
 }
 
+bool contact_cmp(const Contact *a, const Contact *b)
+{
+	if(!a || !b)
+		return !a && !b;
+	return a->backend == b->backend && g_strcmp0(a->line_identifier, b->line_identifier) == 0;
+}
+
 void contact_print(const Contact *contact, const char *module_name)
 {
 	if(contact) {

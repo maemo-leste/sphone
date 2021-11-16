@@ -50,6 +50,8 @@ void contact_free(Contact *contact);
 
 Contact *contact_copy(const Contact *contact);
 
+bool contact_cmp(const Contact *a, const Contact *b);
+
 void contact_print(const Contact *contact, const char *module_name);
 
 typedef struct _CallProperties{

@@ -8,9 +8,27 @@ struct Ui {
 	bool (*sms_send_show)(const MessageProperties* call);
 	bool (*options_open)(void);
 	bool (*history_sms)(void);
+	bool (*contact_shown)(const Contact *contact);
 };
 
 static GSList *uis;
+
+bool gui_contact_shown(const Contact *contact)
+{
+	bool backend_avail = false;
+	for(GSList *element = uis; element; element = element->next) {
+		struct Ui *ui = element->data;
+		if(ui->contact_shown && !ui->contact_shown(contact))
+			return false;
+		else if(ui->contact_shown)
+			backend_avail = true;
+	}
+	if(!backend_avail) {
+		sphone_log(LL_WARN, "No backend for %s", __func__);
+		return false;
+	}
+	return true;
+}
 
 bool gui_dialer_show(const CallProperties* call)
 {
@@ -75,7 +93,8 @@ bool gui_history_sms(void)
 int gui_register(bool (*dialer_show)(const CallProperties* call),
 			 bool (*sms_send_show)(const MessageProperties* call),
 			 bool (*options_open)(void),
-			 bool (*history_sms)(void))
+			 bool (*history_sms)(void),
+			 bool (*contact_shown)(const Contact *contact))
 {
 	struct Ui *ui = g_malloc(sizeof(*ui));
 	int len = g_slist_length(uis);
@@ -84,6 +103,7 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 	ui->sms_send_show = sms_send_show;
 	ui->options_open = options_open;
 	ui->history_sms = history_sms;
+	ui->contact_shown = contact_shown;
 	
 	uis = g_slist_prepend(uis, ui);
 	return len;

@@ -5,6 +5,7 @@
 #include "datapipe.h"
 #include "datapipes.h"
 #include "rtconf.h"
+#include "gui.h"
 
 /** Module name */
 #define MODULE_NAME		"manager"
@@ -113,8 +114,14 @@ static void call_changed_trigger(const void *data, void *user_data)
 
 static void message_recived_trigger(const void *data, void *user_data)
 {
-	(void)data;
 	(void)user_data;
+	const MessageProperties *msg = data;
+	
+	Contact contact = {0};
+	contact.line_identifier = msg->line_identifier;
+	contact.backend = msg->backend;
+	if(gui_contact_shown(&contact))
+		return;
 
 	bool playing = false;
 	execute_datapipe(&audio_playing_pipe, &playing);
@@ -144,6 +151,6 @@ G_MODULE_EXPORT void g_module_unload(GModule *module);
 void g_module_unload(GModule *module)
 {
 	(void)module;
-	remove_trigger_from_datapipe(&call_new_pipe, call_new_trigger);
-	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_changed_trigger);
+	remove_trigger_from_datapipe(&call_new_pipe, call_new_trigger, NULL);
+	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_changed_trigger, NULL);
 }

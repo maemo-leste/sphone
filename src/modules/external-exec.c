@@ -97,9 +97,9 @@ void g_module_unload(GModule *module)
 {
 	(void)module;
 
-	remove_trigger_from_datapipe(&call_new_pipe, new_call_trigger);
-	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger);
+	remove_trigger_from_datapipe(&call_new_pipe, new_call_trigger, NULL);
+	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, NULL);
 
-	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger);
-	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger);
+	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, NULL);
+	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, NULL);
 }

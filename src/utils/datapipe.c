@@ -134,7 +134,8 @@ void append_filter_to_datapipe(datapipe_struct *const datapipe,
  * @param datapipe The datapipe to manipulate
  * @param filter The filter to remove from the datapipe
  */
-void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*filter)(gpointer data, gpointer user_data))
+void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*filter)(gpointer data, gpointer user_data),
+								 gpointer user_data)
 {
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
@@ -148,7 +149,7 @@ void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*fil
 
 	gpointer (*ifilter)(gpointer data, gpointer user_data) = NULL;
 	for (int i = 0; (ifilter = g_slist_nth_data(datapipe->filters, i)) != NULL; i++) {
-		if(ifilter == filter) {
+		if(ifilter == filter && user_data == g_slist_nth_data(datapipe->filters_user_data, i)) {
 			datapipe->filters = g_slist_remove(datapipe->filters, filter);
 			datapipe->filters_user_data = 
 				g_slist_remove(datapipe->filters_user_data, g_slist_nth_data(datapipe->filters_user_data, i));
@@ -192,7 +193,8 @@ void append_trigger_to_datapipe(datapipe_struct *const datapipe,
  * @param datapipe The datapipe to manipulate
  * @param trigger The trigger to remove from the datapipe
  */
-void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigger)(gconstpointer data, gpointer user_data))
+void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigger)(gconstpointer data, gpointer user_data),
+								gpointer user_data)
 {
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
@@ -206,7 +208,7 @@ void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigge
 
 	void (*itrigger)(gconstpointer data, gpointer user_data) = NULL;
 	for (int i = 0; (itrigger = g_slist_nth_data(datapipe->output_triggers, i)) != NULL; i++) {
-		if(itrigger == trigger) {
+		if(itrigger == trigger && user_data == g_slist_nth_data(datapipe->triggers_user_data, i)) {
 			datapipe->output_triggers = g_slist_remove(datapipe->output_triggers, trigger);
 			datapipe->triggers_user_data = 
 				g_slist_remove(datapipe->triggers_user_data, g_slist_nth_data(datapipe->triggers_user_data, i));

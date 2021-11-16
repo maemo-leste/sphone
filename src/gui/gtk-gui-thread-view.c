@@ -3,6 +3,8 @@
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
+#include <hildon/hildon-stackable-window.h>
+#include <hildon/hildon-text-view.h>
 #endif
 
 #include <gtk/gtk.h>
@@ -15,88 +17,154 @@
 #include "comm.h"
 #include "storage.h"
 #include "gtk-gui-utils.h"
+#include "datapipes.h"
+#include "datapipe.h"
 
-static void gtk_gui_thread_list_double_click_callback(GtkTreeView *view, GtkTreePath* path, GtkTreeViewColumn* column, gpointer func_data)
+static GSList *shown_contacts;
+
+bool gtk_gui_contact_shown(const Contact *contact)
 {
-	(void)func_data;
-	(void)column;
-	sphone_log(LL_DEBUG, "%s", __func__);
-	if(path){
+	for(GSList *element = shown_contacts; element; element = element->next) {
+		Contact *icontact = element->data;
+		if(contact_cmp(contact, icontact))
+			return true;
+	}
+	return false;
+}
 
+static void new_message_trigger(const void* data, void *user_data)
+{
+	GtkTextView *text_view = GTK_TEXT_VIEW(user_data);
+	GtkTextBuffer *text;
+	
+#ifdef ENABLE_LIBHILDON
+	text = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(text_view));
+#else
+	text = gtk_text_view_get_buffer(text_view);
+#endif
+	
+	const MessageProperties *msg = data;
+	const Contact *watch_contact = g_object_get_data(G_OBJECT(text), "contact");
+	if(watch_contact->backend == msg->backend &&
+	   g_strcmp0(watch_contact->line_identifier, msg->line_identifier) == 0) {
+		GString *string = g_string_new(NULL);
+		char *time = gtk_gui_time_to_new_string(msg->time);
+		const char *name;
+		if(!msg->outbound) {
+			name = msg->contact && msg->contact->name ? msg->contact->name : msg->line_identifier;
+		} else {
+			name = getenv("LOGNAME") ?: "sphone";
+		}
+		g_string_append_printf(string, "\n[%s] <%s> %s", time, name, msg->text);
+		GtkTextIter iter;
+		gtk_text_buffer_get_end_iter(text, &iter);
+		gtk_text_buffer_insert(text, &iter, string->str, string->len);
+		gtk_text_buffer_get_end_iter(text, &iter);
+		//gtk_text_view_scroll_to_iter(GTK_TEXT_VIEW(text_view), &iter,  0, FALSE, 0, 0);
+		g_free(time);
+		g_string_free(string, TRUE);
 	}
 }
 
-static GtkWidget *gtk_gui_thread_build(GtkWidget *contacts_view)
+static void remove_thread_view(GtkTextBuffer *text)
 {
-	GtkWidget *scroll;
-	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(contacts_view), FALSE);
-	GtkCellRenderer *renderer;
-	GtkTreeViewColumn *column;
-	
-	renderer = gtk_cell_renderer_text_new();
-	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
-	column = gtk_tree_view_column_new_with_attributes("Text", renderer, "text", GTK_UI_MOD_TEXT, NULL);
-	gtk_tree_view_column_set_sizing(column, GTK_TREE_VIEW_COLUMN_FIXED);
-	gtk_tree_view_column_set_expand(column, TRUE);
-	gtk_tree_view_column_set_min_width(column,120);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(contacts_view), column);
+	const Contact *watch_contact = g_object_get_data(G_OBJECT(text), "contact");
+	shown_contacts = g_slist_remove(shown_contacts, watch_contact);
+	remove_trigger_from_datapipe(&message_send_pipe, new_message_trigger, text);
+	remove_trigger_from_datapipe(&message_recived_pipe, new_message_trigger, text);
+}
 
-	renderer = gtk_cell_renderer_text_new();
-	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_END, NULL);
-	column = gtk_tree_view_column_new_with_attributes("Name", renderer, "text", GTK_UI_MOD_NAME, NULL);
-	gtk_tree_view_column_set_sizing(column,GTK_TREE_VIEW_COLUMN_FIXED);
-	gtk_tree_view_column_set_expand(column,TRUE);
-	gtk_tree_view_column_set_min_width(column,100);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(contacts_view), column);
-	
-	renderer = gtk_cell_renderer_text_new();
-	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_NONE, "wrap-width", 350, "wrap-mode", PANGO_WRAP_WORD, NULL);
-	column = gtk_tree_view_column_new_with_attributes("Date", renderer, "text", GTK_UI_MOD_TEXT, NULL);
-	gtk_tree_view_column_set_sizing(column,GTK_TREE_VIEW_COLUMN_FIXED);
-	gtk_tree_view_column_set_expand(column, FALSE);
-	gtk_tree_view_column_set_min_width(column,350);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(contacts_view), column);
+static void gtk_gui_thread_view_reply_cb(GtkButton* button, Contact *contact)
+{
+	(void)button;
+	MessageProperties msg = {0};
+	msg.contact = contact;
+	msg.line_identifier = contact->line_identifier;
+	msg.backend = contact->backend;
+	contact_print(contact, __func__);
+	gui_sms_send_show(&msg);
+}
 
-	gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(contacts_view),TRUE);
-#ifdef ENABLE_LIBHILDON
-	scroll = hildon_pannable_area_new();
-#else
-	scroll = gtk_scrolled_window_new(NULL,NULL);
-	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-#endif
-	gtk_widget_set_size_request(GTK_WIDGET(scroll), 0, 200);
-	gtk_container_add (GTK_CONTAINER(scroll), contacts_view);
-
-	g_signal_connect_after(G_OBJECT(contacts_view), "row-activated",
-	                       G_CALLBACK(gtk_gui_thread_list_double_click_callback), NULL);
-
-	return scroll;
+static GtkTextBuffer *gtk_gui_build_text_buffer(GList *msg_list)
+{
+	GString *string = g_string_new(NULL);
+	GList *last_element = g_list_last(msg_list);
+	for(GList *element = last_element; element; element = element->prev) {
+		MessageProperties *msg = element->data;
+		char *time = gtk_gui_time_to_new_string(msg->time);
+		const char *name;
+		if(!msg->outbound) {
+			name = msg->contact && msg->contact->name ? msg->contact->name : msg->line_identifier;
+		} else {
+			name = getenv("LOGNAME") ?: "sphone";
+		}
+		g_string_append_printf(string, "%s[%s] <%s> %s", element != g_list_last(msg_list) ? "\n" : "", time, name, msg->text);
+		g_free(time);
+	}
+	GtkTextBuffer *text = gtk_text_buffer_new(NULL);
+	gtk_text_buffer_set_text(text, string->str, string->len);
+	g_string_free(string, TRUE);
+	return text;
 }
 
 void gtk_gui_show_thread_for_contact(const Contact *contact)
 {
 	sphone_log(LL_DEBUG, "gtk_gui_thread_calls\n");
-	GtkTreeModel *contacts;
 
-	GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(window), contact->name ?: "Thread");
-	gtk_window_set_default_size(GTK_WINDOW(window), 400, 600);
 	GtkWidget *v1 = gtk_vbox_new(FALSE, 0);
-	GtkWidget *contacts_view = gtk_tree_view_new();
-	GtkWidget *threads = gtk_gui_thread_build(contacts_view);
+	GtkWidget *text_view;
+	GtkWidget *text_view_scroll;
+	GtkWidget *reply_button = gtk_button_new_with_label("Reply");
+	GtkWidget *actions_bar = gtk_hbox_new(TRUE,0);
+	GtkTextMark *text_mark_end;
 	
 #ifdef ENABLE_LIBHILDON
+	GtkWidget *window = hildon_stackable_window_new();
+	text_view = hildon_text_view_new();
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(window), HILDON_PORTRAIT_MODE_SUPPORT);
+	text_view_scroll = hildon_pannable_area_new();
+#else
+	GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+	text_view = gtk_text_view_new();
+	text_view_scroll = gtk_scrolled_window_new(NULL, NULL);
+	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(text_view_scroll), GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
 #endif
 
-	gtk_container_add (GTK_CONTAINER(v1), threads);
-	gtk_container_add (GTK_CONTAINER(window), v1);
+	gtk_window_set_title(GTK_WINDOW(window), contact->name ?: "Thread");
+	gtk_window_set_default_size(GTK_WINDOW(window), 400, 600);
+
+	gtk_container_add(GTK_CONTAINER(text_view_scroll), text_view);
+	gtk_container_add(GTK_CONTAINER(actions_bar), reply_button);
+	gtk_container_add(GTK_CONTAINER(v1), text_view_scroll);
+	gtk_box_pack_start(GTK_BOX(v1), actions_bar, FALSE, FALSE, 0);
+	gtk_container_add(GTK_CONTAINER(window), v1);
 
 	GList *msg_list = store_get_messages_for_contact(contact);
-	contacts = gtk_gui_new_model_from_messages(msg_list);
+	GtkTextBuffer *text = gtk_gui_build_text_buffer(msg_list);
+	Contact *contact_cpy = contact_copy(contact);
+	g_object_set_data_full(G_OBJECT(text), "contact", contact_cpy, (GDestroyNotify)contact_free);
+	g_signal_connect(G_OBJECT(text_view), "delete-event", G_CALLBACK(remove_thread_view), text);
+	shown_contacts = g_slist_prepend(shown_contacts, contact_cpy);
+	append_trigger_to_datapipe(&message_send_pipe, new_message_trigger, text_view);
+	append_trigger_to_datapipe(&message_recived_pipe, new_message_trigger, text_view);
+	gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), false);
+	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(text_view), false);
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_view), GTK_WRAP_WORD_CHAR);
+
+#ifdef ENABLE_LIBHILDON
+	hildon_text_view_set_buffer(HILDON_TEXT_VIEW(text_view), text);
+#else
+	gtk_text_view_set_buffer(GTK_TEXT_VIEW(text_view), text);
+#endif
+
+	g_object_unref(text);
 	store_free_message_list(msg_list);
-	gtk_tree_view_set_model(GTK_TREE_VIEW(contacts_view), GTK_TREE_MODEL(contacts));
-	g_object_unref(G_OBJECT(contacts));
+	g_signal_connect(G_OBJECT(reply_button), "clicked", G_CALLBACK(gtk_gui_thread_view_reply_cb), contact_cpy);
 
 	gtk_widget_show_all(window);
+	
+	GtkTextIter iter;
+	gtk_text_buffer_get_end_iter(text, &iter);
+	text_mark_end = gtk_text_buffer_create_mark(text, "end", &iter, TRUE);
+	gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(text_view), text_mark_end, 0., FALSE, 0., 0.);
 }

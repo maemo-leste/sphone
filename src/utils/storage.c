@@ -46,6 +46,7 @@ GList *store_get_interacted_msg_contacts(void)
 	GList *contacts = NULL;
 	for(GList *element = messages; element; element = element->next) {
 		MessageProperties* msg = element->data;
+		message_properties_print(msg, __func__);
 		if(!store_is_contact_in_list(contacts, msg->line_identifier, msg->backend)) {
 			if(msg->contact && msg->contact->line_identifier) {
 				contacts = g_list_append(contacts, contact_copy(msg->contact));
@@ -53,6 +54,7 @@ GList *store_get_interacted_msg_contacts(void)
 				Contact *contact = g_malloc0(sizeof(*contact));
 				contact->line_identifier = g_strdup(msg->line_identifier);
 				contact->backend = msg->backend;
+				contacts = g_list_append(contacts, contact);
 			}
 		}
 	}
@@ -87,7 +89,7 @@ void store_free_contacts_list(GList *list)
 void store_free_message_list(GList *list)
 {
 	for(GList *element = list; element; element = element->next)
-		call_properties_free(element->data);
+		message_properties_free(element->data);
 	g_list_free(list);
 }
 

@@ -175,6 +175,6 @@ void g_module_unload(GModule *module)
 {
 	(void)module;
 	sphone_pa_distroy_interface(&pa_if);
-	remove_trigger_from_datapipe(&call_mode_pipe, call_mode_trigger);
-	remove_trigger_from_datapipe(&audio_route_pipe, audio_route_trigger);
+	remove_trigger_from_datapipe(&call_mode_pipe, call_mode_trigger, NULL);
+	remove_trigger_from_datapipe(&audio_route_pipe, audio_route_trigger, NULL);
 }

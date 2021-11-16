@@ -22,6 +22,7 @@
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
+#include <hildon/hildon-stackable-window.h>
 #include <hildon/hildon-picker-button.h>
 #endif
 
@@ -180,10 +181,6 @@ static void gui_dialer_validate_callback(GtkEntry *entry,const gchar *text, gint
 
 void gtk_gui_dialer_init(void)
 {
-	g_gui_calls.main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(g_gui_calls.main_window),"Dialer");
-	gtk_window_set_deletable(GTK_WINDOW(g_gui_calls.main_window),FALSE);
-	gtk_window_set_default_size(GTK_WINDOW(g_gui_calls.main_window),400,620);
 	GtkWidget *v1 = gtk_vbox_new(FALSE, 5);
 	GtkWidget *actions_bar = gtk_hbox_new(TRUE,0);
 	GtkWidget *contacts_bar = gtk_hbox_new(TRUE,0);
@@ -198,6 +195,7 @@ void gtk_gui_dialer_init(void)
 	g_gui_calls.spinner = gtk_spinner_new();
 	
 #ifdef ENABLE_LIBHILDON
+	g_gui_calls.main_window = hildon_stackable_window_new();
 	g_gui_calls.selector = gui_dialer_create_selector();
 	g_gui_calls.backend_combo = hildon_picker_button_new (HILDON_SIZE_AUTO, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
 	hildon_button_set_title (HILDON_BUTTON(g_gui_calls.backend_combo), "\nBackend\n");
@@ -205,8 +203,13 @@ void gtk_gui_dialer_init(void)
 	                                 HILDON_TOUCH_SELECTOR(g_gui_calls.selector));
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_gui_calls.main_window), HILDON_PORTRAIT_MODE_SUPPORT);
 #else
+	g_gui_calls.main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	g_gui_calls.backend_combo = gui_dialer_create_backend_combo();
 #endif
+	
+	gtk_window_set_title(GTK_WINDOW(g_gui_calls.main_window),"Dialer");
+	gtk_window_set_deletable(GTK_WINDOW(g_gui_calls.main_window),FALSE);
+	gtk_window_set_default_size(GTK_WINDOW(g_gui_calls.main_window),400,620);
 	
 	GdkColor white, black;
 	GtkWidget *e = gtk_event_box_new ();

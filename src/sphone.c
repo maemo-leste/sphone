@@ -284,6 +284,8 @@ static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointe
 		exit(-1);
 	} else if(options->command != SPHONE_CMD_NONE) {
 		send_command(connection, options);
+	} else {
+		sphone_log(LL_WARN, "Sphone is allready running.");
 	}
 
 	exit(0);

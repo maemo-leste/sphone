@@ -170,8 +170,8 @@ void g_module_unload(GModule *module)
 {
 	(void)module;
 	
-	remove_trigger_from_datapipe(&audio_stop_pipe, audio_stop_trigger);
-	remove_trigger_from_datapipe(&audio_play_once_pipe, audio_play_once_trigger);
-	remove_trigger_from_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger);
-	remove_filter_from_datapipe(&audio_playing_pipe, audio_playing_filter);
+	remove_trigger_from_datapipe(&audio_stop_pipe, audio_stop_trigger, NULL);
+	remove_trigger_from_datapipe(&audio_play_once_pipe, audio_play_once_trigger, NULL);
+	remove_trigger_from_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger, NULL);
+	remove_filter_from_datapipe(&audio_playing_pipe, audio_playing_filter, NULL);
 }

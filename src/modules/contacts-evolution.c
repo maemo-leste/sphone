@@ -179,7 +179,8 @@ const gchar *sphone_module_init(void)
 G_MODULE_EXPORT void g_module_unload(GModule *module);
 void g_module_unload(GModule *module)
 {
-	(void)module;
+	(void)module;/*
 	remove_filter_from_datapipe(&call_new_pipe, call_filter);
 	remove_filter_from_datapipe(&call_properties_changed_pipe, call_filter);
+	*/
 }

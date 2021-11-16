@@ -154,9 +154,9 @@ void gtk_gui_calls_manager_init(void)
 
 void gtk_gui_calls_manager_exit(void)
 {
-	remove_trigger_from_datapipe(&audio_route_pipe, gui_calls_audio_route_trigger);
-	remove_trigger_from_datapipe(&call_new_pipe, gui_calls_new_call_callback);
-	remove_trigger_from_datapipe(&call_properties_changed_pipe, gui_calls_call_status_callback);
+	remove_trigger_from_datapipe(&audio_route_pipe, gui_calls_audio_route_trigger, NULL);
+	remove_trigger_from_datapipe(&call_new_pipe, gui_calls_new_call_callback, NULL);
+	remove_trigger_from_datapipe(&call_properties_changed_pipe, gui_calls_call_status_callback, NULL);
 }
 
 static void gui_calls_update_global_status(void)

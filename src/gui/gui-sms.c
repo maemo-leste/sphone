@@ -23,6 +23,7 @@
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
 #include <hildon/hildon-picker-button.h>
+#include <hildon/hildon-stackable-window.h>
 #endif
 
 #include "comm.h"
@@ -34,6 +35,7 @@
 #include "gui-contact-view.h"
 #include "gui-sms.h"
 #include "gtk-gui-utils.h"
+#include "gui.h"
 
 static void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window);
 static void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window);
@@ -43,6 +45,12 @@ static void gui_sms_incoming_callback(gconstpointer data, gpointer user_data)
 {
 	const MessageProperties *message = (const MessageProperties*)data;
 	(void)user_data;
+	
+	Contact contact = {0};
+	contact.line_identifier = message->line_identifier;
+	contact.backend = message->backend;
+	if(gui_contact_shown(&contact))
+		return;
 
 	gui_sms_receive_show(message);
 }
@@ -60,7 +68,7 @@ void gtk_gui_sms_init(void)
 
 void gtk_gui_sms_exit(void)
 {
-	remove_trigger_from_datapipe(&message_recived_pipe, gui_sms_incoming_callback);
+	remove_trigger_from_datapipe(&message_recived_pipe, gui_sms_incoming_callback, NULL);
 }
 
 #ifdef ENABLE_LIBHILDON
@@ -97,9 +105,6 @@ static GtkWidget *gui_sms_create_backend_combo(void)
 
 bool gtk_gui_sms_send_show(const MessageProperties *msg)
 {
-	GtkWidget *main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(main_window),"Send SMS");
-	gtk_window_set_default_size(GTK_WINDOW(main_window),400,220);
 	GtkWidget *v1=gtk_vbox_new(FALSE,2);
 	GtkWidget *to_bar=gtk_hbox_new(FALSE,0);
 	GtkWidget *actions_bar=gtk_hbox_new(FALSE,0);
@@ -116,6 +121,7 @@ bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	(void)selector;
 	
 #ifdef ENABLE_LIBHILDON
+	GtkWidget *main_window = hildon_stackable_window_new();
 	selector = gui_sms_create_selector();
 	backend_combo = hildon_picker_button_new(HILDON_SIZE_AUTO, HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
 	hildon_button_set_title (HILDON_BUTTON(backend_combo), "Backend");
@@ -124,9 +130,13 @@ bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(main_window), HILDON_PORTRAIT_MODE_SUPPORT);
 	g_object_set_data(G_OBJECT(main_window), "backend-combo-box", selector);
 #else
+	GtkWidget *main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	backend_combo = gui_sms_create_backend_combo();
 	g_object_set_data(G_OBJECT(main_window), "backend-combo-box", backend_combo);
 #endif
+
+	gtk_window_set_title(GTK_WINDOW(main_window),"Send SMS");
+	gtk_window_set_default_size(GTK_WINDOW(main_window),400,220);
 
 	GtkTextBuffer *text_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_edit));
 
@@ -135,8 +145,8 @@ bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	if(msg && msg->text)
 		gtk_text_buffer_set_text(text_buffer, msg->text, -1);
 	
-	gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text_edit), GTK_TEXT_WINDOW_LEFT,2);
-	gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text_edit), GTK_TEXT_WINDOW_RIGHT,2);
+	gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text_edit), GTK_TEXT_WINDOW_LEFT, 2);
+	gtk_text_view_set_border_window_size(GTK_TEXT_VIEW(text_edit), GTK_TEXT_WINDOW_RIGHT, 2);
 
 	gtk_box_pack_start(GTK_BOX(to_bar), to_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(to_bar), to_entry, TRUE, TRUE, 0);
@@ -247,6 +257,7 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 		message->text = text;
 		message->backend = sphone_comm_find_backend_id(backend_name);
 		message->time = time(NULL);
+		message->outbound = true;
 		execute_datapipe(&message_send_pipe, message);
 		message_properties_free(message);
 		gtk_widget_destroy(main_window);

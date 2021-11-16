@@ -46,14 +46,16 @@ void append_filter_to_datapipe(datapipe_struct *const datapipe,
 							   gpointer (*filter)(gpointer data, gpointer user_data),
 							   gpointer user_data);
 void remove_filter_from_datapipe(datapipe_struct *const datapipe,
-								 gpointer (*filter)(gpointer data, gpointer user_data));
+								 gpointer (*filter)(gpointer data, gpointer user_data),
+								gpointer user_data);
 
 // triggers
 void append_trigger_to_datapipe(datapipe_struct *const datapipe,
 								void (*trigger)(gconstpointer data, gpointer user_data),
 								gpointer user_data);
 void remove_trigger_from_datapipe(datapipe_struct *const datapipe,
-								  void (*trigger)(gconstpointer data, gpointer user_data));
+								  void (*trigger)(gconstpointer data, gpointer user_data),
+								gpointer user_data);
 
 void setup_datapipe(datapipe_struct *const datapipe);
 void free_datapipe(datapipe_struct *const datapipe);

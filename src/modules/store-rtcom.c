@@ -56,7 +56,7 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 	RTCOM_EL_EVENT_SET_FIELD(ev, end_time, time(NULL));
 	if(call->contact && call->contact->name)
 		RTCOM_EL_EVENT_SET_FIELD(ev, local_name, g_strdup(call->contact->name));
-	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("/sphone/", backend->name, "/", call->line_identifier, NULL));
+	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("sphone/", backend->name, "/", call->line_identifier, NULL));
 	RTCOM_EL_EVENT_SET_FIELD(ev, remote_uid, g_strdup(call->line_identifier));
 
 	if(rtcom_el_add_event(el, ev, NULL) < 0)
@@ -83,7 +83,7 @@ static RTComElEvent *create_mesage_event(const MessageProperties *msg)
 	RTCOM_EL_EVENT_SET_FIELD(ev, end_time, 0);
 	if(msg->contact && msg->contact->name)
 		RTCOM_EL_EVENT_SET_FIELD(ev, local_name, g_strdup(msg->contact->name));
-	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("/sphone/", backend->name, "/", msg->line_identifier, NULL));
+	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("sphone/", backend->name, NULL));
 	RTCOM_EL_EVENT_SET_FIELD(ev, remote_uid, g_strdup(msg->line_identifier));
 	RTCOM_EL_EVENT_SET_FIELD (ev, free_text, g_strdup(msg->text));
 
@@ -151,14 +151,16 @@ static GList *get_messages_for_contact(const Contact *contact)
 		if(!backend)
 			return NULL;
 
-		char *localid = g_strconcat("/sphone/", backend->name, "/", contact->line_identifier, NULL);
+		char *localid = g_strconcat("sphone/", backend->name, NULL);
 		if(!rtcom_el_query_prepare(querySms, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_SMS"), RTCOM_EL_OP_EQUAL,
 			                       "event-type-id", rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_SMS_MESSAGE"), RTCOM_EL_OP_EQUAL,
-			                       "local-uid", localid, RTCOM_EL_OP_EQUAL, NULL))
+			                       "local-uid", localid, RTCOM_EL_OP_EQUAL, "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL, 
+			                       NULL))
 			return NULL;
 		if(!rtcom_el_query_prepare(queryChat, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_CHAT"), RTCOM_EL_OP_EQUAL,
 			                       "event-type-id", rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_CHAT_MESSAGE"), RTCOM_EL_OP_EQUAL,
-			                       "local-uid", localid, RTCOM_EL_OP_EQUAL, NULL))
+			                       "local-uid", localid, RTCOM_EL_OP_EQUAL, "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL, 
+			                       NULL))
 			return NULL;
 	}
 
@@ -170,7 +172,7 @@ static GList *get_messages_for_contact(const Contact *contact)
 	GList *messages = NULL;
 
 	if(iterSms) {
-			do {
+		do {
 			char *line_identifier;
 			char *local_uid;
 			char *text;
@@ -192,10 +194,13 @@ static GList *get_messages_for_contact(const Contact *contact)
 
 			char **tokens = g_strsplit_set(local_uid, "/", 0);
 
-			if(tokens && g_strcmp0(tokens[0], "sphone") == 0 && tokens[1])
+			if(tokens && tokens[1] && g_strcmp0(tokens[0], "sphone") == 0) {
 				msg->backend = sphone_comm_find_backend_id(tokens[1]);
-			else
-				msg->backend = -1;
+			} else {
+				g_strfreev(tokens);
+				message_properties_free(msg);
+				continue;
+			}
 			g_strfreev(tokens);
 			execute_datapipe_filters(&message_recived_pipe, msg);
 			messages = g_list_append(messages, msg);
@@ -225,10 +230,13 @@ static GList *get_messages_for_contact(const Contact *contact)
 
 			char **tokens = g_strsplit_set(local_uid, "/", 0);
 
-			if(tokens && g_strcmp0(tokens[0], "sphone") == 0 && tokens[1])
+			if(tokens[0] && tokens[1] && g_strcmp0(tokens[0], "sphone") == 0) {
 				msg->backend = sphone_comm_find_backend_id(tokens[1]);
-			else
-				msg->backend = -1;
+			} else {
+				g_strfreev(tokens);
+				message_properties_free(msg);
+				continue;
+			}
 			g_strfreev(tokens);
 			execute_datapipe_filters(&message_recived_pipe, msg);
 			messages = g_list_append(messages, msg);
@@ -259,9 +267,10 @@ static GList *get_calls_for_contact(const Contact *contact)
 		if(!backend)
 			return NULL;
 
-		char *localid = g_strconcat("/sphone/", backend->name, "/", contact->line_identifier, NULL);
+		char *localid = g_strconcat("sphone/", backend->name, NULL);
 		if(!rtcom_el_query_prepare(query, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_CALL"), RTCOM_EL_OP_EQUAL,
-			                              "local-uid", localid, RTCOM_EL_OP_EQUAL, NULL))
+			                              "local-uid", localid, RTCOM_EL_OP_EQUAL,
+			                              "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL, NULL))
 			return NULL;
 	}
 
@@ -288,7 +297,7 @@ static GList *get_calls_for_contact(const Contact *contact)
 			g_free(call);
 			continue;
 		}
-
+		sphone_module_log(LL_DEBUG, "got line: %s", line_identifier ?: "NULL");
 		call->line_identifier = g_strdup(line_identifier);
 		call->awnserd = type != rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_CALL_MISSED");
 		call->outbound = outbound;
@@ -296,8 +305,8 @@ static GList *get_calls_for_contact(const Contact *contact)
 
 		char **tokens = g_strsplit_set(local_uid, "/", 0);
 
-		if(tokens && tokens[1] && tokens[2] && g_strcmp0(tokens[1], "sphone") == 0)
-			call->backend = sphone_comm_find_backend_id(tokens[2]);
+		if(tokens[0] && tokens[1] && g_strcmp0(tokens[0], "sphone") == 0)
+			call->backend = sphone_comm_find_backend_id(tokens[1]);
 		else
 			call->backend = -1;
 		g_strfreev(tokens);
@@ -332,9 +341,9 @@ G_MODULE_EXPORT void g_module_unload(GModule *module);
 void g_module_unload(GModule *module)
 {
 	(void)module;
-	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger);
-	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger);
-	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger);
+	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, evlog);
+	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, evlog);
+	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, evlog);
 	store_unregister_backend(id);
 	g_object_unref(evlog);
 }

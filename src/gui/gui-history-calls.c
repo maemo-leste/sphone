@@ -3,6 +3,7 @@
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
+#include <hildon/hildon-stackable-window.h>
 #endif
 
 #include <gtk/gtk.h>
@@ -49,6 +50,8 @@ static void gui_history_list_double_click_callback(GtkTreeView *view, GtkTreePat
 		gtk_tree_model_get_value(model,&iter,SPHONE_STORE_TREE_MODEL_COLUMN_DIAL,&value);
 		msg.backend = backend ? backend->id : 0;
 		msg.line_identifier = (char*)g_value_get_string(&value);
+		gdk_window_destroy(gtk_widget_get_window(GTK_WIDGET(g_history_calls.window)));
+		g_history_calls.window = NULL;
 		gui_dialer_show(&msg);
 		g_value_unset(&value);
 	}
@@ -58,7 +61,7 @@ static GtkWidget *gui_dialer_build_list(void)
 {
 	GtkWidget *scroll;
 	g_history_calls.dials_view = gtk_tree_view_new();
-	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(g_history_calls.dials_view),FALSE);
+	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(g_history_calls.dials_view), TRUE);
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
 
@@ -72,7 +75,7 @@ static GtkWidget *gui_dialer_build_list(void)
 
 	renderer = gtk_cell_renderer_text_new();
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
-	column = gtk_tree_view_column_new_with_attributes("Dial", renderer, "text", GTK_UI_MOD_LINE_ID, NULL);
+	column = gtk_tree_view_column_new_with_attributes("Line", renderer, "text", GTK_UI_MOD_LINE_ID, NULL);
 	gtk_tree_view_column_set_sizing(column,GTK_TREE_VIEW_COLUMN_FIXED);
 	gtk_tree_view_column_set_expand(column,TRUE);
 	gtk_tree_view_column_set_min_width(column,120);
@@ -117,16 +120,19 @@ gint gui_history_calls(void)
 		return 0;
 	}
 
-	g_history_calls.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(g_history_calls.window),"Call History");
-	gtk_window_set_default_size(GTK_WINDOW(g_history_calls.window), 600, 220);
 	GtkWidget *v1 = gtk_vbox_new(FALSE, 0);
-
-	GtkWidget *list = gui_dialer_build_list();
 	
 #ifdef ENABLE_LIBHILDON
+	g_history_calls.window = hildon_stackable_window_new();
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_history_calls.window), HILDON_PORTRAIT_MODE_SUPPORT);
+#else
+	g_history_calls.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 #endif
+
+	GtkWidget *list = gui_dialer_build_list();
+
+	gtk_window_set_title(GTK_WINDOW(g_history_calls.window),"Call History");
+	gtk_window_set_default_size(GTK_WINDOW(g_history_calls.window), 600, 220);
 
 	gtk_container_add (GTK_CONTAINER(v1), list);
 	gtk_container_add (GTK_CONTAINER(g_history_calls.window), v1);

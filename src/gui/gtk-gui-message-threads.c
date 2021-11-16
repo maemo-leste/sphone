@@ -3,6 +3,7 @@
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
+#include <hildon/hildon-stackable-window.h>
 #endif
 
 #include <gtk/gtk.h>
@@ -48,7 +49,7 @@ static void gtk_gui_msg_threads_list_double_click_callback(GtkTreeView *view, Gt
 static GtkWidget *gtk_gui_msg_threads_build(GtkWidget *contacts_view)
 {
 	GtkWidget *scroll;
-	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(contacts_view),FALSE);
+	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(contacts_view), TRUE);
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
 
@@ -62,10 +63,18 @@ static GtkWidget *gtk_gui_msg_threads_build(GtkWidget *contacts_view)
 
 	renderer = gtk_cell_renderer_text_new();
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
-	column = gtk_tree_view_column_new_with_attributes("Text", renderer, "text", GTK_UI_MOD_LINE_ID, NULL);
+	column = gtk_tree_view_column_new_with_attributes("Line", renderer, "text", GTK_UI_MOD_LINE_ID, NULL);
 	gtk_tree_view_column_set_sizing(column,GTK_TREE_VIEW_COLUMN_FIXED);
 	gtk_tree_view_column_set_expand(column,TRUE);
 	gtk_tree_view_column_set_min_width(column,120);
+	gtk_tree_view_append_column(GTK_TREE_VIEW(contacts_view), column);
+
+	renderer = gtk_cell_renderer_text_new();
+	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_NONE, NULL);
+	column = gtk_tree_view_column_new_with_attributes("Backend", renderer, "text", GTK_UI_MOD_BACKEND_STR, NULL);
+	gtk_tree_view_column_set_sizing(column,GTK_TREE_VIEW_COLUMN_FIXED);
+	gtk_tree_view_column_set_expand(column,TRUE);
+	gtk_tree_view_column_set_min_width(column,60);
 	gtk_tree_view_append_column(GTK_TREE_VIEW(contacts_view), column);
 
 	gtk_tree_view_set_fixed_height_mode(GTK_TREE_VIEW(contacts_view),TRUE);
@@ -88,16 +97,19 @@ bool gtk_gui_msg_threads(void)
 	sphone_log(LL_DEBUG, "gtk_gui_msg_threads_calls\n");
 	GtkTreeModel *contacts;
 
-	GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	gtk_window_set_title(GTK_WINDOW(window),"Threads");
-	gtk_window_set_default_size(GTK_WINDOW(window), 400, 600);
 	GtkWidget *v1 = gtk_vbox_new(FALSE, 0);
 	GtkWidget *contacts_view = gtk_tree_view_new();
 	GtkWidget *threads = gtk_gui_msg_threads_build(contacts_view);
 	
 #ifdef ENABLE_LIBHILDON
+	GtkWidget *window = hildon_stackable_window_new();
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(window), HILDON_PORTRAIT_MODE_SUPPORT);
+#else
+	GtkWidget *window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 #endif
+	
+	gtk_window_set_title(GTK_WINDOW(window),"Threads");
+	gtk_window_set_default_size(GTK_WINDOW(window), 400, 600);
 
 	gtk_container_add (GTK_CONTAINER(v1), threads);
 	gtk_container_add (GTK_CONTAINER(window), v1);

@@ -45,5 +45,5 @@ G_MODULE_EXPORT void g_module_unload(GModule *module);
 void g_module_unload(GModule *module)
 {
 	(void)module;
-	remove_trigger_from_datapipe(&contact_show_pipe, contact_show_trigger);
+	remove_trigger_from_datapipe(&contact_show_pipe, contact_show_trigger, NULL);
 }
