@@ -19,7 +19,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-//#include "sphone.h"
 #include "sphone-conf.h"
 #include "sphone-log.h"
 
@@ -341,7 +340,11 @@ gboolean sphone_conf_init(void)
 	sphone_conf_file_count = 1;
 	struct dirent *direntry;
 
-	gchar *override_dir_path = g_strdup(G_STRINGIFY(SPHONE_SYSCONF_OVR_DIR));
+	const char *home = getenv("HOME");
+	if(!home)
+		home = "/home/user";
+
+	gchar *override_dir_path = g_strconcat(home, "/", G_STRINGIFY(SPHONE_SYSCONF_OVR_DIR), NULL);
 	dir = opendir(override_dir_path);
 	if (dir) {
 		while ((direntry = readdir(dir)) != NULL && telldir(dir)) {
@@ -380,9 +383,8 @@ gboolean sphone_conf_init(void)
 			if ((direntry->d_type == DT_REG || direntry->d_type == DT_LNK) && 
 				sphone_conf_is_ini_file(direntry->d_name)) {
 				conf_files[i].filename = g_strdup(direntry->d_name);
-				conf_files[i].path     = g_strconcat(G_STRINGIFY(SPHONE_SYSCONF_DIR), "/", 
-											G_STRINGIFY(SPHONE_CONF_OVERRIDE_DIR), "/", 
-											conf_files[i].filename, NULL);
+				conf_files[i].path     = g_strconcat(home, "/", G_STRINGIFY(SPHONE_SYSCONF_OVR_DIR),
+													 "/", conf_files[i].filename, NULL);
 				conf_files[i].keyfile  = sphone_conf_read_conf_file(conf_files[i].path);
 				 ++i;
 			}

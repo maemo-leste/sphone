@@ -310,6 +310,8 @@ static GList *get_calls_for_contact(Contact *contact)
 			call->contact->backend = call->backend;
 		} else if(contact && contact->name) {
 			call->contact = contact_copy(contact);
+		} else {
+			execute_datapipe_filters(&call_new_pipe, call);
 		}
 		calls = g_list_append(calls, call);
 	} while(rtcom_el_iter_next(iter));
