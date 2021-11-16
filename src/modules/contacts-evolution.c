@@ -133,6 +133,27 @@ static gpointer call_filter(gpointer data, gpointer user_data)
 	return call;
 }
 
+static gpointer message_filter(gpointer data, gpointer user_data)
+{
+	MessageProperties *msg = data;
+	struct evolution_priv *priv = user_data;
+	if(priv->ebook && !msg->contact) {
+		const CommBackend *backend = sphone_comm_get_backend(msg->backend);
+		if(backend && g_strcmp0(backend->name, "ofono") == 0) {
+			msg->contact = g_malloc0(sizeof(*msg->contact));
+			if(!fill_contact(priv->ebook, msg->line_identifier, msg->contact, msg->backend)) {
+				g_free(msg->contact);
+				msg->contact = NULL;
+			} else {
+				sphone_module_log(LL_DEBUG, "got contact: %s", msg->contact->name);
+			}
+		} else {
+			sphone_module_log(LL_WARN, "can currently only fill contacts of ofono calls");
+		}
+	}
+	return msg;
+}
+
 static void book_ready_callback(GObject *source_object, GAsyncResult *res, gpointer user_data)
 {
 	(void)source_object;
@@ -171,6 +192,7 @@ const gchar *sphone_module_init(void)
 		e_book_client_connect(address_book_src, 0, NULL, book_ready_callback, book);
 		append_filter_to_datapipe(&call_new_pipe, call_filter, book);
 		append_filter_to_datapipe(&call_properties_changed_pipe, call_filter, book);
+		append_filter_to_datapipe(&message_recived_pipe, message_filter, book);
 		g_object_unref(address_book_src);
 	}
 	return NULL;
