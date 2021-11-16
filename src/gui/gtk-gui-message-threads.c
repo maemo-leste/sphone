@@ -9,8 +9,6 @@
 #include <gtk/gtk.h>
 
 #include "sphone-log.h"
-#include "sphone-store-tree-model.h"
-#include "gui-contact-view.h"
 #include "gui-dialer.h"
 #include "gui.h"
 #include "comm.h"

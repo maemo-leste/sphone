@@ -5,8 +5,6 @@ set(SPHONE_SRC_FILES 	sphone.c
 	utils/sphone-conf.c 
 	utils/datapipe.c 
 	utils/datapipes.c
-	utils/sphone-store-tree-model.c 
-	utils/store.c
 	utils/types.c
 	utils/comm.c
 	utils/gui.c
@@ -14,7 +12,6 @@ set(SPHONE_SRC_FILES 	sphone.c
 	gui/gtk-gui-message-threads.c
 	gui/gtk-gui-thread-view.c
 	gui/gui-calls-manager.c
-	gui/gui-contact-view.c
 	gui/gui-dialer.c
 	gui/gui-options.c
 	gui/gui-sms.c

@@ -5,7 +5,6 @@
 #include "gui-options.h"
 #include "gui-sms.h"
 #include "gui-calls-manager.h"
-#include "gui-contact-view.h"
 #include "gtk-gui-message-threads.h"
 #include "gtk-gui-thread-view.h"
 

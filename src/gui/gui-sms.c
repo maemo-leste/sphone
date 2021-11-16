@@ -32,7 +32,6 @@
 #include "datapipes.h"
 #include "sphone-log.h"
 #include "string.h"
-#include "gui-contact-view.h"
 #include "gui-sms.h"
 #include "gtk-gui-utils.h"
 #include "gui.h"
@@ -57,8 +56,9 @@ static void gui_sms_incoming_callback(gconstpointer data, gpointer user_data)
 
 static void gui_sms_open_contact_callback(GtkButton *button)
 {
-	gchar *dial=g_object_get_data(G_OBJECT(button), "dial");
-	gui_contact_open_by_dial(dial);
+	gchar *dial = g_object_get_data(G_OBJECT(button), "dial");
+	// TODO replace:
+	//gui_contact_open_by_dial(dial);
 }
 
 void gtk_gui_sms_init(void)

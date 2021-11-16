@@ -51,7 +51,6 @@
 
 #define PRG_NAME			"sphone"
 
-#include "store.h"
 #include "sphone-log.h"
 #include "sphone-conf.h"
 #include "sphone-modules.h"
@@ -297,8 +296,6 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
 	(void)name;
 	struct sphone_options *options = user_data;
 	sphone_log(LL_INFO, "Starting new instance");
-	store_init();
-	sphone_log(LL_DEBUG, "Store initalized");
 	sphone_modules_init();
 	sphone_log(LL_DEBUG, "Modules initalized");
 	gtk_gui_register();

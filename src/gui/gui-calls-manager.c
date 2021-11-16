@@ -25,8 +25,6 @@
 
 #include "sphone-log.h"
 #include "gui-calls-manager.h"
-#include "gui-contact-view.h"
-#include "store.h"
 #include "datapipes.h"
 #include "types.h"
 
