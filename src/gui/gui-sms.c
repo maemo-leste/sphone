@@ -57,6 +57,7 @@ static void gui_sms_incoming_callback(gconstpointer data, gpointer user_data)
 static void gui_sms_open_contact_callback(GtkButton *button)
 {
 	gchar *dial = g_object_get_data(G_OBJECT(button), "dial");
+	(void)dial;
 	// TODO replace:
 	//gui_contact_open_by_dial(dial);
 }
@@ -129,10 +130,12 @@ bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	                                 HILDON_TOUCH_SELECTOR(selector));
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(main_window), HILDON_PORTRAIT_MODE_SUPPORT);
 	g_object_set_data(G_OBJECT(main_window), "backend-combo-box", selector);
+	hildon_touch_selector_set_active(HILDON_TOUCH_SELECTOR(selector), 0, msg->backend);
 #else
 	GtkWidget *main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	backend_combo = gui_sms_create_backend_combo();
 	g_object_set_data(G_OBJECT(main_window), "backend-combo-box", backend_combo);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(backend_combo), msg->backend);
 #endif
 
 	gtk_window_set_title(GTK_WINDOW(main_window),"Send SMS");

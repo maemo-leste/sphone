@@ -35,6 +35,7 @@ static void gtk_gui_msg_threads_list_double_click_callback(GtkTreeView *view, Gt
 		gtk_tree_model_get_value(model, &iter, GTK_UI_MOD_BACKEND, &backend_value);
 		
 		contact.backend = g_value_get_int(&backend_value);
+		sphone_log(LL_DEBUG, "BACKEND: %i", contact.backend);
 		contact.line_identifier = (char*)g_value_get_string(&line_id_value);
 		gchar *name = g_value_get_string(&name_value);
 		if(g_strcmp0(name, "<unkown>") != 0)
