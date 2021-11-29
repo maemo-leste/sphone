@@ -164,6 +164,8 @@ static void gui_calls_update_global_status(void)
 	} else {
 		gtk_widget_hide(g_calls_manager.mute_button);
 	}
+	
+	sphone_log(LL_DEBUG, "%s: %i, %i", __func__, datapipe_get_last_data_int(&call_mode_pipe), datapipe_get_last_data_int(&audio_route_pipe));
 
 	if(datapipe_get_last_data_int(&call_mode_pipe) == SPHONE_MODE_INCALL ||
 		datapipe_get_last_data_int(&call_mode_pipe) == SPHONE_MODE_INCALL_NO_ROUTE) {
@@ -213,7 +215,7 @@ static void gui_calls_call_status_callback(gconstpointer data, void *object)
 		if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter))
 			return;
 		CallProperties *icall = gui_calls_find_call(call, &iter);
-		if(icall && !icall->awnserd){
+		if(icall && !call->awnserd){
 			//TODO: replace notification_add("missed_call.png",gui_history_calls);
 			sphone_log(LL_DEBUG, "%s: call ended unwanserd %s", __func__, call->line_identifier);
 		}
@@ -248,8 +250,6 @@ static void gui_calls_select_callback(void)
 	gtk_tree_path_free(path);
 	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter, GUI_CALLS_COLUMN_CALL, &value);
 	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
-
-	sphone_log(LL_DEBUG, "%s: found call %p", __func__, call);
 
 	if(call->state == SPHONE_CALL_ACTIVE) {
 		gtk_widget_hide(g_calls_manager.activate_button);

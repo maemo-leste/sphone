@@ -239,7 +239,7 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 	GtkTextBuffer *text_buffer=g_object_get_data(G_OBJECT(main_window),"text_buffer");
 
 	const gchar *to = gtk_entry_get_text(to_entry);
-	gchar *text=NULL;
+	gchar *text = NULL;
 	g_object_get(G_OBJECT(text_buffer),"text", &text, NULL);
 	
 	char *backend_name = NULL;
@@ -251,7 +251,7 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 	backend_name = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(backend_combo));
 #endif
 
-	if(strlen(text) > 0 && strlen(to) > 0) {
+	if(text && strlen(text) > 0 && strlen(to) > 0) {
 		MessageProperties *message = g_malloc0(sizeof(*message));
 		message->line_identifier = g_strdup(to);
 		message->text = text;

@@ -44,6 +44,7 @@ static void check_needed_state(void)
 
 	for(GSList *element = calls; element; element = element->next) {
 		CallProperties *call = element->data;
+		sphone_module_log(LL_DEBUG, "%s: call %s state %s", __func__, call->line_identifier, sphone_get_state_string(call->state));
 		if(call->state == SPHONE_CALL_INCOMING)
 			incomeing_call = true;
 		else  if(call_state_wants_route(call->state) && call->needs_route)
@@ -51,6 +52,8 @@ static void check_needed_state(void)
 		else if(call_state_wants_route(call->state))
 			incall_no_route = true;
 	}
+	
+	sphone_module_log(LL_DEBUG, "%s: incall %s, incall_no_route %s", __func__, incall ? "true" : "false", incall_no_route ? "true" : "false");
 	
 	if(incall || incall_no_route) {
 		if(mode != SPHONE_MODE_INCALL) {
@@ -89,10 +92,8 @@ static void call_new_trigger(const void *data, void *user_data)
 	const CallProperties *call = (const CallProperties*)data;
 	(void)user_data;
 	
-	if(call->state == SPHONE_CALL_INCOMING) {
-		calls = g_slist_prepend(calls, call_properties_copy(call));
-		check_needed_state();
-	}
+	calls = g_slist_prepend(calls, call_properties_copy(call));
+	check_needed_state();
 }
 
 static void call_changed_trigger(const void *data, void *user_data)

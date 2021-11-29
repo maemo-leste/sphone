@@ -64,12 +64,15 @@ static void new_message_trigger(const void* data, void *user_data)
 	}
 }
 
-static void remove_thread_view(GtkTextBuffer *text)
+static gboolean remove_thread_view(GtkWidget *widget, GdkEvent event, gpointer data)
 {
-	const Contact *watch_contact = g_object_get_data(G_OBJECT(text), "contact");
+	GtkWidget *text_view = GTK_WIDGET(data);
+	sphone_log(LL_DEBUG, "removeing widget %p, data %p", widget, data);
+	const Contact *watch_contact = g_object_get_data(G_OBJECT(text_view), "contact");
 	shown_contacts = g_slist_remove(shown_contacts, watch_contact);
-	remove_trigger_from_datapipe(&message_send_pipe, new_message_trigger, text);
-	remove_trigger_from_datapipe(&message_recived_pipe, new_message_trigger, text);
+	remove_trigger_from_datapipe(&message_send_pipe, new_message_trigger, text_view);
+	remove_trigger_from_datapipe(&message_recived_pipe, new_message_trigger, text_view);
+	return FALSE;
 }
 
 static void gtk_gui_thread_view_reply_cb(GtkButton* button, Contact *contact)
@@ -141,8 +144,9 @@ void gtk_gui_show_thread_for_contact(Contact *contact)
 	GtkTextBuffer *text = gtk_gui_build_text_buffer(msg_list);
 	Contact *contact_cpy = contact_copy(contact);
 	g_object_set_data_full(G_OBJECT(text), "contact", contact_cpy, (GDestroyNotify)contact_free);
-	g_signal_connect(G_OBJECT(text_view), "delete-event", G_CALLBACK(remove_thread_view), text);
+	g_signal_connect(G_OBJECT(window), "delete-event", G_CALLBACK(remove_thread_view), text_view);
 	shown_contacts = g_slist_prepend(shown_contacts, contact_cpy);
+	sphone_log(LL_DEBUG, "adding window %p, text_view %p", window, text_view);
 	append_trigger_to_datapipe(&message_send_pipe, new_message_trigger, text_view);
 	append_trigger_to_datapipe(&message_recived_pipe, new_message_trigger, text_view);
 	gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), false);
