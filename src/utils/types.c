@@ -42,6 +42,7 @@ Contact *contact_copy(const Contact *contact)
 	Contact *new_contact = g_malloc0(sizeof(*new_contact));
 	new_contact->name = g_strdup(contact->name);
 	new_contact->line_identifier = g_strdup(contact->line_identifier);
+	new_contact->backend = contact->backend;
 	if(contact->photo) {
 		new_contact->photo = contact->photo;
 		g_object_ref(G_OBJECT(contact->photo));
@@ -129,6 +130,7 @@ MessageProperties *message_properties_copy(const MessageProperties *properties)
 		return NULL;
 	MessageProperties *new_props = g_malloc0(sizeof(*new_props));
 	new_props->contact = contact_copy(properties->contact);
+	new_props->text = g_strdup(properties->text);
 	new_props->line_identifier = g_strdup(properties->line_identifier);
 	new_props->technology = g_strdup(properties->technology);
 	new_props->backend_data = g_strdup(properties->backend_data);
