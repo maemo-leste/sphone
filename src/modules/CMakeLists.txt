@@ -79,6 +79,12 @@ target_include_directories(contacts-ui-exec SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS
 target_include_directories(contacts-ui-exec PRIVATE ${MODULE_INCLUDE_DIRS})
 install(TARGETS contacts-ui-exec DESTINATION ${SPHONE_MODULE_DIR})
 
+add_library(commtest SHARED commtest.c)
+target_link_libraries(commtest ${COMMON_LIBRARIES})
+target_include_directories(commtest SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(commtest PRIVATE ${MODULE_INCLUDE_DIRS})
+install(TARGETS commtest DESTINATION ${SPHONE_MODULE_DIR})
+
 if(DEFINED RTCOM_LIBRARIES)
 	add_library(store-rtcom SHARED store-rtcom.c)
 	target_link_libraries(store-rtcom ${COMMON_LIBRARIES} ${RTCOM_LIBRARIES})
