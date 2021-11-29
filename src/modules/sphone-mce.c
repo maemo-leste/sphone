@@ -102,8 +102,8 @@ static void call_mode_trigger(gconstpointer data, gpointer user_data)
 		result = g_dbus_connection_call_sync(s_bus_conn, MCE_SERVICE, MCE_REQUEST_PATH,
 			MCE_REQUEST_IF, "req_call_state_change", val, NULL,
 			G_DBUS_CALL_FLAGS_NONE, -1, NULL, &error);
-
-		g_variant_unref(result);
+		if(result)
+			g_variant_unref(result);
 	}
 
 	if(error) {
