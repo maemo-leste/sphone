@@ -302,7 +302,7 @@ static void gui_calls_double_click_callback(void)
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter,path);
 	gtk_tree_path_free(path);
 	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter, GUI_CALLS_COLUMN_CALL, &value);
-	CallProperties *call = (CallProperties*)g_value_get_string(&value);
+	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
 
 	if(call->contact)
 		execute_datapipe(&contact_show_pipe, call->contact);
