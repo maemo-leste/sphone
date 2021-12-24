@@ -29,8 +29,6 @@ struct sphone_pa_if {
 	pa_context *context;
 };
 
-static struct sphone_pa_if pa_if;
-
 static void sphone_pa_distroy_interface(struct sphone_pa_if* iface);
 
 static void sphone_pa_state_callback(pa_context *c, void *userdata)
@@ -145,36 +143,36 @@ static void audio_route_trigger(gconstpointer data, gpointer user_data)
 
 static void call_mode_trigger(gconstpointer data, gpointer user_data)
 {
-	(void)user_data;
 	sphone_call_mode_t mode = GPOINTER_TO_INT(data);
+	struct sphone_pa_if *pa_if = user_data;
 
 	if(mode == SPHONE_MODE_NO_CALL) {
-		sphone_pa_audio_route_set_playback(&pa_if);
-	}
-	else if(mode == SPHONE_MODE_RINGING) {
-		sphone_pa_audio_route_set_playback(&pa_if);
-	}
-	else if(mode == SPHONE_MODE_INCALL) {
-		sphone_pa_audio_route_set_in_call(&pa_if);
+		sphone_pa_audio_route_set_playback(pa_if);
+	} else if(mode == SPHONE_MODE_RINGING) {
+		sphone_pa_audio_route_set_playback(pa_if);
+	} else if(mode == SPHONE_MODE_INCALL) {
+		sphone_pa_audio_route_set_in_call(pa_if);
 	}
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
-	if(sphone_pa_create_interface(&pa_if) != 0)
+	struct sphone_pa_if *pa_if = g_malloc0(sizeof(*pa_if));
+	*data = pa_if;
+	if(sphone_pa_create_interface(pa_if) != 0)
 		return "Failed to create pulseaudio context";
 	
-	append_trigger_to_datapipe(&call_mode_pipe, call_mode_trigger, NULL);
-	append_trigger_to_datapipe(&audio_route_pipe, audio_route_trigger, NULL);
+	append_trigger_to_datapipe(&call_mode_pipe, call_mode_trigger, pa_if);
+	append_trigger_to_datapipe(&audio_route_pipe, audio_route_trigger, pa_if);
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
-	sphone_pa_distroy_interface(&pa_if);
-	remove_trigger_from_datapipe(&call_mode_pipe, call_mode_trigger, NULL);
-	remove_trigger_from_datapipe(&audio_route_pipe, audio_route_trigger, NULL);
+	struct sphone_pa_if *pa_if = data;
+	sphone_pa_distroy_interface(pa_if);
+	remove_trigger_from_datapipe(&call_mode_pipe, call_mode_trigger, pa_if);
+	remove_trigger_from_datapipe(&audio_route_pipe, audio_route_trigger, pa_if);
 }

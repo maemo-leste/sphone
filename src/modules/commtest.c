@@ -162,9 +162,10 @@ static void message_send_trigger(const void *data, void *user_data)
 	
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
+	(void)data;
 	sphone_module_log(LL_DEBUG, "enabled");
 	
 	id = sphone_comm_add_backend(MODULE_NAME);
@@ -177,10 +178,10 @@ const gchar *sphone_module_init(void)
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
+	(void)data;
 	sphone_comm_remove_backend(id);
 	remove_trigger_from_datapipe(&call_dial_pipe, call_dial_trigger, NULL);
 	remove_trigger_from_datapipe(&call_accept_pipe, call_accept_trigger, NULL);

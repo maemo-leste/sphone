@@ -34,16 +34,17 @@ static void contact_show_trigger(const void *data, void *user_data)
 	}
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
+	(void)data;
 	append_trigger_to_datapipe(&contact_show_pipe, contact_show_trigger, NULL);
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
+	(void)data;
 	remove_trigger_from_datapipe(&contact_show_pipe, contact_show_trigger, NULL);
 }

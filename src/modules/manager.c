@@ -141,19 +141,20 @@ static void message_recived_trigger(const void *data, void *user_data)
 		execute_datapipe(&vibrate_pipe, GINT_TO_POINTER(SPHONE_VIBRATE_MESSAGE));
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
+	(void)data;
 	append_trigger_to_datapipe(&call_new_pipe, call_new_trigger, NULL);
 	append_trigger_to_datapipe(&call_properties_changed_pipe, call_changed_trigger, NULL);
 	append_trigger_to_datapipe(&message_recived_pipe, message_recived_trigger, NULL);
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
+	(void)data;
 	remove_trigger_from_datapipe(&call_new_pipe, call_new_trigger, NULL);
 	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_changed_trigger, NULL);
 }

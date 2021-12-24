@@ -22,13 +22,18 @@
 #include "sphone-log.h"
 #include "sphone-conf.h"
 
+struct sphone_module {
+	GModule *module;
+	void *data;
+};
+
 /** List of all loaded modules */
 static GSList *modules = NULL;
 
-static module_info_struct *sphone_modules_get_info(GModule *module)
+static module_info_struct *sphone_modules_get_info(struct sphone_module *module)
 {
 	gpointer mip = NULL;
-	if(g_module_symbol(module, "module_info", (void**)&mip) == FALSE)
+	if(g_module_symbol(module->module, "module_info", (void**)&mip) == FALSE)
 		return NULL;
 	return (module_info_struct*)mip;
 }
@@ -75,19 +80,20 @@ static gboolean sphone_modules_check_essential(void)
 
 static gboolean sphone_modules_init_modules(void)
 {
-	for (GSList *module = modules; module; module = module->next) {
+	for (GSList *element = modules; element; element = element->next) {
 		gpointer fnp = NULL;
 		sphone_module_init_fn *init_fn;
-		if (g_module_symbol(module->data, "sphone_module_init", (void**)&fnp) == FALSE) {
+		struct sphone_module *module = element->data;
+		if (g_module_symbol(module->module, "sphone_module_init", (void**)&fnp) == FALSE) {
 			sphone_log(LL_ERR, "faled to load module %s: missing symbol sphone_module_init",
-					   sphone_modules_get_info(module->data)->name);
+					   sphone_modules_get_info(module)->name);
 			return FALSE;
 		}
 		init_fn = (sphone_module_init_fn*)fnp;
-		const char* result = init_fn();
+		const char* result = init_fn(&module->data);
 		if(result) {
 			sphone_log(LL_ERR, "faled to load module %s: %s",
-					   sphone_modules_get_info(module->data)->name, result);
+					   sphone_modules_get_info(module)->name, result);
 			return FALSE;
 		}
 	}
@@ -106,21 +112,23 @@ static void sphone_modules_load(gchar **modlist)
 				   NULL);
 
 	for (i = 0; modlist[i]; i++) {
-		GModule *module;
+		struct sphone_module *module = g_malloc(sizeof(*module));
 		gchar *tmp = g_module_build_path(path, modlist[i]);
 
 		sphone_log(LL_DEBUG, "Loading module: %s from %s", modlist[i], path);
 
-		if ((module = g_module_open(tmp, 0)) != NULL) {
+		if ((module->module = g_module_open(tmp, 0)) != NULL) {
 			module_info_struct *info = sphone_modules_get_info(module);
 			gboolean blockLoad = FALSE;
 
 			if (!info) {
 				sphone_log(LL_ERR, "Failed to retrieve module information for: %s", modlist[i]);
-				g_module_close(module);
+				g_module_close(module->module);
+				g_free(module);
 				blockLoad = TRUE;
 			} else if (!sphone_modules_check_provides(info)) {
-				g_module_close(module);
+				g_module_close(module->module);
+				g_free(module);
 				blockLoad = TRUE;
 			}
 
@@ -152,8 +160,7 @@ gboolean sphone_modules_init(void)
 					   &length,
 					   NULL);
 
-	if (modlist)
-	{
+	if (modlist) {
 		sphone_modules_load(modlist);
 		g_strfreev(modlist);
 
@@ -171,12 +178,22 @@ gboolean sphone_modules_init(void)
  */
 void sphone_modules_exit(void)
 {
-	GModule *module;
+	struct sphone_module *module;
 	gint i;
 
 	if (modules != NULL) {
 		for (i = 0; (module = g_slist_nth_data(modules, i)) != NULL; i++) {
-			g_module_close(module);
+			gpointer fnp = NULL;
+
+			if (g_module_symbol(module->module, "sphone_module_exit", (void**)&fnp) == TRUE) {
+				sphone_module_exit_fn *exit_fn = (sphone_module_exit_fn*)fnp;
+				exit_fn(module->data);
+			} else {
+				sphone_log(LL_DEBUG, "module %s: has no sphone_module_exit", sphone_modules_get_info(module)->name);
+			}
+			
+			g_module_close(module->module);
+			g_free(module);
 		}
 
 		g_slist_free(modules);

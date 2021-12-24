@@ -148,9 +148,10 @@ static void vibration_trigger(gconstpointer data, gpointer user_data)
 	}
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
+	(void)data;
 	s_bus_conn = get_dbus_connection();
 	if(!s_bus_conn)
 		return "Failed to connect dbus system bus";
@@ -161,10 +162,10 @@ const gchar *sphone_module_init(void)
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
+	(void)data;
 
 	remove_trigger_from_datapipe(&vibrate_pipe, vibration_trigger, NULL);
 	remove_trigger_from_datapipe(&call_mode_pipe, call_mode_trigger, NULL);

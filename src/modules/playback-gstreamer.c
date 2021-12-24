@@ -152,9 +152,10 @@ static gpointer audio_playing_filter(gpointer data, gpointer user_data)
 	return playing;
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
+	(void)data;
 	append_trigger_to_datapipe(&audio_stop_pipe, audio_stop_trigger, NULL);
 	append_trigger_to_datapipe(&audio_play_once_pipe, audio_play_once_trigger, NULL);
 	append_trigger_to_datapipe(&audio_play_looping_pipe, audio_play_looping_trigger, NULL);
@@ -165,10 +166,10 @@ const gchar *sphone_module_init(void)
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
+	(void)data;
 	
 	remove_trigger_from_datapipe(&audio_stop_pipe, audio_stop_trigger, NULL);
 	remove_trigger_from_datapipe(&audio_play_once_pipe, audio_play_once_trigger, NULL);

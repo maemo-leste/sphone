@@ -189,10 +189,11 @@ static void book_ready_callback(GObject *source_object, GAsyncResult *res, gpoin
 	}
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
 	struct evolution_priv *book = g_malloc0(sizeof(*book));
+	*data = book;
 	ESourceRegistry *regestry = e_source_registry_new_sync(NULL,NULL);
 	ESource *address_book_src;
 	gchar *source_uid = sphone_conf_get_string("ContactsEvolution", "ContactsSource", NULL, NULL);
@@ -217,11 +218,9 @@ const gchar *sphone_module_init(void)
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;/*
-	remove_filter_from_datapipe(&call_new_pipe, call_filter);
-	remove_filter_from_datapipe(&call_properties_changed_pipe, call_filter);
-	*/
+	remove_filter_from_datapipe(&call_new_pipe, call_filter, data);
+	remove_filter_from_datapipe(&call_properties_changed_pipe, call_filter, data);
 }

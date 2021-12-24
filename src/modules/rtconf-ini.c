@@ -143,9 +143,10 @@ static int conf_save(void)
 	return ret;
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
+	(void)data;
 	backend_id = rtconf_register_backend(conf_vibration_enabled,
 							conf_set_vibration_enabled,
 							conf_ringer_enabled,
@@ -159,9 +160,9 @@ const gchar *sphone_module_init(void)
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
+	(void)data;
 	rtconf_unregister_backend(backend_id);
 }

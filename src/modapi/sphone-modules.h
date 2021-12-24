@@ -46,6 +46,7 @@ typedef struct {
 gboolean sphone_modules_init(void);
 void sphone_modules_exit(void);
 
-typedef const char* sphone_module_init_fn(void);
+typedef const char* sphone_module_init_fn(void** data);
+typedef void sphone_module_exit_fn(void* data);
 
 #endif /* _SPHONE_MODULES_H_ */

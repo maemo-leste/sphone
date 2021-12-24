@@ -321,12 +321,14 @@ static GList *get_calls_for_contact(Contact *contact)
 	return calls;
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
 	evlog = rtcom_el_new();
 	if(!evlog)
 		return "Unable to connect to rtcom-eventlogger database";
+
+	(void)data;
 
 	sphone_module_log(LL_INFO, "Successfully opened rtcom-eventlogger database");
 
@@ -339,10 +341,10 @@ const gchar *sphone_module_init(void)
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
+	(void)data;
 	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, evlog);
 	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, evlog);
 	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, evlog);
