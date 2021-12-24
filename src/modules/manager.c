@@ -157,4 +157,5 @@ void sphone_module_exit(void* data)
 	(void)data;
 	remove_trigger_from_datapipe(&call_new_pipe, call_new_trigger, NULL);
 	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_changed_trigger, NULL);
+	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, NULL);
 }

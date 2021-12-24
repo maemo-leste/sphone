@@ -26,10 +26,8 @@
  * Only access this struct through the functions
  */
 typedef struct {
-	GSList *filters;		//< The filters 
-	GSList *filters_user_data;
-	GSList *output_triggers;	//< Triggers
-	GSList *triggers_user_data;
+	GSList *filters;
+	GSList *output_triggers;
 	const void *last_data;
 } datapipe_struct;
 

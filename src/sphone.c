@@ -59,6 +59,7 @@
 #include "gtk-gui.h"
 #include "types.h"
 #include "comm.h"
+#include "signal.h"
 
 #define SPHONE_SERVICE "xyz.uvos.sphone"
 #define SPHONE_PATH "/xyz/uvos/sphone/summon"
@@ -92,6 +93,21 @@ static const gchar dbus_introspection_xml[] =
 "		</method>"
 "	</interface>"
 "</node>"; 
+
+static GMainLoop *loop;
+
+static void signal_handler(const int nr)
+{
+	switch (nr) {
+	case SIGTERM:
+	case SIGINT:
+		g_main_loop_quit(loop);
+		break;
+
+	default:
+		break;
+	}
+}
 
 static void method_call_callback(GDBusConnection* connection,
 						const gchar* sender,
@@ -319,7 +335,6 @@ int main (int argc, char *argv[])
 	int c;
 	int verbosity = LL_DEFAULT;
 	guint owner_id;
-	GMainLoop *loop;
 	
 	options.command = SPHONE_CMD_NONE;
 	options.number = NULL;
@@ -392,7 +407,17 @@ int main (int argc, char *argv[])
 								NULL);
 
 	loop = g_main_loop_new (NULL, FALSE);
+
+	signal(SIGTERM, signal_handler);
+	signal(SIGINT, signal_handler);
+
 	g_main_loop_run(loop);
+	
+	sphone_log(LL_INFO, "shuting down");
+	
+	gtk_gui_unregister();
+	sphone_modules_exit();
+	datapipes_exit();
 	
 	if(owner_id > 0)
 		g_bus_unown_name(owner_id);

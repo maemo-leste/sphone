@@ -38,10 +38,10 @@ void sphone_comm_remove_backend(int id)
 	if(default_backend && default_backend->id == id)
 		default_backend = NULL;
 
-	backends = g_slist_remove(backends, element->data);
-
 	g_free(((CommBackend*)(element->data))->name);
 	g_free(element->data);
+
+	backends = g_slist_remove(backends, element->data);
 }
 
 GSList *sphone_comm_get_backends(void)

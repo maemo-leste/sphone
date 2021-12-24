@@ -635,11 +635,12 @@ void sphone_module_exit(void* data)
 {
 	struct ofono_if_priv_s *priv = data;
 	
+	sphone_comm_remove_backend(priv->backend_id);
+	
 	remove_trigger_from_datapipe(&call_dial_pipe,   call_dial_trigger, priv);
 	remove_trigger_from_datapipe(&call_accept_pipe, call_accept_trigger, priv);
 	remove_trigger_from_datapipe(&call_hold_pipe,   call_hold_trigger, priv);
 	remove_trigger_from_datapipe(&call_hangup_pipe, call_hangup_trigger,priv);
-	remove_trigger_from_datapipe(&call_dial_pipe,   call_dial_trigger, priv);
 	
 	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, priv);
 

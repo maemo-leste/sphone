@@ -345,9 +345,11 @@ G_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
 	(void)data;
-	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, evlog);
-	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, evlog);
-	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, evlog);
-	store_unregister_backend(id);
-	g_object_unref(evlog);
+	if(evlog) {
+		remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, evlog);
+		remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, evlog);
+		remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, evlog);
+		store_unregister_backend(id);
+		g_object_unref(evlog);
+	}
 }

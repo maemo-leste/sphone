@@ -112,6 +112,6 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 void gui_remove(int id)
 {
 	GSList *element = g_slist_nth(uis, id);
-	uis = g_slist_remove(uis, element->data);
 	g_free(element->data);
+	uis = g_slist_remove(uis, element->data);
 }

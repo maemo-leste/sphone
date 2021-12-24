@@ -16,8 +16,14 @@
  * License along with sphone.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <glib.h>
+#include <stdbool.h>
 #include "datapipe.h"
 #include "sphone-log.h"
+
+struct callback {
+	void *callback;
+	void *data;
+};
 
 /**
  * Execute the filters of a datapipe
@@ -28,7 +34,6 @@
  */
 gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer indata)
 {
-	gpointer (*filter)(gpointer data, gpointer user_data);
 	gpointer data = indata;
 
 	if (datapipe == NULL) {
@@ -36,8 +41,10 @@ gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer
 		return NULL;
 	}
 
-	for (int i = 0; (filter = g_slist_nth_data(datapipe->filters, i)) != NULL; i++) {
-		gpointer tmp = filter(data, g_slist_nth_data(datapipe->filters_user_data, i));
+	struct callback *cb;
+	for (int i = 0; (cb = g_slist_nth_data(datapipe->filters, i)) != NULL; i++) {
+		gpointer (*filter)(gpointer data, gpointer user_data) = cb->callback;
+		gpointer tmp = filter(data, cb->data);
 
 		data = tmp;
 	}
@@ -53,15 +60,16 @@ gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer
  */
 void execute_datapipe_output_triggers(const datapipe_struct *const datapipe, gconstpointer indata)
 {
-	void (*trigger)(gconstpointer data, gpointer user_data);
-
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
 		return;
 	}
 
-	for (int i = 0; (trigger = g_slist_nth_data(datapipe->output_triggers, i)) != NULL; i++)
-		trigger(indata, g_slist_nth_data(datapipe->triggers_user_data, i));
+	struct callback *cb;
+	for (int i = 0; (cb = g_slist_nth_data(datapipe->output_triggers, i)) != NULL; i++) {
+		void (*trigger)(gconstpointer data, gpointer user_data) = cb->callback;
+		trigger(indata, cb->data);
+	}
 }
 
 /**
@@ -122,9 +130,11 @@ void append_filter_to_datapipe(datapipe_struct *const datapipe,
 		sphone_log(LL_ERR, "%s called without a valid filter", __func__);
 		return;
 	}
-
-	datapipe->filters = g_slist_append(datapipe->filters, filter);
-	datapipe->filters_user_data = g_slist_append(datapipe->filters_user_data, user_data);
+	
+	struct callback *cb = g_malloc0(sizeof(*cb));
+	cb->callback = filter;
+	cb->data = user_data;
+	datapipe->filters = g_slist_append(datapipe->filters, cb);
 }
 
 /**
@@ -147,18 +157,19 @@ void remove_filter_from_datapipe(datapipe_struct *const datapipe, gpointer (*fil
 		return;
 	}
 
-	gpointer (*ifilter)(gpointer data, gpointer user_data) = NULL;
-	for (int i = 0; (ifilter = g_slist_nth_data(datapipe->filters, i)) != NULL; i++) {
-		if(ifilter == filter && user_data == g_slist_nth_data(datapipe->filters_user_data, i)) {
-			datapipe->filters = g_slist_remove(datapipe->filters, filter);
-			datapipe->filters_user_data = 
-				g_slist_remove(datapipe->filters_user_data, g_slist_nth_data(datapipe->filters_user_data, i));
+	bool removed = false;
+	for (GSList *element = datapipe->filters; element; element = element->next) {
+		struct callback *cb = element->data;
+		if(cb->callback == filter && user_data == cb->data) {
+			datapipe->filters = g_slist_remove(datapipe->filters, cb);
+			g_free(cb);
+			removed = true;
 			break;
 		}
 	}
 
 	/* Did we remove any entry? */
-	if (!ifilter)
+	if (!removed)
 		sphone_log(LL_WARN, "Trying to remove non-existing filter");
 }
 
@@ -182,8 +193,10 @@ void append_trigger_to_datapipe(datapipe_struct *const datapipe,
 		return;
 	}
 
-	datapipe->output_triggers = g_slist_append(datapipe->output_triggers, trigger);
-	datapipe->triggers_user_data = g_slist_append(datapipe->triggers_user_data, user_data);
+	struct callback *cb = g_malloc0(sizeof(*cb));
+	cb->callback = trigger;
+	cb->data = user_data;
+	datapipe->output_triggers = g_slist_append(datapipe->output_triggers, cb);
 }
 
 /**
@@ -206,18 +219,19 @@ void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigge
 		return;
 	}
 
-	void (*itrigger)(gconstpointer data, gpointer user_data) = NULL;
-	for (int i = 0; (itrigger = g_slist_nth_data(datapipe->output_triggers, i)) != NULL; i++) {
-		if(itrigger == trigger && user_data == g_slist_nth_data(datapipe->triggers_user_data, i)) {
-			datapipe->output_triggers = g_slist_remove(datapipe->output_triggers, trigger);
-			datapipe->triggers_user_data = 
-				g_slist_remove(datapipe->triggers_user_data, g_slist_nth_data(datapipe->triggers_user_data, i));
+	bool removed = false;
+	for (GSList *element = datapipe->output_triggers; element; element = element->next) {
+		struct callback *cb = element->data;
+		if(cb->callback == trigger && user_data == cb->data) {
+			datapipe->output_triggers = g_slist_remove(datapipe->output_triggers, cb);
+			g_free(cb);
+			removed = true;
 			break;
 		}
 	}
 
 	/* Did we remove any entry? */
-	if (!itrigger)
+	if (!removed)
 		sphone_log(LL_WARN, "Trying to remove non-existing trigger");
 }
 
@@ -234,9 +248,7 @@ void setup_datapipe(datapipe_struct *const datapipe)
 	}
 
 	datapipe->filters = NULL;
-	datapipe->filters_user_data = NULL;
 	datapipe->output_triggers = NULL;
-	datapipe->triggers_user_data = NULL;
 	datapipe->last_data = NULL;
 }
 
@@ -256,14 +268,18 @@ void free_datapipe(datapipe_struct *const datapipe)
 
 	/* Warn about still registered filters/triggers */
 	if (datapipe->filters != NULL) {
-		sphone_log(LL_INFO,
+		sphone_log(LL_WARN,
 			"free_datapipe() called on a datapipe that "
-			"still has registered filter(s)");
+			"still has registered filter(s). Offending callbacks:");
+		for(GSList *element = datapipe->filters; element; element = element->next)
+			sphone_log(LL_WARN, "%p", element->data);
 	}
 
 	if (datapipe->output_triggers != NULL) {
-		sphone_log(LL_INFO,
+		sphone_log(LL_WARN,
 			"free_datapipe() called on a datapipe that "
-			"still has registered output_trigger(s)");
+			"still has registered output_trigger(s). Offending callbacks:");
+		for(GSList *element = datapipe->output_triggers; element; element = element->next)
+			sphone_log(LL_WARN, "%p", element->data);
 	}
 }

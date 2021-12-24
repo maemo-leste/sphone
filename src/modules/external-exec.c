@@ -80,9 +80,10 @@ static void message_recived_trigger(gconstpointer data, gpointer user_data)
 	}
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void);
-const gchar *sphone_module_init(void)
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
 {
+	(void)data;
 	append_trigger_to_datapipe(&call_new_pipe, new_call_trigger, NULL);
 	append_trigger_to_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, NULL);
 	
@@ -92,10 +93,10 @@ const gchar *sphone_module_init(void)
 	return NULL;
 }
 
-G_MODULE_EXPORT void g_module_unload(GModule *module);
-void g_module_unload(GModule *module)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	(void)module;
+	(void)data;
 
 	remove_trigger_from_datapipe(&call_new_pipe, new_call_trigger, NULL);
 	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, NULL);
