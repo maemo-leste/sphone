@@ -40,12 +40,28 @@ struct key keys[]={
 	{"#", "#"}
 };
 
-static void key_presses_callback(GtkWidget *button, GtkWidget *target)
+static void key_press_callback(GtkWidget *button, GdkEvent *event, void *data)
+{
+	(void)data;
+	guint32 *time = g_object_get_data(G_OBJECT(button), "press_time");
+	*time = gdk_event_get_time(event);
+}
+
+static void key_release_callback(GtkWidget *button, GdkEvent *event, GtkWidget *target)
 {
 	gtk_editable_set_position(GTK_EDITABLE(target),-1);
 	gint position = gtk_editable_get_position(GTK_EDITABLE(target));
 	const gchar *value = g_object_get_data(G_OBJECT(button), "key_value");
-	gtk_editable_insert_text(GTK_EDITABLE(target), value,-1, &position);
+	
+	if(*value == '0') {
+		guint32 *presstime = g_object_get_data(G_OBJECT(button), "press_time");
+		if(gdk_event_get_time(event) - *presstime > 500)
+			gtk_editable_insert_text(GTK_EDITABLE(target), "+",-1, &position);
+		else
+			gtk_editable_insert_text(GTK_EDITABLE(target), "0",-1, &position);
+	} else {
+		gtk_editable_insert_text(GTK_EDITABLE(target), value,-1, &position);
+	}
 
 	gtk_widget_grab_focus(target);
 	gtk_editable_set_position(GTK_EDITABLE(target),position);
@@ -65,8 +81,10 @@ GtkWidget *gui_keypad_setup(GtkWidget *target)
 			gtk_container_add (GTK_CONTAINER(button),label);
 			gtk_widget_set_can_focus(button, FALSE);
 			gtk_table_attach_defaults(GTK_TABLE(ret),button,column,column+1,row,row+1);
-			g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(key_presses_callback), target);
+			g_signal_connect(G_OBJECT(button), "button-release-event", G_CALLBACK(key_release_callback), target);
+			g_signal_connect(G_OBJECT(button), "button-press-event", G_CALLBACK(key_press_callback), NULL);
 			g_object_set_data(G_OBJECT(button),"key_value", (gpointer)keys[i].value);
+			g_object_set_data_full(G_OBJECT(button),"press_time", g_malloc0(sizeof(guint32)), g_free);
 			++i;
 		}
 
