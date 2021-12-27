@@ -1,3 +1,12 @@
+sphone (0.5.0) unstable; urgency=medium
+
+  * Allow typing + by long pressing 0 on dialer keypad
+  * Sphone now shutsdown cleanly on sigint and sigterm
+  * Split ui into modules: dialer, messages, message threads, calls and options
+  * Allow Qt modules and guis by supporting runtime selectable mainloops
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Mon, 27 Dec 2021 14:08:00 +0100
+
 sphone (0.4.1) unstable; urgency=medium
 
   * new commtest module to mock calls and messages
