@@ -25,8 +25,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <gtk/gtk.h>
-
 /*
  * Standard gettext macros.
  */
@@ -93,14 +91,16 @@ static const gchar dbus_introspection_xml[] =
 "	</interface>"
 "</node>"; 
 
-static GMainLoop *loop;
+void (*exit_main_loop)(void);
+void (*main_loop_init)(int argc, char *argv[]);
+void (*main_loop)(int argc, char *argv[]);
 
 static void signal_handler(const int nr)
 {
 	switch (nr) {
 	case SIGTERM:
 	case SIGINT:
-		g_main_loop_quit(loop);
+		exit_main_loop();
 		break;
 
 	default:
@@ -317,6 +317,46 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
 	sphone_log(LL_DEBUG, "Instance setup finished");
 }
 
+static void load_loop_module(GModule **loop_module)
+{
+	char *module_dir_path = sphone_conf_get_string(SPHONE_CONF_MODULES_GROUP,
+				SPHONE_CONF_MODULES_PATH,
+				DEFAULT_SPHONE_MODULE_PATH,
+				NULL);
+	char *module_name = sphone_conf_get_string(SPHONE_CONF_MODULES_GROUP, "LoopModule", NULL, NULL);
+	char *module_path;
+	if(!module_name) {
+		sphone_log(LL_CRIT, "A valid LoopModule must be specified!");
+		exit(-1);
+	}
+	module_path = g_module_build_path(module_dir_path, module_name);
+	sphone_log(LL_DEBUG, "Loading %s as loop module", module_path);
+	*loop_module = g_module_open(module_path, 0);
+	if(!*loop_module) {
+		sphone_log(LL_CRIT, "Failed to load module %s no usable LoopModule available, abort\n%s", module_name, g_module_error());
+		exit(-1);
+	}
+
+	gpointer fnp = NULL;
+	if (g_module_symbol(*loop_module, "sphone_loop_setup", (void**)&fnp) == FALSE) {
+		sphone_log(LL_CRIT, "Loop Module dosent contain sphone_loop_setup");
+		exit(-1);
+	}
+	main_loop_init = fnp;
+
+	if (g_module_symbol(*loop_module, "sphone_loop_run", (void**)&fnp) == FALSE) {
+		sphone_log(LL_CRIT, "Loop Module dosent contain sphone_loop_run");
+		exit(-1);
+	}
+	main_loop = fnp;
+	
+	if (g_module_symbol(*loop_module, "sphone_loop_exit", (void**)&fnp) == FALSE) {
+		sphone_log(LL_CRIT, "Loop Module dosent contain sphone_loop_exit");
+		exit(-1);
+	}
+	exit_main_loop = fnp;
+}
+
 int main (int argc, char *argv[])
 {
 #ifdef ENABLE_NLS
@@ -325,13 +365,11 @@ int main (int argc, char *argv[])
 	textdomain (GETTEXT_PACKAGE);
 #endif
 
-	gtk_set_locale();
-	gtk_init(&argc, &argv);
-
 	struct sphone_options options;
 	int c;
 	int verbosity = LL_DEFAULT;
 	guint owner_id;
+	GModule *loop_module = NULL;
 	
 	options.command = SPHONE_CMD_NONE;
 	options.number = NULL;
@@ -389,6 +427,9 @@ int main (int argc, char *argv[])
 		}
 	}
 
+	load_loop_module(&loop_module);
+	main_loop_init(argc, argv);
+
 	dbus_introspection_data = g_dbus_node_info_new_for_xml(dbus_introspection_xml, NULL);
 	if(!dbus_introspection_data) {
 		sphone_log(LL_CRIT, "Creating dbus introspection data failed");
@@ -403,12 +444,10 @@ int main (int argc, char *argv[])
 								&options,
 								NULL);
 
-	loop = g_main_loop_new (NULL, FALSE);
-
 	signal(SIGTERM, signal_handler);
 	signal(SIGINT, signal_handler);
 
-	g_main_loop_run(loop);
+	main_loop(argc, argv);
 	
 	sphone_log(LL_INFO, "shuting down");
 

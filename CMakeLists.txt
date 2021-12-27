@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(sphone LANGUAGES C VERSION 0.1)
+project(sphone LANGUAGES C CXX VERSION 0.5)
 
 set(CMAKE_INSTALL_PREFIX "/usr")
 
@@ -21,6 +21,8 @@ pkg_search_module(GMODULE REQUIRED gmodule-2.0)
 pkg_search_module(DBUS REQUIRED dbus-glib-1)
 pkg_search_module(SQL REQUIRED sqlite3)
 
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets)
 pkg_search_module(GSTREAMER gstreamer-1.0)
 pkg_search_module(PULSE libpulse)
 pkg_search_module(LIBHILDON hildon-1)
@@ -125,6 +127,12 @@ if(DEFINED RTCOM_LIBRARIES)
 else()
 	message("rtcom-eventlogger support disabled")
 endif(DEFINED RTCOM_LIBRARIES)
+
+if(DEFINED Qt${QT_VERSION_MAJOR}_FOUND)
+	message("QT support enabled")
+else()
+	message("QT support disabled")
+endif(DEFINED Qt${QT_VERSION_MAJOR}_FOUND)
 
 add_subdirectory(src)
 add_subdirectory(src/modules)
