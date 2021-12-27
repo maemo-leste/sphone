@@ -19,9 +19,26 @@
 #include <gtk/gtk.h>
 #include <gio/gio.h>
 #include "rtconf.h"
-#include "gui-options.h"
 #include "datapipes.h"
 #include "datapipe.h"
+#include "gui.h"
+#include "sphone-modules.h"
+
+/** Module name */
+#define MODULE_NAME		"ui-options-gtk"
+
+/** Functionality provided by this module */
+static const gchar *const provides[] = { MODULE_NAME, NULL };
+
+/** Module information */
+G_MODULE_EXPORT module_info_struct module_info = {
+	/** Name of the module */
+	.name = MODULE_NAME,
+	/** Module provides */
+	.provides = provides,
+	/** Module priority */
+	.priority = 250
+};
 
 struct {
 	GtkWidget *main_window;
@@ -47,7 +64,7 @@ static void gui_options_stop_callback(GtkButton *button, GtkFileChooser *chooser
 
 static int is_dirty=0;
 
-bool gtk_gui_options_open(void)
+static bool gtk_gui_options_open(void)
 {
 	if(g_options.main_window){
 		gtk_window_present(GTK_WINDOW(g_options.main_window));
@@ -188,4 +205,17 @@ static void gui_options_play_callback(GtkButton *button, GtkFileChooser *chooser
 	gchar *file=gtk_file_chooser_get_filename(chooser);
 	execute_datapipe(&audio_play_once_pipe, file);;
 	g_free(file);
+}
+
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
+{
+	*data = GINT_TO_POINTER(gui_register(NULL, NULL, gtk_gui_options_open, NULL, NULL));
+	return NULL;
+}
+
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
+{
+	gui_remove(GPOINTER_TO_INT(data));
 }

@@ -1,4 +1,4 @@
-#include "gui-history-calls.h"
+#include "ui-history-calls-gtk.h"
 
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
@@ -9,11 +9,11 @@
 #include <gtk/gtk.h>
 
 #include "sphone-log.h"
-#include "gui-dialer.h"
 #include "gui.h"
 #include "comm.h"
 #include "gtk-gui-utils.h"
 #include "storage.h"
+#include "gui.h"
 
 struct{
 	GtkWidget *window;

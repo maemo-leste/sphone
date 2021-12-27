@@ -9,21 +9,11 @@ set(SPHONE_SRC_FILES 	sphone.c
 	utils/comm.c
 	utils/gui.c
 	utils/storage.c
-	gui/gtk-gui-message-threads.c
-	gui/gtk-gui-thread-view.c
-	gui/gui-calls-manager.c
-	gui/gui-dialer.c
-	gui/gui-options.c
-	gui/gui-sms.c
-	gui/gtk-gui.c
-	gui/keypad.c
-	gui/gui-history-calls.c
-	gui/gtk-gui-utils.c
 	)
 
 add_executable(sphone ${SPHONE_SRC_FILES})
 target_link_libraries(sphone ${COMMON_LIBRARIES})
 target_include_directories(sphone SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
-target_include_directories(sphone PRIVATE . utils gui modapi)
+target_include_directories(sphone PRIVATE . utils modapi)
 install(TARGETS sphone DESTINATION bin)
 

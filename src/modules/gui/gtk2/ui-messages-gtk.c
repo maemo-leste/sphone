@@ -32,13 +32,33 @@
 #include "datapipes.h"
 #include "sphone-log.h"
 #include "string.h"
-#include "gui-sms.h"
 #include "gtk-gui-utils.h"
 #include "gui.h"
+#include "sphone-modules.h"
+
+/** Module name */
+#define MODULE_NAME		"ui-sms-gtk"
+
+/** Functionality provided by this module */
+static const gchar *const provides[] = { MODULE_NAME, NULL };
+
+/** Module information */
+G_MODULE_EXPORT module_info_struct module_info = {
+	/** Name of the module */
+	.name = MODULE_NAME,
+	/** Module provides */
+	.provides = provides,
+	/** Module priority */
+	.priority = 250
+};
+
+static int gui_id;
 
 static void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window);
 static void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window);
 static void gui_sms_reply_callback(GtkWidget *button);
+static bool gtk_gui_sms_send_show(const MessageProperties *msg);
+static void gui_sms_receive_show(const MessageProperties *message);
 
 static void gui_sms_incoming_callback(gconstpointer data, gpointer user_data)
 {
@@ -60,16 +80,6 @@ static void gui_sms_open_contact_callback(GtkButton *button)
 	(void)dial;
 	// TODO replace:
 	//gui_contact_open_by_dial(dial);
-}
-
-void gtk_gui_sms_init(void)
-{
-	append_trigger_to_datapipe(&message_recived_pipe, gui_sms_incoming_callback, NULL);
-}
-
-void gtk_gui_sms_exit(void)
-{
-	remove_trigger_from_datapipe(&message_recived_pipe, gui_sms_incoming_callback, NULL);
 }
 
 #ifdef ENABLE_LIBHILDON
@@ -104,7 +114,7 @@ static GtkWidget *gui_sms_create_backend_combo(void)
 }
 #endif
 
-bool gtk_gui_sms_send_show(const MessageProperties *msg)
+static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 {
 	GtkWidget *v1=gtk_vbox_new(FALSE,2);
 	GtkWidget *to_bar=gtk_hbox_new(FALSE,0);
@@ -172,7 +182,7 @@ bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	return true;
 }
 
-void gui_sms_receive_show(const MessageProperties *message)
+static void gui_sms_receive_show(const MessageProperties *message)
 {
 	gchar *desc;
 	gchar *time_str;
@@ -235,7 +245,7 @@ void gui_sms_receive_show(const MessageProperties *message)
 	g_free(desc);
 }
 
-void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
+static void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 {
 	(void)button;
 	GtkEntry *to_entry=g_object_get_data(G_OBJECT(main_window),"to_entry");
@@ -276,13 +286,13 @@ void gui_sms_send_callback(GtkWidget *button, GtkWidget *main_window)
 	}
 }
 
-void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window)
+static void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window)
 {
 	(void)button;
 	gtk_widget_destroy(main_window);
 }
 
-void gui_sms_reply_callback(GtkWidget *button)
+static void gui_sms_reply_callback(GtkWidget *button)
 {
 	gchar *from=g_object_get_data(G_OBJECT(button),"dial");
 	MessageProperties msg = {0};
@@ -291,4 +301,21 @@ void gui_sms_reply_callback(GtkWidget *button)
 	msg.backend = backend ? backend->id : 0;
 	msg.line_identifier = from;
 	gtk_gui_sms_send_show(&msg);
+}
+
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
+{
+	(void)data;
+	append_trigger_to_datapipe(&message_recived_pipe, gui_sms_incoming_callback, NULL);
+	gui_id = gui_register(NULL, gtk_gui_sms_send_show, NULL, NULL, NULL);
+	return NULL;
+}
+
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
+{
+	(void)data;
+	gui_remove(gui_id);
+	remove_trigger_from_datapipe(&message_recived_pipe, gui_sms_incoming_callback, NULL);
 }

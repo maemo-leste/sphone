@@ -1,4 +1,4 @@
-#include "gtk-gui-thread-view.h"
+#include "ui-message-threads-gtk.h"
 
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
@@ -10,17 +10,36 @@
 #include <gtk/gtk.h>
 
 #include "sphone-log.h"
-#include "gui-dialer.h"
 #include "gui.h"
 #include "comm.h"
 #include "storage.h"
 #include "gtk-gui-utils.h"
 #include "datapipes.h"
 #include "datapipe.h"
+#include "sphone-modules.h"
+#include "gtk-gui-message-threads.h"
+
+/** Module name */
+#define MODULE_NAME		"ui-message-threads-gtk"
+
+/** Functionality provided by this module */
+static const gchar *const provides[] = { MODULE_NAME, NULL };
+
+/** Module information */
+G_MODULE_EXPORT module_info_struct module_info = {
+	/** Name of the module */
+	.name = MODULE_NAME,
+	/** Module provides */
+	.provides = provides,
+	/** Module priority */
+	.priority = 250
+};
 
 static GSList *shown_contacts;
 
-bool gtk_gui_contact_shown(const Contact *contact)
+static int gui_id;
+
+static bool gtk_gui_contact_shown(const Contact *contact)
 {
 	for(GSList *element = shown_contacts; element; element = element->next) {
 		Contact *icontact = element->data;
@@ -170,4 +189,19 @@ void gtk_gui_show_thread_for_contact(Contact *contact)
 	gtk_text_buffer_get_end_iter(text, &iter);
 	text_mark_end = gtk_text_buffer_create_mark(text, "end", &iter, TRUE);
 	gtk_text_view_scroll_to_mark(GTK_TEXT_VIEW(text_view), text_mark_end, 0., FALSE, 0., 0.);
+}
+
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
+{
+	(void)data;
+	gui_id = gui_register(NULL, NULL, NULL, gtk_gui_msg_threads, gtk_gui_contact_shown);
+	return NULL;
+}
+
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
+{
+	(void)data;
+	gui_remove(gui_id);
 }

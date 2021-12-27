@@ -135,7 +135,7 @@ static void sphone_modules_load(gchar **modlist)
 			if (!blockLoad)
 				modules = g_slist_append(modules, module);
 		} else {
-			sphone_log(LL_WARN, "Failed to load module: %s; skipping", modlist[i]);
+			sphone_log(LL_WARN, "Failed to load module %s: %s; skipping", modlist[i], g_module_error());
 		}
 
 		g_free(tmp);

@@ -9,6 +9,7 @@ struct Ui {
 	bool (*options_open)(void);
 	bool (*history_sms)(void);
 	bool (*contact_shown)(const Contact *contact);
+	int id;
 };
 
 static GSList *uis;
@@ -96,9 +97,10 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 			 bool (*history_sms)(void),
 			 bool (*contact_shown)(const Contact *contact))
 {
+	static int id_counter = 0;
 	struct Ui *ui = g_malloc(sizeof(*ui));
-	int len = g_slist_length(uis);
 
+	ui->id = id_counter++;
 	ui->dialer_show = dialer_show;
 	ui->sms_send_show = sms_send_show;
 	ui->options_open = options_open;
@@ -106,12 +108,17 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 	ui->contact_shown = contact_shown;
 	
 	uis = g_slist_prepend(uis, ui);
-	return len;
+	return id_counter-1;
 }
 
 void gui_remove(int id)
 {
-	GSList *element = g_slist_nth(uis, id);
-	g_free(element->data);
-	uis = g_slist_remove(uis, element->data);
+	for(GSList *element = uis; element; element = element->next) {
+		if(((struct Ui*)element->data)->id == id) {
+			g_free(element->data);
+			uis = g_slist_remove(uis, element->data);
+			break;
+		}
+	}
+	sphone_log(LL_DEBUG, "Removed ui %i, %i remaining", id, g_slist_length(uis));
 }

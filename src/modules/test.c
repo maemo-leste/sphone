@@ -2,7 +2,6 @@
 #include "sphone-modules.h"
 #include "sphone-log.h"
 
-
 /** Module name */
 #define MODULE_NAME		"test"
 

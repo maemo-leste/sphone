@@ -9,12 +9,11 @@
 #include <gtk/gtk.h>
 
 #include "sphone-log.h"
-#include "gui-dialer.h"
 #include "gui.h"
 #include "comm.h"
 #include "storage.h"
 #include "gtk-gui-utils.h"
-#include "gtk-gui-thread-view.h"
+#include "ui-message-threads-gtk.h"
 
 static void gtk_gui_msg_threads_list_double_click_callback(GtkTreeView *view, GtkTreePath* path, GtkTreeViewColumn* column, gpointer func_data)
 {

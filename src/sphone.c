@@ -56,7 +56,6 @@
 #include "sphone-modules.h"
 #include "datapipes.h"
 #include "gui.h"
-#include "gtk-gui.h"
 #include "types.h"
 #include "comm.h"
 #include "signal.h"
@@ -314,8 +313,6 @@ static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpo
 	sphone_log(LL_INFO, "Starting new instance");
 	sphone_modules_init();
 	sphone_log(LL_DEBUG, "Modules initalized");
-	gtk_gui_register();
-	sphone_log(LL_DEBUG, "GUI initalized");
 	run_command(options);
 	sphone_log(LL_DEBUG, "Instance setup finished");
 }
@@ -414,8 +411,7 @@ int main (int argc, char *argv[])
 	g_main_loop_run(loop);
 	
 	sphone_log(LL_INFO, "shuting down");
-	
-	gtk_gui_unregister();
+
 	sphone_modules_exit();
 	datapipes_exit();
 	

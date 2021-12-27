@@ -1,4 +1,4 @@
-set(MODULE_INCLUDE_DIRS ../modapi)
+set(MODULE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../modapi)
 
 add_library(test SHARED test.c)
 target_link_libraries(test ${COMMON_LIBRARIES})
@@ -92,3 +92,5 @@ if(DEFINED RTCOM_LIBRARIES)
 	target_include_directories(store-rtcom PRIVATE ${MODULE_INCLUDE_DIRS})
 	install(TARGETS store-rtcom DESTINATION ${SPHONE_MODULE_DIR})
 endif(DEFINED RTCOM_LIBRARIES)
+
+add_subdirectory(gui)

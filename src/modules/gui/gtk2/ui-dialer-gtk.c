@@ -32,8 +32,25 @@
 #include "types.h"
 #include "sphone-log.h"
 #include "keypad.h"
-#include "gui-dialer.h"
-#include "gui-history-calls.h"
+#include "ui-history-calls-gtk.h"
+#include "gui.h"
+#include "sphone-modules.h"
+
+/** Module name */
+#define MODULE_NAME		"ui-dialer-gtk"
+
+/** Functionality provided by this module */
+static const gchar *const provides[] = { MODULE_NAME, NULL };
+
+/** Module information */
+G_MODULE_EXPORT module_info_struct module_info = {
+	/** Name of the module */
+	.name = MODULE_NAME,
+	/** Module provides */
+	.provides = provides,
+	/** Module priority */
+	.priority = 250
+};
 
 struct{
 	GtkWidget *display;
@@ -45,6 +62,7 @@ struct{
 	GtkWidget *selector;
 	GtkWidget *spinner;
 	GtkWidget *contacts_button;
+	int gui_id;
 }g_gui_calls;
 
 #ifdef ENABLE_LIBHILDON
@@ -178,8 +196,22 @@ static void gui_dialer_validate_callback(GtkEntry *entry,const gchar *text, gint
 	g_free (result);
 }
 
-void gtk_gui_dialer_init(void)
+static bool gtk_gui_dialer_show(const CallProperties* call)
 {
+	gtk_window_present(GTK_WINDOW(g_gui_calls.main_window));
+	gtk_widget_grab_focus(g_gui_calls.display);
+
+	if(call && call->line_identifier) {
+		sphone_log(LL_DEBUG, "%s: with %s", __func__, call->line_identifier);
+		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), call->line_identifier);
+	}
+	return true;
+}
+
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
+{
+	(void)data;
 	GtkWidget *v1 = gtk_vbox_new(FALSE, 5);
 	GtkWidget *actions_bar = gtk_hbox_new(TRUE,0);
 	GtkWidget *contacts_bar = gtk_hbox_new(TRUE,0);
@@ -253,16 +285,14 @@ void gtk_gui_dialer_init(void)
 	g_signal_connect(G_OBJECT(g_gui_calls.main_window),"delete-event", G_CALLBACK(gtk_widget_hide_on_delete),NULL);
 	g_signal_connect(G_OBJECT(display_back), "clicked", G_CALLBACK(gui_dialer_back_presses_callback), display);
 	g_signal_connect(G_OBJECT(display), "insert_text", G_CALLBACK(gui_dialer_validate_callback),NULL);
+	
+	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL);
+	return NULL;
 }
 
-bool gtk_gui_dialer_show(const CallProperties* call)
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
 {
-	gtk_window_present(GTK_WINDOW(g_gui_calls.main_window));
-	gtk_widget_grab_focus(g_gui_calls.display);
-
-	if(call && call->line_identifier) {
-		sphone_log(LL_DEBUG, "%s: with %s", __func__, call->line_identifier);
-		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), call->line_identifier);
-	}
-	return true;
+	(void)data;
+	gui_remove(g_gui_calls.gui_id);
 }
