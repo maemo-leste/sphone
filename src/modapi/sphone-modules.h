@@ -23,6 +23,10 @@
 #include <glib.h>
 #include <gmodule.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /** Name of Modules configuration group */
 #define SPHONE_CONF_MODULES_GROUP		"Modules"
 
@@ -48,5 +52,10 @@ void sphone_modules_exit(void);
 
 typedef const char* sphone_module_init_fn(void** data);
 typedef void sphone_module_exit_fn(void* data);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif /* _SPHONE_MODULES_H_ */

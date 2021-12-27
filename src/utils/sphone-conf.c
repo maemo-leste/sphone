@@ -1,7 +1,8 @@
 /**
  * @file sphone-conf.c
  * Configuration option handling for SPHONE
- * @author Jonathan Wilson <carl@uvos.xyz>
+ * @author Jonathan Wilson
+ * @author Carl Philipp Klemm <carl@uvos.xyz>
  *
  * sphone is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License

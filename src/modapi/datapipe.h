@@ -20,6 +20,10 @@
 
 #include <glib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * Datapipe structure
  *
@@ -57,5 +61,10 @@ void remove_trigger_from_datapipe(datapipe_struct *const datapipe,
 
 void setup_datapipe(datapipe_struct *const datapipe);
 void free_datapipe(datapipe_struct *const datapipe);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif // _DATAPIPE_H_

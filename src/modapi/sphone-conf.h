@@ -20,6 +20,10 @@
 
 #include <glib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 gboolean sphone_conf_get_bool(const gchar *group, const gchar *key,
 			   const gboolean defaultval, gpointer keyfileptr);
 gint sphone_conf_get_int(const gchar *group, const gchar *key,
@@ -36,4 +40,8 @@ void sphone_conf_free_conf_file(gpointer keyfileptr);
 
 gboolean sphone_conf_init(void);
 void sphone_conf_exit(void);
+
+#ifdef __cplusplus
+}
+#endif
 #endif /* _SPHONE_CONF_H_ */

@@ -18,6 +18,10 @@
 
 #include <syslog.h>	/* LOG_DAEMON, LOG_USER */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define SPHONE_LOG_SYSLOG			1	/**< Log to syslog */
 #define SPHONE_LOG_STDERR			0	/**< Log to stderr */
 
@@ -39,4 +43,8 @@ void sphone_log(const loglevel_t loglevel, const char *const fmt, ...)
 void sphone_log_set_verbosity(const int verbosity);
 void sphone_log_open(const char *const name, const int facility, const int type);
 void sphone_log_close(void);
+
+#ifdef __cplusplus
+}
+#endif
 
