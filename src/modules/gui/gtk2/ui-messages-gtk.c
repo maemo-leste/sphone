@@ -235,8 +235,12 @@ static void gui_sms_receive_show(const MessageProperties *message)
 
 	gtk_widget_show_all(main_window);
 
-	g_object_set_data_full(G_OBJECT(from_entry), "dial", g_strdup(message->line_identifier), g_free);
-	g_object_set_data_full(G_OBJECT(send_button), "dial", g_strdup(message->line_identifier), g_free);
+	MessageProperties *message_copy = message_properties_copy(message);
+	
+	sphone_module_log(LL_DEBUG, "%s %p", __func__, message_copy);
+
+	g_object_set_data_full(G_OBJECT(send_button), "message-proparties",
+						   message_copy, (void (*)(void *))message_properties_free);
 	
 	g_signal_connect(G_OBJECT(from_entry),"clicked", G_CALLBACK(gui_sms_open_contact_callback),NULL);
 	g_signal_connect(G_OBJECT(send_button),"clicked", G_CALLBACK(gui_sms_reply_callback),NULL);
@@ -295,13 +299,8 @@ static void gui_sms_cancel_callback(GtkWidget *button, GtkWidget *main_window)
 
 static void gui_sms_reply_callback(GtkWidget *button)
 {
-	gchar *from=g_object_get_data(G_OBJECT(button),"dial");
-	MessageProperties msg = {0};
-	CommBackend *backend = sphone_comm_default_backend();
-	
-	msg.backend = backend ? backend->id : 0;
-	msg.line_identifier = from;
-	gtk_gui_sms_send_show(&msg);
+	MessageProperties *msg = g_object_get_data(G_OBJECT(button), "message-proparties");
+	gtk_gui_sms_send_show(msg);
 }
 
 G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
