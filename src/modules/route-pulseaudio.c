@@ -1,6 +1,6 @@
 /*
  * route-pulseaudio.c
- * Copyright (C) Carl Philipp Klemm 2021 <carl@uvos.xyz>
+ * Copyright (C) Carl Philipp Klemm 2022 <carl@uvos.xyz>
  * 
  * route-pulseaudio.c is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -41,13 +41,47 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 250
 };
 
+
+#define VOICE_CALL_NAME "Voice Call"
+#define HIFI_NAME "HiFi"
+
 struct sphone_pa_if {
 	pa_threaded_mainloop *mainloop;
 	pa_mainloop_api *api;
 	pa_context *context;
+	GSList *cards;
 };
 
 static void sphone_pa_distroy_interface(struct sphone_pa_if* iface);
+
+static void sphone_pa_card_info_cb(pa_context *c, const pa_card_info *i, int eol, void *userdata)
+{
+	(void)c;
+
+	struct sphone_pa_if *iface = userdata;
+
+	if (eol < 0)
+	{
+		sphone_module_log(LL_WARN, "Pulse audio callback faliure in %s", __func__);
+		return;
+	}
+
+	if (eol)
+	{
+		if(!iface->cards)
+			sphone_module_log(LL_WARN, "No pulse card availabe with "VOICE_CALL_NAME" profile");
+		return;
+	}
+
+	for (uint32_t k = 0; k < i->n_profiles; ++k)
+	{
+		if (g_strcmp0(i->profiles[k].name, VOICE_CALL_NAME) == 0)
+		{
+			iface->cards = g_slist_prepend(iface->cards, GUINT_TO_POINTER(i->index));
+			break;
+		}
+	}
+}
 
 static void sphone_pa_state_callback(pa_context *c, void *userdata)
 {
@@ -60,6 +94,13 @@ static void sphone_pa_state_callback(pa_context *c, void *userdata)
 			break;
 		case PA_CONTEXT_READY:
 			sphone_module_log(LL_DEBUG, "Pulse audio context is ready");
+			pa_operation *operation =
+				pa_context_get_card_info_list(iface->context, sphone_pa_card_info_cb, iface);
+			if (!operation)
+				sphone_module_log(LL_ERR, "pulse create operation failed %s.",
+								  pa_strerror(pa_context_errno(iface->context)));
+			else
+				pa_operation_unref(operation);
 			break;
 		case PA_CONTEXT_TERMINATED:
 			sphone_module_log(LL_DEBUG, "Context terminated: %s", pa_strerror(pa_context_errno(c)));
@@ -112,43 +153,32 @@ static void sphone_pa_distroy_interface(struct sphone_pa_if* iface)
 	iface->api = NULL;
 }
 
-static int sphone_pa_audio_route_set_in_call(struct sphone_pa_if *pa_if_l)
+static int sphone_pa_audio_route_set_profile(struct sphone_pa_if *pa_if_l, const char *name)
 {
 	if(!pa_if_l->context)
+	{
 		sphone_module_log(LL_DEBUG, "pulse context not present.");
-	pa_operation *operation = 
-		pa_context_set_card_profile_by_index(pa_if_l->context, 0,
-											"Voice Call", sphone_pa_callback,
-											(void*)"set ucm profile to Voice Call");
-
-	if (!operation) {
-		sphone_module_log(LL_ERR, "pulse create operation failed %s.",
-			  pa_strerror(pa_context_errno(pa_if_l->context)));
-		return -1;
+		return 0;
 	}
 
-	pa_signal_done();
-	pa_operation_unref(operation);
-	return 0;
-}
+	for (GSList *element = pa_if_l->cards; element; element = element->next)
+	{
+		if(!pa_if_l->context)
+			sphone_module_log(LL_DEBUG, "pulse context not present.");
+		pa_operation *operation = 
+			pa_context_set_card_profile_by_index(pa_if_l->context, GPOINTER_TO_UINT(element->data),
+				name, sphone_pa_callback,
+				(void*)"set ucm profile");
 
-static int sphone_pa_audio_route_set_playback(struct sphone_pa_if *pa_if_l)
-{
-	if(!pa_if_l->context)
-		sphone_module_log(LL_DEBUG, "pulse context not present.");
-	pa_operation *operation = 
-		pa_context_set_card_profile_by_index(pa_if_l->context, 0,
-											"HiFi", sphone_pa_callback,
-											(void*)"set ucm profile to HiFi");
+		if (!operation) {
+			sphone_module_log(LL_ERR, "pulse create operation failed %s.",
+				pa_strerror(pa_context_errno(pa_if_l->context)));
+			return -1;
+		}
 
-	if (!operation) {
-		sphone_module_log(LL_ERR, "pulse create operation failed %s.",
-			  pa_strerror(pa_context_errno(pa_if_l->context)));
-		return -1;
+		pa_signal_done();
+		pa_operation_unref(operation);
 	}
-
-	pa_signal_done();
-	pa_operation_unref(operation);
 	return 0;
 }
 
@@ -165,11 +195,11 @@ static void call_mode_trigger(gconstpointer data, gpointer user_data)
 	struct sphone_pa_if *pa_if = user_data;
 
 	if(mode == SPHONE_MODE_NO_CALL) {
-		sphone_pa_audio_route_set_playback(pa_if);
+		sphone_pa_audio_route_set_profile(pa_if, HIFI_NAME);
 	} else if(mode == SPHONE_MODE_RINGING) {
-		sphone_pa_audio_route_set_playback(pa_if);
+		sphone_pa_audio_route_set_profile(pa_if, HIFI_NAME);
 	} else if(mode == SPHONE_MODE_INCALL) {
-		sphone_pa_audio_route_set_in_call(pa_if);
+		sphone_pa_audio_route_set_profile(pa_if, VOICE_CALL_NAME);
 	}
 }
 
@@ -193,4 +223,5 @@ void sphone_module_exit(void* data)
 	sphone_pa_distroy_interface(pa_if);
 	remove_trigger_from_datapipe(&call_mode_pipe, call_mode_trigger, pa_if);
 	remove_trigger_from_datapipe(&audio_route_pipe, audio_route_trigger, pa_if);
+	g_free(pa_if);
 }
