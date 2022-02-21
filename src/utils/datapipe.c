@@ -271,15 +271,19 @@ void free_datapipe(datapipe_struct *const datapipe)
 		sphone_log(LL_WARN,
 			"free_datapipe() called on a datapipe that "
 			"still has registered filter(s). Offending callbacks:");
-		for(GSList *element = datapipe->filters; element; element = element->next)
-			sphone_log(LL_WARN, "%p", element->data);
+		for(GSList *element = datapipe->filters; element; element = element->next) {
+			struct callback *cb = element->data;
+			sphone_log(LL_WARN, "%p", cb->callback);
+		}
 	}
 
 	if (datapipe->output_triggers != NULL) {
 		sphone_log(LL_WARN,
 			"free_datapipe() called on a datapipe that "
 			"still has registered output_trigger(s). Offending callbacks:");
-		for(GSList *element = datapipe->output_triggers; element; element = element->next)
-			sphone_log(LL_WARN, "%p", element->data);
+		for(GSList *element = datapipe->output_triggers; element; element = element->next) {
+			struct callback *cb = element->data;
+			sphone_log(LL_WARN, "%p", cb->callback);
+		}
 	}
 }
