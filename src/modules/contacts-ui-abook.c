@@ -19,11 +19,15 @@
 #include <glib.h>
 #include <libosso-abook/osso-abook.h>
 #include <gtk/gtk.h>
+#include <libebook-contacts/libebook-contacts.h>
 #include "sphone-modules.h"
 #include "sphone-log.h"
 #include "sphone-conf.h"
 #include "datapipes.h"
 #include "datapipe.h"
+#include "types.h"
+#include "gui.h"
+#include "comm.h"
 
 /** Module name */
 #define MODULE_NAME		"contacts-ui-abook"
@@ -48,23 +52,45 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 static void contact_dialog_reponse_cb(GtkDialog *dialog, int response_id, void *data)
 {
+	(void)dialog;
+	(void)response_id;
+
 	struct UiAbookPriv *priv = data;
 	GList *selection =
 		osso_abook_contact_chooser_get_selection(OSSO_ABOOK_CONTACT_CHOOSER(priv->chooser));
 		
-	if (selection) {
-		GList *l;
-
-		sphone_module_log(LL_DEBUG, "Selected Contacts:\n");
-
-		for (l = selection; l; l = l->next) {
-				sphone_module_log(LL_DEBUG, "%s\n", osso_abook_contact_get_display_name(l->data));
-		}
-	} else {
-			sphone_module_log(LL_DEBUG, "Nothing selected");
-	}
 	gtk_widget_destroy(priv->chooser);
 	priv->chooser = NULL;
+		
+	if (selection) {
+		OssoABookContact *contact = selection->data;
+		OssoABookContactDetailSelector *detailDiag = 
+		(OssoABookContactDetailSelector*)osso_abook_contact_detail_selector_new_for_contact(
+			NULL, contact, OSSO_ABOOK_CONTACT_DETAIL_PHONE | OSSO_ABOOK_CONTACT_DETAIL_IM_VOICE);
+		gtk_dialog_run(GTK_DIALOG(detailDiag));
+		
+		EVCardAttribute *attribute = osso_abook_contact_detail_selector_get_detail(detailDiag);
+		
+		if(!attribute)
+			return;
+
+		{
+			CallProperties callProp = {};
+			Contact callContact = {};
+
+			callContact.name = osso_abook_contact_get_display_name(contact);
+			//callContact.photo = osso_abook_contact_get_photo(contact);
+			g_object_ref(G_OBJECT(callContact.photo));
+			callProp.backend = sphone_comm_default_backend()->id; //TODO: select poper backend
+			callProp.line_identifier = e_vcard_attribute_get_value(attribute);
+			callContact.line_identifier = callProp.line_identifier;
+
+			gui_dialer_show(&callProp);
+
+			g_list_free(selection);
+			gtk_widget_destroy(GTK_WIDGET(detailDiag));
+		}
+	}
 }
 
 static void contact_show_trigger(const void *data, void *user_data)
@@ -79,7 +105,7 @@ static void contact_show_trigger(const void *data, void *user_data)
 		                                                                 OSSO_ABOOK_CONTACT_ORDER_NAME);
 		osso_abook_contact_chooser_set_maximum_selection(OSSO_ABOOK_CONTACT_CHOOSER(priv->chooser), 1);
 		osso_abook_contact_chooser_set_minimum_selection(OSSO_ABOOK_CONTACT_CHOOSER(priv->chooser), 1);
-		g_signal_connect(G_OBJECT(priv->chooser), "response", contact_dialog_reponse_cb, priv);
+		g_signal_connect(G_OBJECT(priv->chooser), "response", G_CALLBACK(contact_dialog_reponse_cb), priv);
 	}
 
 	gtk_widget_show_all(priv->chooser);
@@ -91,6 +117,9 @@ const gchar *sphone_module_init(void** data)
 	(void)data;
 	struct UiAbookPriv *priv = g_malloc0(sizeof(*priv));
 	*data = priv;
+
+	hildon_init();
+	osso_abook_init_with_name("sphone", NULL);
 
 	append_trigger_to_datapipe(&contact_show_pipe, contact_show_trigger, priv);
 	return NULL;
