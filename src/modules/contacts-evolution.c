@@ -223,4 +223,6 @@ void sphone_module_exit(void* data)
 {
 	remove_filter_from_datapipe(&call_new_pipe, call_filter, data);
 	remove_filter_from_datapipe(&call_properties_changed_pipe, call_filter, data);
+	remove_filter_from_datapipe(&message_recived_pipe, message_filter, data);
+	remove_filter_from_datapipe(&contact_fill_pipe, contact_filter, data);
 }

@@ -23,7 +23,6 @@
 #include "datapipes.h"
 #include "datapipe.h"
 
-
 /** Module name */
 #define MODULE_NAME		"commtest"
 

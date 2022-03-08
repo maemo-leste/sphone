@@ -19,6 +19,7 @@
 #include "ui-message-threads-gtk.h"
 
 #ifdef ENABLE_LIBHILDON
+#include <hildon/hildon.h>
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
 #include <hildon/hildon-stackable-window.h>
@@ -213,6 +214,9 @@ G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
+#ifdef ENABLE_LIBHILDON
+	hildon_init();
+#endif
 	gui_id = gui_register(NULL, NULL, NULL, gtk_gui_msg_threads, gtk_gui_contact_shown);
 	return NULL;
 }

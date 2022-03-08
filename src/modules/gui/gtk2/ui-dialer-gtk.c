@@ -21,6 +21,7 @@
 #include <gtk/gtk.h>
 
 #ifdef ENABLE_LIBHILDON
+#include <hildon/hildon.h>
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
 #include <hildon/hildon-stackable-window.h>
@@ -213,6 +214,11 @@ G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
+	
+#ifdef ENABLE_LIBHILDON
+	hildon_init();
+#endif
+	
 	GtkWidget *v1 = gtk_vbox_new(FALSE, 5);
 	GtkWidget *actions_bar = gtk_hbox_new(TRUE,0);
 	GtkWidget *contacts_bar = gtk_hbox_new(TRUE,0);

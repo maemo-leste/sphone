@@ -19,6 +19,7 @@
 #include "ui-history-calls-gtk.h"
 
 #ifdef ENABLE_LIBHILDON
+#include <hildon/hildon.h>
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
 #include <hildon/hildon-stackable-window.h>
@@ -80,6 +81,10 @@ static GtkWidget *gui_dialer_build_list(void)
 	gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(g_history_calls.dials_view), TRUE);
 	GtkCellRenderer *renderer;
 	GtkTreeViewColumn *column;
+	
+#ifdef ENABLE_LIBHILDON
+	hildon_init();
+#endif
 
 	renderer = gtk_cell_renderer_text_new();
 	g_object_set(G_OBJECT(renderer), "ellipsize", PANGO_ELLIPSIZE_END, NULL);

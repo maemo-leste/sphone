@@ -21,6 +21,7 @@
 #include <time.h>
 
 #ifdef ENABLE_LIBHILDON
+#include <hildon/hildon.h>
 #include <hildon/hildon-gtk.h>
 #include <hildon/hildon-pannable-area.h>
 #include <hildon/hildon-picker-button.h>
@@ -307,6 +308,9 @@ G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
+#ifdef ENABLE_LIBHILDON
+	hildon_init();
+#endif
 	append_trigger_to_datapipe(&message_recived_pipe, gui_sms_incoming_callback, NULL);
 	gui_id = gui_register(NULL, gtk_gui_sms_send_show, NULL, NULL, NULL);
 	return NULL;
