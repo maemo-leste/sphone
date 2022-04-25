@@ -1,3 +1,9 @@
+sphone (0.6.1) unstable; urgency=medium
+
+  * Minor ui fixes
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Tue, 25 Mar 2022 21:08:00 +0100
+
 sphone (0.6.0) unstable; urgency=medium
 
   * osso-abook support
