@@ -92,6 +92,8 @@ static void gui_calls_update_global_status(void)
 {
 	if(datapipe_get_last_data_int(&call_mode_pipe) == SPHONE_MODE_RINGING) {
 		gtk_widget_show(g_calls_manager.mute_button);
+		gtk_widget_hide(g_calls_manager.handset_button);
+		gtk_widget_hide(g_calls_manager.speaker_button);
 	} else {
 		gtk_widget_hide(g_calls_manager.mute_button);
 	}

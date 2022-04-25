@@ -153,6 +153,7 @@ static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	gtk_window_set_title(GTK_WINDOW(main_window),"Send SMS");
 	gtk_window_set_default_size(GTK_WINDOW(main_window),400,220);
 
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_edit), GTK_WRAP_WORD_CHAR);
 	GtkTextBuffer *text_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_edit));
 
 	if(msg && msg->line_identifier)
@@ -216,6 +217,7 @@ static void gui_sms_receive_show(const MessageProperties *message)
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (s),
 		       GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
+	gtk_label_set_line_wrap(GTK_LABEL(text_edit), TRUE);
 	gtk_misc_set_alignment(GTK_MISC(text_edit),0.0,0.0);
 	gtk_misc_set_padding(GTK_MISC(text_edit),2,2);
 	gtk_button_set_relief(GTK_BUTTON(from_entry),GTK_RELIEF_NONE);
