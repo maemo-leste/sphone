@@ -56,6 +56,12 @@ if(DEFINED PULSE_LIBRARIES)
 	install(TARGETS route-pulseaudio DESTINATION ${SPHONE_MODULE_DIR})
 endif(DEFINED PULSE_LIBRARIES)
 
+add_library(route-mapphone-hack SHARED route-mapphone-hack.c)
+target_link_libraries(route-mapphone-hack ${COMMON_LIBRARIES})
+target_include_directories(route-mapphone-hack SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(route-mapphone-hack PRIVATE ${MODULE_INCLUDE_DIRS})
+install(TARGETS route-mapphone-hack DESTINATION ${SPHONE_MODULE_DIR})
+
 add_library(rtconf-ini SHARED rtconf-ini.c)
 target_link_libraries(rtconf-ini ${COMMON_LIBRARIES})
 target_include_directories(rtconf-ini PRIVATE ${COMMON_INCLUDE_DIRS} ${MODULE_INCLUDE_DIRS})
