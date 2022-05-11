@@ -184,9 +184,33 @@ static int sphone_pa_audio_route_set_profile(struct sphone_pa_if *pa_if_l, const
 
 static void audio_route_trigger(gconstpointer data, gpointer user_data)
 {
-	(void)data;
-	(void)user_data;
-	//TODO
+	sphone_audio_route_t mode = GPOINTER_TO_INT(data);
+	struct sphone_pa_if *pa_if = user_data;
+
+	sphone_module_log(LL_DEBUG, "PA audio_route_trigger");
+
+	/*
+	 *         Ports:
+	 [Out] Headphones: Headset (priority: 100, not available)
+	 [Out] Earpiece: Internal Earpiece (priority: 200)
+	 [Out] Speaker: Internal speaker (priority: 300)
+	 */
+
+	// TODO: Use pa_context_get_sink_input_info_list() to find the right sink
+	// (there are different sinks depending on HiFi or Voice Call)
+
+	/* "alsa_output.0.HiFi__hw_Audio_0__sink" */
+	const char sink_name = "alsa_output.0.Voice_Call__hw_Audio_0__sink";
+
+	if (mode == SPHONE_AUDIO_ROUTE_SPEAKER) {
+		pa_context_set_sink_port_by_name(pa_if->context, sink_name, "Speaker", sphone_pa_callback, user_data);
+	} else if (mode == SPHONE_AUDIO_ROUTE_HANDSET) {
+		pa_context_set_sink_port_by_name(pa_if->context, sink_name, "Earpiece", sphone_pa_callback, user_data);
+	} else if (mode == SPHONE_AUDIO_ROUTE_HEADSET) {
+		pa_context_set_sink_port_by_name(pa_if->context, sink_name,
+						 "Headphones", sphone_pa_callback, user_data);
+	} else if (mode == SPHONE_AUDIO_ROUTE_BT) {
+	}
 }
 
 static void call_mode_trigger(gconstpointer data, gpointer user_data)
