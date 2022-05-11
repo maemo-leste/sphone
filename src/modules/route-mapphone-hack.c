@@ -16,6 +16,8 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <fcntl.h>
+#include <unistd.h>
 #include <glib.h>
 
 #include "sphone-modules.h"
@@ -59,18 +61,22 @@ static void audio_route_trigger(gconstpointer data, gpointer user_data)
 		return;
 	}
 
+	int fd = open(SYSFS_REGISTER_HACK_PATH, O_WRONLY);
+
 	if (mode == SPHONE_AUDIO_ROUTE_SPEAKER) {
-		g_file_set_contents(SYSFS_REGISTER_HACK_PATH, "081c 0002\n", -1,
-				    &err);
+		const char* msg = "081c 0002\n";
+		write(fd, msg, strlen(msg));
 	} else if (mode == SPHONE_AUDIO_ROUTE_HANDSET) {
-		g_file_set_contents(SYSFS_REGISTER_HACK_PATH, "081c 0001\n", -1,
-				    &err);
+		const char* msg = "081c 0001\n";
+		write(fd, msg, strlen(msg));
 	} else if (mode == SPHONE_AUDIO_ROUTE_HEADSET) {
-		g_file_set_contents(SYSFS_REGISTER_HACK_PATH, "081c 0260\n", -1,
-				    &err);
+		const char* msg = "081c 0260\n";
+		write(fd, msg, strlen(msg));
 	} else if (mode == SPHONE_AUDIO_ROUTE_BT) {
 		/* Nothing for now */
 	}
+
+	close(fd);
 
 	if (err != NULL) {
 		sphone_module_log(LL_WARN,
