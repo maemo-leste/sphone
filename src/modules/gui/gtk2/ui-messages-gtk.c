@@ -116,15 +116,21 @@ static GtkWidget *gui_sms_create_backend_combo(void)
 }
 #endif
 
+static void gui_sms_contacts_callback(void)
+{
+	execute_datapipe(&contact_show_pipe, NULL);
+}
+
 static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 {
-	GtkWidget *v1=gtk_vbox_new(FALSE,2);
-	GtkWidget *to_bar=gtk_hbox_new(FALSE,0);
-	GtkWidget *actions_bar=gtk_hbox_new(FALSE,0);
-	GtkWidget *to_label=gtk_label_new("To:");
-	GtkWidget *to_entry=gtk_entry_new();
-	GtkWidget *send_button=gtk_button_new_with_label("Send");
-	GtkWidget *cancel_button=gtk_button_new_with_label("Cancel");
+	GtkWidget *v1 = gtk_vbox_new(FALSE,2);
+	GtkWidget *to_bar = gtk_hbox_new(FALSE,0);
+	GtkWidget *actions_bar = gtk_hbox_new(FALSE,0);
+	GtkWidget *to_label = gtk_label_new("To:");
+	GtkWidget *to_entry = gtk_entry_new();
+	GtkWidget *send_button = gtk_button_new_with_label("Send");
+	GtkWidget *cancel_button = gtk_button_new_with_label("Cancel");
+	GtkWidget *contacts_button = gtk_button_new_with_label("Contacts");
 	GtkWidget *text_edit=gtk_text_view_new();
 	GtkWidget *s = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (s),
@@ -154,7 +160,7 @@ static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	gtk_window_set_default_size(GTK_WINDOW(main_window),400,220);
 
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_edit), GTK_WRAP_WORD_CHAR);
-	GtkTextBuffer *text_buffer=gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_edit));
+	GtkTextBuffer *text_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_edit));
 
 	if(msg && msg->line_identifier)
 		gtk_entry_set_text(GTK_ENTRY(to_entry), msg->line_identifier);
@@ -166,6 +172,7 @@ static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 
 	gtk_box_pack_start(GTK_BOX(to_bar), to_label, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(to_bar), to_entry, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(to_bar), contacts_button, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(to_bar), backend_combo, TRUE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(actions_bar), send_button);
 	gtk_container_add(GTK_CONTAINER(actions_bar), cancel_button);
@@ -181,6 +188,7 @@ static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	gtk_widget_show_all(main_window);
 	
 	g_signal_connect(G_OBJECT(send_button),"clicked", G_CALLBACK(gui_sms_send_callback), main_window);
+	g_signal_connect(G_OBJECT(contacts_button),"clicked", G_CALLBACK(gui_sms_contacts_callback), main_window);
 	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_sms_cancel_callback), main_window);
 	return true;
 }
