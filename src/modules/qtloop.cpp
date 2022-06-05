@@ -18,7 +18,7 @@ void sphone_loop_setup(int argc, char *argv[])
 	app->setQuitOnLastWindowClosed(false);
 
 	QAbstractEventDispatcher *dispatcher = QCoreApplication::eventDispatcher();
-	if(!dispatcher && dispatcher->inherits("QEventDispatcherGlib")) {
+	if(!dispatcher || dispatcher->inherits("QEventDispatcherGlib")) {
 		sphone_log(LL_CRIT, "CRITICAL FAILURE: qt-glib support is required!!");
 		exit(-1);
 	}
