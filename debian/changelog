@@ -1,3 +1,10 @@
+sphone (0.6.2) unstable; urgency=medium
+
+  * Add contacts button to sms-new
+  * qtloop: fix mistake in dispatcher compat check
+  
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Tue, 11 Jun 2022 21:08:00 +0100
+
 sphone (0.6.1) unstable; urgency=medium
 
   * Minor ui fixes
