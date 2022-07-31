@@ -1,3 +1,9 @@
+sphone (0.6.3) unstable; urgency=medium
+
+  * Implement pulseaudio output routing
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Tue, 31 Jul 2022 23:15:00 +0100
+
 sphone (0.6.2) unstable; urgency=medium
 
   * Add contacts button to sms-new
