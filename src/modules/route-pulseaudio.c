@@ -60,23 +60,19 @@ static void sphone_pa_card_info_cb(pa_context *c, const pa_card_info *i, int eol
 
 	struct sphone_pa_if *iface = userdata;
 
-	if (eol < 0)
-	{
+	if(eol < 0) {
 		sphone_module_log(LL_WARN, "Pulse audio callback faliure in %s", __func__);
 		return;
 	}
 
-	if (eol)
-	{
+	if(eol) {
 		if(!iface->cards)
 			sphone_module_log(LL_WARN, "No pulse card availabe with "VOICE_CALL_NAME" profile");
 		return;
 	}
 
-	for (uint32_t k = 0; k < i->n_profiles; ++k)
-	{
-		if (g_strcmp0(i->profiles[k].name, VOICE_CALL_NAME) == 0)
-		{
+	for (uint32_t k = 0; k < i->n_profiles; ++k) {
+		if (g_strcmp0(i->profiles[k].name, VOICE_CALL_NAME) == 0) {
 			iface->cards = g_slist_prepend(iface->cards, GUINT_TO_POINTER(i->index));
 			break;
 		}
@@ -155,14 +151,12 @@ static void sphone_pa_distroy_interface(struct sphone_pa_if* iface)
 
 static int sphone_pa_audio_route_set_profile(struct sphone_pa_if *pa_if_l, const char *name)
 {
-	if(!pa_if_l->context)
-	{
+	if(!pa_if_l->context) {
 		sphone_module_log(LL_DEBUG, "pulse context not present.");
 		return 0;
 	}
 
-	for (GSList *element = pa_if_l->cards; element; element = element->next)
-	{
+	for(GSList *element = pa_if_l->cards; element; element = element->next) {
 		if(!pa_if_l->context)
 			sphone_module_log(LL_DEBUG, "pulse context not present.");
 		pa_operation *operation = 
@@ -170,7 +164,7 @@ static int sphone_pa_audio_route_set_profile(struct sphone_pa_if *pa_if_l, const
 				name, sphone_pa_callback,
 				(void*)"set ucm profile");
 
-		if (!operation) {
+		if(!operation) {
 			sphone_module_log(LL_ERR, "pulse create operation failed %s.",
 				pa_strerror(pa_context_errno(pa_if_l->context)));
 			return -1;
@@ -182,11 +176,58 @@ static int sphone_pa_audio_route_set_profile(struct sphone_pa_if *pa_if_l, const
 	return 0;
 }
 
+static void audio_route_set_cb(pa_context *c, const pa_server_info *i, void *userdata)
+{
+	if(!i) {
+		sphone_module_log(LL_ERR, "failed to get default sink name from pulse %s.", pa_strerror(pa_context_errno(c)));
+		return;
+	}
+
+	const sphone_audio_route_t mode = GPOINTER_TO_INT(userdata);
+	pa_operation* operation = NULL;
+
+	sphone_module_log(LL_DEBUG, "Seting route on %s", i->default_sink_name);
+
+	switch(mode) {
+		case SPHONE_AUDIO_ROUTE_SPEAKER:
+			operation = pa_context_set_sink_port_by_name(c, i->default_sink_name, "[Out] Speaker",
+														 sphone_pa_callback, (void*)"Set sink to Speaker");
+			break;
+		case SPHONE_AUDIO_ROUTE_HANDSET:
+			operation = pa_context_set_sink_port_by_name(c, i->default_sink_name, "[Out] Earpiece",
+														 sphone_pa_callback, (void*)"Set sink to Earpiece");
+			break;
+		case SPHONE_AUDIO_ROUTE_HEADSET:
+			operation = pa_context_set_sink_port_by_name(c, i->default_sink_name, "[Out] Headphones",
+														 sphone_pa_callback, (void*)"Set sink to Headphones");
+			break;
+		case SPHONE_AUDIO_ROUTE_BT:
+			sphone_module_log(LL_WARN, "Currently audio routing via bluetooth is not supported");
+		default:
+			sphone_module_log(LL_WARN, "Unsupported routing mode selected");
+			return;
+	}
+
+	if(!operation) {
+		sphone_module_log(LL_ERR, "pulse create operation failed %s.",
+			pa_strerror(pa_context_errno(c)));
+		return;
+	}
+	pa_operation_unref(operation);
+}
+
 static void audio_route_trigger(gconstpointer data, gpointer user_data)
 {
-	(void)data;
-	(void)user_data;
-	//TODO
+	struct sphone_pa_if *pa_if = user_data;
+
+	pa_operation *operation = pa_context_get_server_info(pa_if->context, audio_route_set_cb, (void*)data);
+
+	if(!operation) {
+		sphone_module_log(LL_ERR, "pulse create operation failed %s.",
+			pa_strerror(pa_context_errno(pa_if->context)));
+		return;
+	}
+	pa_operation_unref(operation);
 }
 
 static void call_mode_trigger(gconstpointer data, gpointer user_data)
