@@ -72,9 +72,13 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 	RTCOM_EL_EVENT_SET_FIELD(ev, outgoing, call->outbound);
 	RTCOM_EL_EVENT_SET_FIELD(ev, start_time, call->start_time);
 	RTCOM_EL_EVENT_SET_FIELD(ev, end_time, time(NULL));
+
+	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("sphone/", backend->name, "/", "sphone", NULL));
+	RTCOM_EL_EVENT_SET_FIELD(ev, local_name, "<SelfHandle>");
+
 	if(call->contact && call->contact->name)
-		RTCOM_EL_EVENT_SET_FIELD(ev, local_name, g_strdup(call->contact->name));
-	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("sphone/", backend->name, "/", call->line_identifier, NULL));
+		RTCOM_EL_EVENT_SET_FIELD(ev, remote_name, g_strdup(call->contact->name));
+
 	RTCOM_EL_EVENT_SET_FIELD(ev, remote_uid, g_strdup(call->line_identifier));
 
 	if(rtcom_el_add_event(el, ev, NULL) < 0)
@@ -99,10 +103,13 @@ static RTComElEvent *create_mesage_event(const MessageProperties *msg)
 
 	RTCOM_EL_EVENT_SET_FIELD(ev, start_time, msg->time);
 	RTCOM_EL_EVENT_SET_FIELD(ev, end_time, 0);
+	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("sphone/", backend->name, "/", "sphone", NULL));
+	RTCOM_EL_EVENT_SET_FIELD(ev, local_name, "<SelfHandle>");
+
 	if(msg->contact && msg->contact->name)
-		RTCOM_EL_EVENT_SET_FIELD(ev, local_name, g_strdup(msg->contact->name));
-	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("sphone/", backend->name, NULL));
+		RTCOM_EL_EVENT_SET_FIELD(ev, remote_name, g_strdup(msg->contact->name));
 	RTCOM_EL_EVENT_SET_FIELD(ev, remote_uid, g_strdup(msg->line_identifier));
+
 	RTCOM_EL_EVENT_SET_FIELD (ev, free_text, g_strdup(msg->text));
 
 	return ev;
@@ -157,7 +164,7 @@ static MessageProperties *convert_to_message_proparites(RTComElIter *iter, Conta
 									"outgoing", &outbound,
 									"start-time", &msg->time,
 									"free-text", &text,
-									"local-name", &name, NULL)) {
+									"remote-name", &name, NULL)) {
 		sphone_module_log(LL_ERR, "Failed to access event by iterator");
 		g_free(msg);
 		return NULL;
@@ -214,7 +221,7 @@ static GList *get_messages_for_contact(Contact *contact)
 		if(!backend)
 			return NULL;
 
-		char *localid = g_strconcat("sphone/", backend->name, NULL);
+		char *localid = g_strconcat("sphone/", backend->name, "/", "sphone", NULL);
 		if(!rtcom_el_query_prepare(querySms, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_SMS"), RTCOM_EL_OP_EQUAL,
 			                       "event-type-id", rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_SMS_MESSAGE"), RTCOM_EL_OP_EQUAL,
 			                       "local-uid", localid, RTCOM_EL_OP_EQUAL, "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL, 
@@ -276,7 +283,7 @@ static GList *get_calls_for_contact(Contact *contact)
 		if(!backend)
 			return NULL;
 
-		char *localid = g_strconcat("sphone/", backend->name, NULL);
+		char *localid = g_strconcat("sphone/", backend->name, "/", "sphone", NULL);
 		if(!rtcom_el_query_prepare(query, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_CALL"), RTCOM_EL_OP_EQUAL,
 			                              "local-uid", localid, RTCOM_EL_OP_EQUAL,
 			                              "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL, NULL))
@@ -303,7 +310,7 @@ static GList *get_calls_for_contact(Contact *contact)
 			                               "start-time", &call->start_time,
 			                               "end-time", &call->end_time,
 			                               "event-type-id", &type,
-			                               "local-name", &name, NULL)) {
+			                               "remote-name", &name, NULL)) {
 			sphone_module_log(LL_ERR, "Failed to access event by iterator");
 			g_free(call);
 			continue;
