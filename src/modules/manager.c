@@ -133,7 +133,7 @@ static void call_changed_trigger(const void *data, void *user_data)
 	check_needed_state();
 }
 
-static void message_recived_trigger(const void *data, void *user_data)
+static void message_received_trigger(const void *data, void *user_data)
 {
 	(void)user_data;
 	const MessageProperties *msg = data;
@@ -165,7 +165,7 @@ const gchar *sphone_module_init(void** data)
 	(void)data;
 	append_trigger_to_datapipe(&call_new_pipe, call_new_trigger, NULL);
 	append_trigger_to_datapipe(&call_properties_changed_pipe, call_changed_trigger, NULL);
-	append_trigger_to_datapipe(&message_recived_pipe, message_recived_trigger, NULL);
+	append_trigger_to_datapipe(&message_received_pipe, message_received_trigger, NULL);
 	return NULL;
 }
 
@@ -175,5 +175,5 @@ void sphone_module_exit(void* data)
 	(void)data;
 	remove_trigger_from_datapipe(&call_new_pipe, call_new_trigger, NULL);
 	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_changed_trigger, NULL);
-	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, NULL);
+	remove_trigger_from_datapipe(&message_received_pipe, message_received_trigger, NULL);
 }

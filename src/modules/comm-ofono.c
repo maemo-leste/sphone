@@ -537,7 +537,7 @@ static void new_sms_cb(GDBusConnection *connection,
 	message->time = mktime(&tm);
 	
 	if(message->line_identifier && message->text)
-		execute_datapipe(&message_recived_pipe, message);
+		execute_datapipe(&message_received_pipe, message);
 
 	error:
 	message_properties_free(message);
