@@ -159,8 +159,8 @@ static gboolean mock_incomeing_message(void *data)
 	
 	msg->time = time(NULL);
 	msg->outbound = false;
-	sphone_module_log(LL_DEBUG, "Mock recived message %s with text \"%s\"", msg->line_identifier, msg->text);
-	execute_datapipe(&message_recived_pipe, msg);
+	sphone_module_log(LL_DEBUG, "Mock received message %s with text \"%s\"", msg->line_identifier, msg->text);
+	execute_datapipe(&message_received_pipe, msg);
 	message_properties_free(msg);
 	return false;
 }

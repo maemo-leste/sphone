@@ -211,7 +211,7 @@ const gchar *sphone_module_init(void** data)
 		e_book_client_connect(address_book_src, 0, NULL, book_ready_callback, book);
 		append_filter_to_datapipe(&call_new_pipe, call_filter, book);
 		append_filter_to_datapipe(&call_properties_changed_pipe, call_filter, book);
-		append_filter_to_datapipe(&message_recived_pipe, message_filter, book);
+		append_filter_to_datapipe(&message_received_pipe, message_filter, book);
 		append_filter_to_datapipe(&contact_fill_pipe, contact_filter, book);
 		g_object_unref(address_book_src);
 	}
@@ -223,6 +223,6 @@ void sphone_module_exit(void* data)
 {
 	remove_filter_from_datapipe(&call_new_pipe, call_filter, data);
 	remove_filter_from_datapipe(&call_properties_changed_pipe, call_filter, data);
-	remove_filter_from_datapipe(&message_recived_pipe, message_filter, data);
+	remove_filter_from_datapipe(&message_received_pipe, message_filter, data);
 	remove_filter_from_datapipe(&contact_fill_pipe, contact_filter, data);
 }

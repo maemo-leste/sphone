@@ -66,7 +66,7 @@ extern datapipe_struct call_backend_error_pipe;
 extern datapipe_struct vibrate_pipe;
 
 //input: MessageProperties
-extern datapipe_struct message_recived_pipe;
+extern datapipe_struct message_received_pipe;
 
 //input: MessageProperties
 extern datapipe_struct message_send_pipe;

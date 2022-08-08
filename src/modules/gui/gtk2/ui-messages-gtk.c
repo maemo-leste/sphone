@@ -321,7 +321,7 @@ const gchar *sphone_module_init(void** data)
 #ifdef ENABLE_LIBHILDON
 	hildon_init();
 #endif
-	append_trigger_to_datapipe(&message_recived_pipe, gui_sms_incoming_callback, NULL);
+	append_trigger_to_datapipe(&message_received_pipe, gui_sms_incoming_callback, NULL);
 	gui_id = gui_register(NULL, gtk_gui_sms_send_show, NULL, NULL, NULL);
 	return NULL;
 }
@@ -331,5 +331,5 @@ void sphone_module_exit(void* data)
 {
 	(void)data;
 	gui_remove(gui_id);
-	remove_trigger_from_datapipe(&message_recived_pipe, gui_sms_incoming_callback, NULL);
+	remove_trigger_from_datapipe(&message_received_pipe, gui_sms_incoming_callback, NULL);
 }

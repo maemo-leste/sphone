@@ -108,7 +108,7 @@ static void remove_thread_view(GtkWidget *widget, gpointer data)
 	const Contact *watch_contact = g_object_get_data(G_OBJECT(text_view), "contact");
 	shown_contacts = g_slist_remove(shown_contacts, watch_contact);
 	remove_trigger_from_datapipe(&message_send_pipe, new_message_trigger, text_view);
-	remove_trigger_from_datapipe(&message_recived_pipe, new_message_trigger, text_view);
+	remove_trigger_from_datapipe(&message_received_pipe, new_message_trigger, text_view);
 }
 
 static void gtk_gui_thread_view_reply_cb(GtkButton* button, Contact *contact)
@@ -187,7 +187,7 @@ void gtk_gui_show_thread_for_contact(Contact *contact)
 	g_signal_connect(GTK_WIDGET(window), "hide", G_CALLBACK(remove_thread_view), text_view);
 	shown_contacts = g_slist_prepend(shown_contacts, contact_cpy);
 	append_trigger_to_datapipe(&message_send_pipe, new_message_trigger, text_view);
-	append_trigger_to_datapipe(&message_recived_pipe, new_message_trigger, text_view);
+	append_trigger_to_datapipe(&message_received_pipe, new_message_trigger, text_view);
 	gtk_text_view_set_editable(GTK_TEXT_VIEW(text_view), false);
 	gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(text_view), false);
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(text_view), GTK_WRAP_WORD_CHAR);

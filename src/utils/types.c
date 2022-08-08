@@ -80,9 +80,9 @@ void contact_print(const Contact *contact, const char *module_name)
 		CommBackend *backend = sphone_comm_get_backend(contact->backend);
 		sphone_log(LL_DEBUG, "%s%sContact %s %s from %s",
 				   module_name ?: "", module_name ? ": " : "",
-				   contact->name ?: "<unkown>",
+				   contact->name ?: "<unknown>",
 				   contact->line_identifier ?: "",
-				   backend ? backend->name : "unkown");
+				   backend ? backend->name : "unknown");
 	} else {
 		sphone_log(LL_DEBUG, "%s%sContact: NULL", module_name ?: "", module_name ? ": " : "" );
 	}

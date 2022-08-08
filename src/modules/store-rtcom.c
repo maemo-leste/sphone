@@ -87,7 +87,7 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 	rtcom_el_event_free(ev);
 }
 
-static RTComElEvent *create_mesage_event(const MessageProperties *msg)
+static RTComElEvent *create_message_event(const MessageProperties *msg)
 {
 	RTComElEvent *ev = rtcom_el_event_new();
 
@@ -115,7 +115,7 @@ static RTComElEvent *create_mesage_event(const MessageProperties *msg)
 	return ev;
 }
 
-static void message_recived_trigger(const void *data, void *user_data)
+static void message_received_trigger(const void *data, void *user_data)
 {
 	RTComEl *el = user_data;
 	const MessageProperties *msg = data;
@@ -124,7 +124,7 @@ static void message_recived_trigger(const void *data, void *user_data)
 	if(!backend)
 		return;
 
-	RTComElEvent *ev = create_mesage_event(msg);
+	RTComElEvent *ev = create_message_event(msg);
 	RTCOM_EL_EVENT_SET_FIELD(ev, outgoing, false);
 
 	if(rtcom_el_add_event(el, ev, NULL) < 0)
@@ -142,7 +142,7 @@ static void message_send_trigger(const void *data, void *user_data)
 	if(!backend)
 		return;
 
-	RTComElEvent *ev = create_mesage_event(msg);
+	RTComElEvent *ev = create_message_event(msg);
 	RTCOM_EL_EVENT_SET_FIELD(ev, outgoing, true);
 
 	if(rtcom_el_add_event(el, ev, NULL) < 0)
@@ -151,7 +151,7 @@ static void message_send_trigger(const void *data, void *user_data)
 	rtcom_el_event_free(ev);
 }
 
-static MessageProperties *convert_to_message_proparites(RTComElIter *iter, Contact *contact)
+static MessageProperties *convert_to_message_properties(RTComElIter *iter, Contact *contact)
 {
 	char *line_identifier;
 	char *local_uid;
@@ -243,7 +243,7 @@ static GList *get_messages_for_contact(Contact *contact)
 
 	if(iterSms) {
 		do {
-			MessageProperties *msg = convert_to_message_proparites(iterSms, contact);
+			MessageProperties *msg = convert_to_message_properties(iterSms, contact);
 			if(msg)
 				messages = g_list_append(messages, msg);
 		} while(rtcom_el_iter_next(iterSms));
@@ -251,7 +251,7 @@ static GList *get_messages_for_contact(Contact *contact)
 
 	if(iterChat) {
 		do {
-			MessageProperties *msg = convert_to_message_proparites(iterChat, contact);
+			MessageProperties *msg = convert_to_message_properties(iterChat, contact);
 			if(msg)
 				messages = g_list_append(messages, msg);
 		} while(rtcom_el_iter_next(iterChat));
@@ -358,7 +358,7 @@ const gchar *sphone_module_init(void** data)
 	sphone_module_log(LL_INFO, "Successfully opened rtcom-eventlogger database");
 
 	append_trigger_to_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, evlog);
-	append_trigger_to_datapipe(&message_recived_pipe, message_recived_trigger, evlog);
+	append_trigger_to_datapipe(&message_received_pipe, message_received_trigger, evlog);
 	append_trigger_to_datapipe(&message_send_pipe, message_send_trigger, evlog);
 
 	id = store_register_backend(get_messages_for_contact, get_calls_for_contact);
@@ -372,7 +372,7 @@ void sphone_module_exit(void* data)
 	(void)data;
 	if(evlog) {
 		remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, evlog);
-		remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, evlog);
+		remove_trigger_from_datapipe(&message_received_pipe, message_received_trigger, evlog);
 		remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, evlog);
 		store_unregister_backend(id);
 		g_object_unref(evlog);

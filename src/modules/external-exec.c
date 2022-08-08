@@ -86,7 +86,7 @@ static void message_send_trigger(gconstpointer data, gpointer user_data)
 	}
 }
 
-static void message_recived_trigger(gconstpointer data, gpointer user_data)
+static void message_received_trigger(gconstpointer data, gpointer user_data)
 {
 	(void)user_data;
 	const MessageProperties *msg = data;
@@ -105,7 +105,7 @@ const gchar *sphone_module_init(void** data)
 	append_trigger_to_datapipe(&call_new_pipe, new_call_trigger, NULL);
 	append_trigger_to_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, NULL);
 	
-	append_trigger_to_datapipe(&message_recived_pipe, message_recived_trigger, NULL);
+	append_trigger_to_datapipe(&message_received_pipe, message_received_trigger, NULL);
 	append_trigger_to_datapipe(&message_send_pipe, message_send_trigger, NULL);
 
 	return NULL;
@@ -119,6 +119,6 @@ void sphone_module_exit(void* data)
 	remove_trigger_from_datapipe(&call_new_pipe, new_call_trigger, NULL);
 	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, NULL);
 
-	remove_trigger_from_datapipe(&message_recived_pipe, message_recived_trigger, NULL);
+	remove_trigger_from_datapipe(&message_received_pipe, message_received_trigger, NULL);
 	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, NULL);
 }

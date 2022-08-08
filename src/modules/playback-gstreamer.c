@@ -137,7 +137,7 @@ static void audio_play_looping_trigger(gconstpointer data, gpointer user_data)
 	const char *filename = (const char*)data;
 	
 	if(!filename) {
-		sphone_module_log(LL_WARN, "%s recived invalid file name", __func__);
+		sphone_module_log(LL_WARN, "%s received invalid file name", __func__);
 		return;
 	}
 	
@@ -152,7 +152,7 @@ static void audio_play_once_trigger(gconstpointer data, gpointer user_data)
 	const char *filename = (const char*)data;
 	
 	if(!filename) {
-		sphone_module_log(LL_WARN, "%s recived invalid file name", __func__);
+		sphone_module_log(LL_WARN, "%s received invalid file name", __func__);
 		return;
 	}
 	

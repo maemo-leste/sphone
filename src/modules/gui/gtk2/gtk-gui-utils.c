@@ -38,12 +38,12 @@ GtkTreeModel *gtk_gui_new_model_from_calls(GList *calls)
 		char *timestr = gtk_gui_date_to_new_string(call->start_time);
 		CommBackend *backend = sphone_comm_get_backend(call->backend);
 		gtk_list_store_set(store, &iter,
-		              GTK_UI_MOD_NAME, call->contact && call->contact->name ? call->contact->name : "<unkown>",
+		              GTK_UI_MOD_NAME, call->contact && call->contact->name ? call->contact->name : "<unknown>",
 		              GTK_UI_MOD_LINE_ID, call->line_identifier,
 		              GTK_UI_MOD_TIME, timestr,
 		              GTK_UI_MOD_TEXT, NULL,
 		              GTK_UI_MOD_BACKEND, call->backend,
-		              GTK_UI_MOD_BACKEND_STR, backend ? backend->name : "unkown", -1);
+		              GTK_UI_MOD_BACKEND_STR, backend ? backend->name : "unknown", -1);
 		g_free(timestr);
 	}
 	return GTK_TREE_MODEL(store);
@@ -61,12 +61,12 @@ GtkTreeModel *gtk_gui_new_model_from_messages(GList *messages)
 		char *timestr = gtk_gui_time_to_new_string(msg->time);
 		CommBackend *backend = sphone_comm_get_backend(msg->backend);
 		gtk_list_store_set(store, &iter,
-		              GTK_UI_MOD_NAME, msg->contact && msg->contact->name ? msg->contact->name : "<unkown>",
+		              GTK_UI_MOD_NAME, msg->contact && msg->contact->name ? msg->contact->name : "<unknown>",
 		              GTK_UI_MOD_LINE_ID, msg->line_identifier,
 		              GTK_UI_MOD_TIME, timestr,
 		              GTK_UI_MOD_TEXT, msg->text,
 		              GTK_UI_MOD_BACKEND, msg->backend,
-		              GTK_UI_MOD_BACKEND_STR, backend ? backend->name : "unkown", -1);
+		              GTK_UI_MOD_BACKEND_STR, backend ? backend->name : "unknown", -1);
 		g_free(timestr);
 	}
 	return GTK_TREE_MODEL(store);
@@ -84,12 +84,12 @@ GtkTreeModel *gtk_gui_new_model_from_contacts(GList *contacts)
 		gtk_list_store_append(store, &iter);
 		CommBackend *backend = sphone_comm_get_backend(contact->backend);
 		gtk_list_store_set(store, &iter,
-		              GTK_UI_MOD_NAME, contact->name ?: "<unkown>" ,
+		              GTK_UI_MOD_NAME, contact->name ?: "<unknown>" ,
 		              GTK_UI_MOD_LINE_ID, contact->line_identifier,
 		              GTK_UI_MOD_TIME, NULL,
 		              GTK_UI_MOD_TEXT, NULL,
 		              GTK_UI_MOD_BACKEND, contact->backend,
-		              GTK_UI_MOD_BACKEND_STR, backend ? backend->name : "unkown", -1);
+		              GTK_UI_MOD_BACKEND_STR, backend ? backend->name : "unknown", -1);
 	}
 	return GTK_TREE_MODEL(store);
 }
