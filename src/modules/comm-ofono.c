@@ -391,6 +391,7 @@ static void call_added_cb(GDBusConnection *connection,
 	CallProperties *call = g_malloc0(sizeof(*call));
 	call->backend = priv->backend_id;
 	call->needs_route = true;
+	call->start_time = time(NULL);
 	GVariantIter *info_iter;
 	char *path;
 

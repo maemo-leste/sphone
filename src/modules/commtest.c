@@ -75,6 +75,7 @@ static gboolean mock_incomeing_call(void *data)
 	call->backend = id;
 	call->needs_route = true;
 	call->state = SPHONE_CALL_INCOMING;
+	call->start_time = time(NULL);
 	calls = g_slist_prepend(calls ,call);
 	execute_datapipe(&call_new_pipe, call);
 	return false;
