@@ -1,3 +1,12 @@
+sphone (0.6.4) unstable; urgency=medium
+
+  * Call gui enhancements
+  * Fix storeing of wrong time when a call is missed
+  * Fix usage of rtcom-el fields
+  * Fix some typos
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Tue, 25 Aug 2022 13:29:37 +0100
+
 sphone (0.6.3) unstable; urgency=medium
 
   * Implement pulseaudio output routing
