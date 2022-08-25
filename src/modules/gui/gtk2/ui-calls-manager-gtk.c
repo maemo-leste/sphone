@@ -57,6 +57,7 @@ struct {
 	GtkWidget *mute_button;
 	GtkWidget *speaker_button;
 	GtkWidget *handset_button;
+	guint end_call_timer;
 } g_calls_manager;
 
 enum{
@@ -148,10 +149,6 @@ static void gui_calls_call_status_callback(gconstpointer data, void *object)
 		if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter))
 			return;
 		CallProperties *icall = gui_calls_find_call(call, &iter);
-		if(icall && !call->awnserd){
-			//TODO: replace notification_add("missed_call.png",gui_history_calls);
-			sphone_log(LL_DEBUG, "%s: call ended unwanserd %s", __func__, call->line_identifier);
-		}
 		gui_calls_utils_delete_call(call);
 	} else {
 		gui_calls_utils_update_call(call);
@@ -243,6 +240,12 @@ static void gui_calls_double_click_callback(void)
 	g_value_unset(&value);
 }
 
+int gui_calls_close_window(void* data)
+{
+	gtk_widget_hide(g_calls_manager.main_window);
+	return FALSE;
+}
+
 static void gui_calls_utils_delete_call(const CallProperties *call)
 {
 	GtkTreeIter iter;
@@ -259,7 +262,8 @@ static void gui_calls_utils_delete_call(const CallProperties *call)
 
 	// Hide the window if no active calls
 	if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter)) {
-		gtk_widget_hide(g_calls_manager.main_window);
+		if(g_calls_manager.end_call_timer == 0)
+			g_calls_manager.end_call_timer = g_timeout_add_seconds(5, gui_calls_close_window, NULL);
 	}
 	else {
 		GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter);
@@ -293,6 +297,11 @@ static void gui_calls_utils_add_call(const CallProperties *call)
 	GtkTreeIter iter;
 	gchar *desc;
 	GdkPixbuf *photo = NULL;
+
+	if(g_calls_manager.end_call_timer != 0) {
+		g_source_remove(g_calls_manager.end_call_timer);
+		g_calls_manager.end_call_timer = 0;
+	}
 
 	if(call->contact && call->contact->name) {
 		desc = g_strdup_printf("%s\n%s",call->contact->name, call->line_identifier);
@@ -386,6 +395,12 @@ static void gui_calls_hangup_callback(void)
 	} else {
 		sphone_module_log(LL_DEBUG, "%s: hangup call %p from %s", __func__, call, call->line_identifier);
 		execute_datapipe(&call_hangup_pipe, call);
+		if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter) ||
+			!gtk_tree_model_iter_next(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter)) {
+			g_source_remove(g_calls_manager.end_call_timer);
+			g_calls_manager.end_call_timer = 0;
+			gui_calls_close_window(NULL);
+		}
 	}
 
 	g_value_unset(&value);
@@ -395,7 +410,11 @@ G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
+#ifdef ENABLE_LIBHILDON
+	g_calls_manager.main_window = hildon_stackable_window_new();
+#else
 	g_calls_manager.main_window=gtk_window_new(GTK_WINDOW_TOPLEVEL);
+#endif
 	gtk_window_set_title(GTK_WINDOW(g_calls_manager.main_window),"Active Calls");
 	gtk_window_set_deletable(GTK_WINDOW(g_calls_manager.main_window),FALSE);
 	gtk_window_set_default_size(GTK_WINDOW(g_calls_manager.main_window),400,220);

@@ -121,7 +121,6 @@ static void gui_call_callback(GtkButton button)
 		call_properties_free(call);
 
 		gtk_entry_set_text(GTK_ENTRY(g_gui_calls.display), "");
-		gtk_widget_hide(g_gui_calls.main_window);
 	}
 }
 
