@@ -1,3 +1,9 @@
+sphone (0.6.5) unstable; urgency=medium
+
+  * Fix sms-new contacts button not working
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Tue, 1 Sep 2022 13:29:37 +0100
+
 sphone (0.6.4) unstable; urgency=medium
 
   * Call gui enhancements
