@@ -563,7 +563,7 @@ static void call_dial_trigger(gconstpointer data, gpointer user_data)
 
 		if(gerror) {
 			error_dbus(gerror);
-			gchar message[] = "Unable to transmit dial number via ofono";
+			gchar message[] = "Unable to transmit or dial number via ofono";
 			execute_datapipe(&call_backend_error_pipe, message);
 			return;
 		}
