@@ -211,7 +211,7 @@ static void gui_options_play_callback(GtkButton *button, GtkFileChooser *chooser
 G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
-	*data = GINT_TO_POINTER(gui_register(NULL, NULL, gtk_gui_options_open, NULL, NULL));
+	*data = GINT_TO_POINTER(gui_register(NULL, NULL, gtk_gui_options_open, NULL, NULL, NULL, NULL));
 	return NULL;
 }
 

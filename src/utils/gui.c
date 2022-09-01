@@ -26,6 +26,8 @@ struct Ui {
 	bool (*options_open)(void);
 	bool (*history_sms)(void);
 	bool (*contact_shown)(const Contact *contact);
+	void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data);
+	void (*close_contact_diag)(void);
 	int id;
 };
 
@@ -46,6 +48,32 @@ bool gui_contact_shown(const Contact *contact)
 		return false;
 	}
 	return true;
+}
+
+void gui_contact_show(const Contact *contact, void (*callback)(Contact*, void*), void *user_data)
+{
+	for(GSList *element = uis; element; element = element->next) {
+		struct Ui *ui = element->data;
+		if(ui->contact_show) {
+			ui->contact_show(contact, callback, user_data);
+			return;
+		}
+	}
+	sphone_log(LL_WARN, "No backend for %s", __func__);
+}
+
+void gui_close_contact_diag(void)
+{
+	bool backend_avail = false;
+	for(GSList *element = uis; element; element = element->next) {
+		struct Ui *ui = element->data;
+		if(ui->close_contact_diag) {
+			ui->close_contact_diag();
+			backend_avail = true;
+		}
+	}
+	if(!backend_avail)
+		sphone_log(LL_WARN, "No backend for %s", __func__);
 }
 
 bool gui_dialer_show(const CallProperties* call)
@@ -112,7 +140,9 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 			 bool (*sms_send_show)(const MessageProperties* call),
 			 bool (*options_open)(void),
 			 bool (*history_sms)(void),
-			 bool (*contact_shown)(const Contact *contact))
+			 bool (*contact_shown)(const Contact *contact),
+			 void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data),
+			 void (*close_contact_diag)(void))
 {
 	static int id_counter = 0;
 	struct Ui *ui = g_malloc(sizeof(*ui));
@@ -123,6 +153,8 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 	ui->options_open = options_open;
 	ui->history_sms = history_sms;
 	ui->contact_shown = contact_shown;
+	ui->contact_show = contact_show;
+	ui->close_contact_diag = close_contact_diag;
 	
 	uis = g_slist_prepend(uis, ui);
 	return id_counter-1;

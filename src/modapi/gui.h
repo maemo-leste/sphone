@@ -35,11 +35,17 @@ bool gui_history_sms(void);
 
 bool gui_contact_shown(const Contact *contact);
 
+void gui_contact_show(const Contact *contact, void (*callback)(Contact*, void*), void *user_data);
+
+void gui_close_contact_diag(void);
+
 int gui_register(bool (*dialer_show)(const CallProperties* call),
 			 bool (*sms_send_show)(const MessageProperties* call),
 			 bool (*options_open)(void),
 			 bool (*history_sms)(void),
-			 bool (*contact_shown)(const Contact *contact));
+			 bool (*contact_shown)(const Contact *contact),
+			 void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data),
+			 void (*close_contact_diag)(void));
 
 void gui_remove(int id);
 

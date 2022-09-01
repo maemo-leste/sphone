@@ -104,6 +104,7 @@ static void new_message_trigger(const void* data, void *user_data)
 
 static void remove_thread_view(GtkWidget *widget, gpointer data)
 {
+	(void)widget;
 	GtkWidget *text_view = GTK_WIDGET(data);
 	const Contact *watch_contact = g_object_get_data(G_OBJECT(text_view), "contact");
 	shown_contacts = g_slist_remove(shown_contacts, watch_contact);
@@ -217,7 +218,7 @@ const gchar *sphone_module_init(void** data)
 #ifdef ENABLE_LIBHILDON
 	hildon_init();
 #endif
-	gui_id = gui_register(NULL, NULL, NULL, gtk_gui_msg_threads, gtk_gui_contact_shown);
+	gui_id = gui_register(NULL, NULL, NULL, gtk_gui_msg_threads, gtk_gui_contact_shown, NULL, NULL);
 	return NULL;
 }
 

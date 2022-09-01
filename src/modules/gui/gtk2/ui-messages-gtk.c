@@ -116,9 +116,24 @@ static GtkWidget *gui_sms_create_backend_combo(void)
 }
 #endif
 
-static void gui_sms_contacts_callback(void)
+static void gui_sms_contact_show_callback(Contact* contact, void* user_data)
 {
-	execute_datapipe(&contact_show_pipe, NULL);
+	if(contact)
+		gtk_entry_set_text(GTK_ENTRY(user_data), contact->line_identifier);
+}
+
+static void gui_sms_contacts_callback(GtkWidget *button, GtkWidget *to_entry)
+{
+	(void)button;
+	gui_contact_show(NULL, gui_sms_contact_show_callback, to_entry);
+}
+
+static int gui_sms_send_close(GtkWidget *w)
+{
+	(void)w;
+	gui_close_contact_diag();
+
+	return FALSE;
 }
 
 static bool gtk_gui_sms_send_show(const MessageProperties *msg)
@@ -131,7 +146,7 @@ static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	GtkWidget *send_button = gtk_button_new_with_label("Send");
 	GtkWidget *cancel_button = gtk_button_new_with_label("Cancel");
 	GtkWidget *contacts_button = gtk_button_new_with_label("Contacts");
-	GtkWidget *text_edit=gtk_text_view_new();
+	GtkWidget *text_edit = gtk_text_view_new();
 	GtkWidget *s = gtk_scrolled_window_new (NULL, NULL);
 	gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (s),
 		       GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
@@ -188,8 +203,9 @@ static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	gtk_widget_show_all(main_window);
 	
 	g_signal_connect(G_OBJECT(send_button),"clicked", G_CALLBACK(gui_sms_send_callback), main_window);
-	g_signal_connect(G_OBJECT(contacts_button),"clicked", G_CALLBACK(gui_sms_contacts_callback), main_window);
+	g_signal_connect(G_OBJECT(contacts_button),"clicked", G_CALLBACK(gui_sms_contacts_callback), to_entry);
 	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_sms_cancel_callback), main_window);
+	g_signal_connect(G_OBJECT(main_window), "delete-event", G_CALLBACK(gui_sms_send_close),NULL);
 	return true;
 }
 
@@ -247,15 +263,13 @@ static void gui_sms_receive_show(const MessageProperties *message)
 	gtk_widget_show_all(main_window);
 
 	MessageProperties *message_copy = message_properties_copy(message);
-	
-	sphone_module_log(LL_DEBUG, "%s %p", __func__, message_copy);
 
 	g_object_set_data_full(G_OBJECT(send_button), "message-proparties",
 						   message_copy, (void (*)(void *))message_properties_free);
 	
-	g_signal_connect(G_OBJECT(from_entry),"clicked", G_CALLBACK(gui_sms_open_contact_callback),NULL);
-	g_signal_connect(G_OBJECT(send_button),"clicked", G_CALLBACK(gui_sms_reply_callback),NULL);
-	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_sms_cancel_callback),main_window);
+	g_signal_connect(G_OBJECT(from_entry), "clicked", G_CALLBACK(gui_sms_open_contact_callback), NULL);
+	g_signal_connect(G_OBJECT(send_button), "clicked", G_CALLBACK(gui_sms_reply_callback), NULL);
+	g_signal_connect(G_OBJECT(cancel_button), "clicked", G_CALLBACK(gui_sms_cancel_callback), main_window);
 	
 	g_free(time_str);
 	g_free(desc);
@@ -322,7 +336,7 @@ const gchar *sphone_module_init(void** data)
 	hildon_init();
 #endif
 	append_trigger_to_datapipe(&message_received_pipe, gui_sms_incoming_callback, NULL);
-	gui_id = gui_register(NULL, gtk_gui_sms_send_show, NULL, NULL, NULL);
+	gui_id = gui_register(NULL, gtk_gui_sms_send_show, NULL, NULL, NULL, NULL, NULL);
 	return NULL;
 }
 

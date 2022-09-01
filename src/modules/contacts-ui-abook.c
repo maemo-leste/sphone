@@ -38,7 +38,10 @@ static const gchar *const provides[] = { "contacts-ui", NULL };
 struct UiAbookPriv
 {
 	GtkWidget *chooser;
-};
+	void (*callback)(Contact*, void*);
+	void *user_data;
+	int ui_id;
+} abook_priv;
 
 /** Module information */
 G_MODULE_EXPORT module_info_struct module_info = {
@@ -52,84 +55,102 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 static void contact_dialog_reponse_cb(GtkDialog *dialog, int response_id, void *data)
 {
+	(void)data;
 	(void)dialog;
 	(void)response_id;
 
-	struct UiAbookPriv *priv = data;
 	GList *selection =
-		osso_abook_contact_chooser_get_selection(OSSO_ABOOK_CONTACT_CHOOSER(priv->chooser));
+		osso_abook_contact_chooser_get_selection(OSSO_ABOOK_CONTACT_CHOOSER(abook_priv.chooser));
 		
-	gtk_widget_destroy(priv->chooser);
-	priv->chooser = NULL;
+	gtk_widget_destroy(abook_priv.chooser);
+	abook_priv.chooser = NULL;
 		
 	if (selection) {
-		OssoABookContact *contact = selection->data;
+		OssoABookContact *acontact = selection->data;
 		OssoABookContactDetailSelector *detailDiag = 
 		(OssoABookContactDetailSelector*)osso_abook_contact_detail_selector_new_for_contact(
-			NULL, contact, OSSO_ABOOK_CONTACT_DETAIL_PHONE | OSSO_ABOOK_CONTACT_DETAIL_IM_VOICE);
+			NULL, acontact, OSSO_ABOOK_CONTACT_DETAIL_PHONE | OSSO_ABOOK_CONTACT_DETAIL_IM_VOICE);
 		gtk_dialog_run(GTK_DIALOG(detailDiag));
 		
 		EVCardAttribute *attribute = osso_abook_contact_detail_selector_get_detail(detailDiag);
 		
-		if(!attribute)
+		if(!attribute) {
+			abook_priv.callback = NULL;
 			return;
+		}
 
 		{
-			CallProperties callProp = {};
-			Contact callContact = {};
+			Contact contact = {};
 
-			callContact.name = osso_abook_contact_get_display_name(contact);
-			//callContact.photo = osso_abook_contact_get_photo(contact);
-			g_object_ref(G_OBJECT(callContact.photo));
-			callProp.backend = sphone_comm_default_backend()->id; //TODO: select poper backend
-			callProp.line_identifier = e_vcard_attribute_get_value(attribute);
-			callContact.line_identifier = callProp.line_identifier;
+			contact.name = (char*)osso_abook_contact_get_display_name(acontact);
+			//callContact.photo = osso_abook_contact_get_photo(acontact);
+			//g_object_ref(G_OBJECT(callContact.photo));
+			contact.line_identifier = e_vcard_attribute_get_value(attribute);
 
-			gui_dialer_show(&callProp);
+			if(abook_priv.callback)
+				abook_priv.callback(&contact, abook_priv.user_data);
 
 			g_list_free(selection);
 			gtk_widget_destroy(GTK_WIDGET(detailDiag));
 		}
 	}
+
+	abook_priv.callback = NULL;
 }
 
-static void contact_show_trigger(const void *data, void *user_data)
+static void abook_dialog_close(void)
 {
-	struct UiAbookPriv *priv = user_data;
-	(void)data;
+	if (abook_priv.chooser) {
+		gtk_widget_destroy(abook_priv.chooser);
+		abook_priv.callback = NULL;
+	}
+}
 
-	if(!priv->chooser) {
-		priv->chooser = osso_abook_contact_chooser_new_with_capabilities(NULL, "Choose contact",
+
+static void abook_contact_show(const Contact *contact, void (*callback)(Contact*, void*), void *user_data)
+{
+	(void)contact; //TODO show specific contact
+
+	if(abook_priv.callback) {
+		sphone_module_log(LL_WARN, "Only one dialog can be shown at a time");
+		return;
+	}
+
+	abook_priv.callback = callback;
+	abook_priv.user_data = user_data;
+
+	if(!abook_priv.chooser) {
+		abook_priv.chooser = osso_abook_contact_chooser_new_with_capabilities(NULL, "Choose contact",
 		                                                                 OSSO_ABOOK_CAPS_PHONE |
 		                                                                 OSSO_ABOOK_CAPS_VOICE,
 		                                                                 OSSO_ABOOK_CONTACT_ORDER_NAME);
-		osso_abook_contact_chooser_set_maximum_selection(OSSO_ABOOK_CONTACT_CHOOSER(priv->chooser), 1);
-		osso_abook_contact_chooser_set_minimum_selection(OSSO_ABOOK_CONTACT_CHOOSER(priv->chooser), 1);
-		g_signal_connect(G_OBJECT(priv->chooser), "response", G_CALLBACK(contact_dialog_reponse_cb), priv);
+		osso_abook_contact_chooser_set_maximum_selection(OSSO_ABOOK_CONTACT_CHOOSER(abook_priv.chooser), 1);
+		osso_abook_contact_chooser_set_minimum_selection(OSSO_ABOOK_CONTACT_CHOOSER(abook_priv.chooser), 1);
+		g_signal_connect(G_OBJECT(abook_priv.chooser), "response", G_CALLBACK(contact_dialog_reponse_cb), NULL);
 	}
 
-	gtk_widget_show_all(priv->chooser);
+	gtk_widget_show_all(abook_priv.chooser);
 }
 
 G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
-	struct UiAbookPriv *priv = g_malloc0(sizeof(*priv));
-	*data = priv;
 
 	hildon_init();
 	osso_abook_init_with_name("sphone", NULL);
 
-	append_trigger_to_datapipe(&contact_show_pipe, contact_show_trigger, priv);
+	abook_priv.ui_id = gui_register(NULL, NULL, NULL, NULL, NULL, abook_contact_show, abook_dialog_close);
+
 	return NULL;
 }
 
 G_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
-	struct UiAbookPriv *priv = data;
-	if(priv->chooser)
-		gtk_widget_destroy(priv->chooser);
-	remove_trigger_from_datapipe(&contact_show_pipe, contact_show_trigger, data);
+	(void)data;
+	gui_remove(abook_priv.ui_id);
+	abook_dialog_close();
+	if(abook_priv.chooser)
+		gtk_widget_destroy(abook_priv.chooser);
 }

@@ -77,9 +77,6 @@ extern datapipe_struct contact_fill_pipe;
 //input: NotificationProperties
 extern datapipe_struct notification_raise_pipe;
 
-//input: Contact or NULL
-extern datapipe_struct contact_show_pipe;
-
 void datapipes_init(void);
 void datapipes_exit(void);
 

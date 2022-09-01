@@ -22,6 +22,7 @@
 
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon-gtk.h>
+#include <hildon/hildon-stackable-window.h>
 #endif
 
 #include "sphone-log.h"
@@ -29,6 +30,7 @@
 #include "types.h"
 #include "sphone-modules.h"
 #include "gui.h"
+#include "comm.h"
 
 /** Module name */
 #define MODULE_NAME		"ui-calls-manager-gtk"
@@ -148,7 +150,6 @@ static void gui_calls_call_status_callback(gconstpointer data, void *object)
 	if(call->state == SPHONE_CALL_DISCONNECTED) {
 		if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter))
 			return;
-		CallProperties *icall = gui_calls_find_call(call, &iter);
 		gui_calls_utils_delete_call(call);
 	} else {
 		gui_calls_utils_update_call(call);
@@ -222,6 +223,16 @@ static void gui_calls_select_callback(void)
 	                         
 }
 
+static void gui_calls_contact_show_callback(Contact* contact, void* user_data)
+{
+	(void)user_data;
+	CallProperties call = {};
+	call.contact = contact;
+	call.line_identifier = contact->line_identifier;
+	call.backend = sphone_comm_default_backend()->id;
+	gui_dialer_show(&call);
+}
+
 static void gui_calls_double_click_callback(void)
 {
 	sphone_log(LL_DEBUG, "%s", __func__);
@@ -235,13 +246,14 @@ static void gui_calls_double_click_callback(void)
 	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
 
 	if(call->contact)
-		execute_datapipe(&contact_show_pipe, call->contact);
+		gui_contact_show(call->contact, gui_calls_contact_show_callback, NULL);
 	
 	g_value_unset(&value);
 }
 
-int gui_calls_close_window(void* data)
+static int gui_calls_close_window(void* data)
 {
+	(void)data;
 	gtk_widget_hide(g_calls_manager.main_window);
 	return FALSE;
 }
