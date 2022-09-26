@@ -46,7 +46,7 @@ static void new_call_trigger(gconstpointer data, gpointer user_data)
 	(void)user_data;
 	const CallProperties *call = data;
 	if(call->state == SPHONE_CALL_INCOMING) {
-		char *command = sphone_conf_get_string("ExternalExec", "IncomeingCall", NULL, NULL);
+		char *command = sphone_conf_get_string("ExternalExec", "IncomingCall", NULL, NULL);
 		if(command) {
 			char *argv[] = {command, call->line_identifier, sphone_comm_get_backend(call->backend)->name, NULL};
 			g_spawn_async(NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL);
@@ -63,7 +63,7 @@ static void call_properties_changed_trigger(gconstpointer data, gpointer user_da
 	if(call->state == SPHONE_CALL_DIALING)
 		command = sphone_conf_get_string("ExternalExec", "OutgoingCall", NULL, NULL);
 	else if(call->state == SPHONE_CALL_ACTIVE)
-		command = sphone_conf_get_string("ExternalExec", "CallAwnserd", NULL, NULL);
+		command = sphone_conf_get_string("ExternalExec", "CallAnswered", NULL, NULL);
 	else if(call->state == SPHONE_CALL_DISCONNECTED && !call->awnserd)
 		command = sphone_conf_get_string("ExternalExec", "CallMissed", NULL, NULL);
 
@@ -90,7 +90,7 @@ static void message_received_trigger(gconstpointer data, gpointer user_data)
 {
 	(void)user_data;
 	const MessageProperties *msg = data;
-	char *command = sphone_conf_get_string("ExternalExec", "MessageRecived", NULL, NULL);
+	char *command = sphone_conf_get_string("ExternalExec", "MessageReceived", NULL, NULL);
 	if(command) {
 		char *argv[] = {command, msg->line_identifier, msg->text, sphone_comm_get_backend(msg->backend)->name, NULL};
 		g_spawn_async(NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL);
