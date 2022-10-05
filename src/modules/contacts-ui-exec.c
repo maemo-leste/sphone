@@ -22,6 +22,8 @@
 #include "sphone-conf.h"
 #include "datapipes.h"
 #include "datapipe.h"
+#include "gui.h"
+#include "types.h"
 
 /** Module name */
 #define MODULE_NAME		"contacts-ui-exec"
@@ -41,7 +43,7 @@ G_MODULE_EXPORT module_info_struct module_info = {
 
 int gui_id;
 
-static void contact_show_trigger(const void *data, void *user_data)
+static void contact_show_trigger(const Contact *data, void (*callback)(Contact*, void*), void *user_data)
 {
 	(void)data;
 	(void)user_data;
