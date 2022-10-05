@@ -64,7 +64,7 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 
 	RTCOM_EL_EVENT_SET_FIELD(ev, service, g_strdup("RTCOM_EL_SERVICE_CALL"));
 
-	if(!call->awnserd) {
+	if(!call->awnserd && !call->outbound) {
 		RTCOM_EL_EVENT_SET_FIELD(ev, event_type,  g_strdup("RTCOM_EL_EVENTTYPE_CALL_MISSED"));
 	} else {
 		RTCOM_EL_EVENT_SET_FIELD(ev, event_type,  g_strdup("RTCOM_EL_EVENTTYPE_CALL"));

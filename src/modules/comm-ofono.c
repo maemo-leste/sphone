@@ -83,7 +83,7 @@ static GDBusConnection *get_dbus_connection(void)
 	addr = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
 	if (addr == NULL) {
 		sphone_module_log(LL_ERR, "failed to get dbus addr: %s", error->message);
-		g_free(error);
+		g_error_free(error);
 		return NULL;
 	}
 
@@ -94,7 +94,7 @@ static GDBusConnection *get_dbus_connection(void)
 
 	if (s_bus_conn == NULL) {
 		sphone_module_log(LL_ERR, "failed to create dbus connection: %s", error->message);
-		g_free(error);
+		g_error_free(error);
 	}
 
 	return s_bus_conn;
@@ -399,12 +399,7 @@ static void call_added_cb(GDBusConnection *connection,
 	sphone_module_log(LL_DEBUG, "%s: %s", __func__, path);
 	ofono_voice_call_decode_properties(call, info_iter, path);
 	
-	if(call->state != SPHONE_CALL_INCOMING) {
-		call->awnserd = true;
-		call->outbound = false;
-	} else {
-		call->outbound = true;
-	}
+	call->outbound = call->state != SPHONE_CALL_INCOMING;
 	
 	ofono_voice_call_properties_add_handler(priv, path);
 
