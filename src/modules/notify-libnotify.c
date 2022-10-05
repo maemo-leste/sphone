@@ -23,7 +23,7 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 250
 };
 
-static void notificaion_closed_cb(NotifyNotification *notification, gpointer user_data)
+static void notification_closed_cb(NotifyNotification *notification, gpointer user_data)
 {
 	(void)user_data;
 	int reason = notify_notification_get_closed_reason(notification);
@@ -72,7 +72,7 @@ static void message_received_trigger(gconstpointer data, gpointer user_data)
 	notify_notification_add_action(notification, "default", "Reply", notificaion_reply_cb, NULL, NULL);
 	g_object_set_data_full(G_OBJECT(notification), "message-proparties",
 						   message_copy, (void (*)(void *))message_properties_free);
-	g_signal_connect(G_OBJECT(notification), "closed", G_CALLBACK(notificaion_closed_cb), NULL);
+	g_signal_connect(G_OBJECT(notification), "closed", G_CALLBACK(notification_closed_cb), NULL);
 
 	GError *error = NULL;
 	if(!notify_notification_show(notification, &error)) {
