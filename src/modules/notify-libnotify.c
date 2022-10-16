@@ -56,7 +56,7 @@ static void message_received_trigger(gconstpointer data, gpointer user_data)
 		contact = contact_copy(message->contact);
 	} else {
 		contact = g_malloc0(sizeof(*contact));
-		contact->line_identifier = message->line_identifier;
+		contact->line_identifier = g_strdup(message->line_identifier);
 		contact->backend = message->backend;
 	}
 
@@ -67,9 +67,11 @@ static void message_received_trigger(gconstpointer data, gpointer user_data)
 
 	MessageProperties *message_copy = message_properties_copy(message);
 	NotifyNotification *notification =
-		notify_notification_new(contact->name ? contact->name : contact->line_identifier, message_copy->text, NULL);
+		notify_notification_new(contact->name ? contact->name : contact->line_identifier, message_copy->text, "tasklaunch_sms_chat");
 	notify_notification_set_category(notification, "im.received");
 	notify_notification_add_action(notification, "default", "Reply", notificaion_reply_cb, NULL, NULL);
+	notify_notification_set_hint_string(notification, "LED-Pattern", "PatternCommunicationSMS");
+	notify_notification_set_hint_string(notification, "Group", "_grouped_messages");
 	g_object_set_data_full(G_OBJECT(notification), "message-proparties",
 						   message_copy, (void (*)(void *))message_properties_free);
 	g_signal_connect(G_OBJECT(notification), "closed", G_CALLBACK(notification_closed_cb), NULL);
@@ -110,12 +112,14 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 	CallProperties *call_copy = call_properties_copy(call);
 
 	NotifyNotification *notification =
-		notify_notification_new("Missed call", (call->contact && call->contact->name) ? call->contact->name : call->line_identifier, NULL);
+		notify_notification_new("Missed call", (call->contact && call->contact->name) ? call->contact->name : call->line_identifier, "general_missed");
 	notify_notification_set_category(notification, "im");
 	notify_notification_add_action(notification, "default", "Call Back", notificaion_call_back_cb, NULL, NULL);
+	notify_notification_set_hint_string(notification, "LED-Pattern", "PatternCommunicationCall");
+	notify_notification_set_hint_string(notification, "Group", "_grouped_missed");
 	g_object_set_data_full(G_OBJECT(notification), "call-proparties",
 						   call_copy, (void (*)(void *))call_properties_free);
-	g_signal_connect(G_OBJECT(notification), "closed", G_CALLBACK(notificaion_closed_cb), NULL);
+	g_signal_connect(G_OBJECT(notification), "closed", G_CALLBACK(notification_closed_cb), NULL);
 
 	GError *error = NULL;
 	if(!notify_notification_show(notification, &error)) {
