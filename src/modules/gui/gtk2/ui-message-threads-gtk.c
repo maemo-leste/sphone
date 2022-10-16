@@ -61,7 +61,7 @@ static int gui_id;
 static bool gtk_gui_contact_shown(const Contact *contact)
 {
 	for(GSList *element = shown_contacts; element; element = element->next) {
-		Contact *icontact = element->data;
+		const Contact *icontact = element->data;
 		if(contact_cmp(contact, icontact))
 			return true;
 	}
@@ -82,7 +82,7 @@ static void new_message_trigger(const void* data, void *user_data)
 	const MessageProperties *msg = data;
 	const Contact *watch_contact = g_object_get_data(G_OBJECT(text), "contact");
 	if(watch_contact->backend == msg->backend &&
-	   g_strcmp0(watch_contact->line_identifier, msg->line_identifier) == 0) {
+		g_strcmp0(watch_contact->line_identifier, msg->line_identifier) == 0) {
 		GString *string = g_string_new(NULL);
 		char *time = gtk_gui_time_to_new_string(msg->time);
 		const char *name;

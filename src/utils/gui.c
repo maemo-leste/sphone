@@ -35,11 +35,13 @@ static GSList *uis;
 
 bool gui_contact_shown(const Contact *contact)
 {
+	if(!contact)
+		return false;
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->contact_shown && !ui->contact_shown(contact))
-			return false;
+		if(ui->contact_shown && ui->contact_shown(contact))
+			return true;
 		else if(ui->contact_shown)
 			backend_avail = true;
 	}
@@ -47,7 +49,7 @@ bool gui_contact_shown(const Contact *contact)
 		sphone_log(LL_WARN, "No backend for %s", __func__);
 		return false;
 	}
-	return true;
+	return false;
 }
 
 void gui_contact_show(const Contact *contact, void (*callback)(Contact*, void*), void *user_data)
