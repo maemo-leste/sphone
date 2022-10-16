@@ -1,3 +1,12 @@
+sphone (0.6.6) unstable; urgency=medium
+
+  * gui: gtk: Make message recived window its own module
+  * add libnotify support module
+  * notify-libnotify: add some hildon specific hints
+  * gui: fix gui_contact_shown behavior when more than one module registers to serve this function
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 16 Oct 20:52:32  +0100
+
 sphone (0.6.5) unstable; urgency=medium
 
   * Fix sms-new contacts button not working
