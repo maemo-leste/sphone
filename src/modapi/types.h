@@ -127,6 +127,9 @@ struct str_list {
   int count;
 };
 
+const Contact *contact_from_message(const MessageProperties *msg);
+const Contact *contact_from_call(const CallProperties *call);
+
 #ifdef __cplusplus
 }
 #endif

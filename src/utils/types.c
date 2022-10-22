@@ -88,6 +88,22 @@ void contact_print(const Contact *contact, const char *module_name)
 	}
 }
 
+const Contact *contact_from_message(const MessageProperties *msg)
+{
+	static Contact contact = {0};
+	contact.line_identifier = msg->line_identifier;
+	contact.backend = msg->backend;
+	return &contact;
+}
+
+const Contact *contact_from_call(const CallProperties *call)
+{
+	static Contact contact = {0};
+	contact.line_identifier = call->line_identifier;
+	contact.backend = call->backend;
+	return &contact;
+}
+
 void call_properties_free(CallProperties *properties)
 {
 	if(!properties)

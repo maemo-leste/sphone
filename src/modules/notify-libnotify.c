@@ -41,9 +41,14 @@ static void notificaion_reply_cb(NotifyNotification *notification, char *action,
 	sphone_module_log(LL_DEBUG, "action %s in %s", action, __func__);
 
 	MessageProperties *msg = g_object_get_data(G_OBJECT(notification), "message-proparties");
+	Contact *contact;
+	if(msg->contact)
+		gui_show_thread_for_contact(msg->contact);
+	else
+		gui_show_thread_for_contact(contact_from_message(msg));
+
 	g_free(msg->text);
 	msg->text = NULL;
-	gui_sms_send_show(msg);
 }
 
 static void message_received_trigger(gconstpointer data, gpointer user_data)
@@ -95,8 +100,7 @@ static void notificaion_call_back_cb(NotifyNotification *notification, char *act
 
 	sphone_module_log(LL_DEBUG, "action %s in %s", action, __func__);
 
-	CallProperties *call = g_object_get_data(G_OBJECT(notification), "call-proparties");
-	gui_dialer_show(call);
+	gui_history_calls();
 }
 
 static void call_properties_changed_trigger(const void *data, void *user_data)
