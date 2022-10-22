@@ -1,3 +1,12 @@
+sphone (0.6.7) unstable; urgency=medium
+
+  * notify-libnotify: show thread instead of sms-new when reply is clicked
+  * gui: add more functions to handle jumping to message threads and call history
+  * storage: make paramters const that can be
+  * qtloop: fix obvious boolaean inversion _again_
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 23 Oct 00:40:32  +0100
+
 sphone (0.6.6) unstable; urgency=medium
 
   * gui: gtk: Make message recived window its own module
