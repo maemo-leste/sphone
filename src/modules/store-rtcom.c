@@ -151,7 +151,7 @@ static void message_send_trigger(const void *data, void *user_data)
 	rtcom_el_event_free(ev);
 }
 
-static MessageProperties *convert_to_message_properties(RTComElIter *iter, Contact *contact)
+static MessageProperties *convert_to_message_properties(RTComElIter *iter, const Contact *contact)
 {
 	char *line_identifier;
 	char *local_uid;
@@ -195,7 +195,7 @@ static MessageProperties *convert_to_message_properties(RTComElIter *iter, Conta
 	return msg;
 }
 
-static GList *get_messages_for_contact(Contact *contact)
+static GList *get_messages_for_contact(const Contact *contact)
 {
 	if(!evlog)
 		return NULL;
@@ -263,7 +263,7 @@ static GList *get_messages_for_contact(Contact *contact)
 	return messages;
 }
 
-static GList *get_calls_for_contact(Contact *contact)
+static GList *get_calls_for_contact(const Contact *contact)
 {
 	if(!evlog)
 		return 0;

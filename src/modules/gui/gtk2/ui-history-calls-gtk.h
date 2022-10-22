@@ -19,4 +19,4 @@
 
 #include <glib.h>
 
-gint gui_history_calls(void);
+void gtk_gui_history_calls(void);

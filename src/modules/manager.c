@@ -141,7 +141,7 @@ static void message_received_trigger(const void *data, void *user_data)
 	Contact contact = {0};
 	contact.line_identifier = msg->line_identifier;
 	contact.backend = msg->backend;
-	if(gui_contact_shown(&contact))
+	if(gui_contact_thread_shown(&contact))
 		return;
 
 	bool playing = false;

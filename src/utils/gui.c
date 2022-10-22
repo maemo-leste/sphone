@@ -25,7 +25,9 @@ struct Ui {
 	bool (*sms_send_show)(const MessageProperties* call);
 	bool (*options_open)(void);
 	bool (*history_sms)(void);
-	bool (*contact_shown)(const Contact *contact);
+	bool (*contact_thread_shown)(const Contact *contact);
+	void (*show_thread_for_contact)(const Contact *contact);
+	void (*history_calls)(void);
 	void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data);
 	void (*close_contact_diag)(void);
 	int id;
@@ -33,16 +35,16 @@ struct Ui {
 
 static GSList *uis;
 
-bool gui_contact_shown(const Contact *contact)
+bool gui_contact_thread_shown(const Contact *contact)
 {
 	if(!contact)
 		return false;
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->contact_shown && ui->contact_shown(contact))
+		if(ui->contact_thread_shown && ui->contact_thread_shown(contact))
 			return true;
-		else if(ui->contact_shown)
+		else if(ui->contact_thread_shown)
 			backend_avail = true;
 	}
 	if(!backend_avail) {
@@ -50,6 +52,40 @@ bool gui_contact_shown(const Contact *contact)
 		return false;
 	}
 	return false;
+}
+
+void gui_show_thread_for_contact(const Contact *contact)
+{
+	if(!contact)
+		return;
+	bool backend_avail = false;
+	for(GSList *element = uis; element; element = element->next) {
+		struct Ui *ui = element->data;
+		if(ui->show_thread_for_contact) {
+			ui->show_thread_for_contact(contact);
+			backend_avail = true;
+			break;
+		}
+	}
+	if(!backend_avail) {
+		sphone_log(LL_WARN, "No backend for %s", __func__);
+	}
+}
+
+void gui_history_calls(void)
+{
+	bool backend_avail = false;
+	for(GSList *element = uis; element; element = element->next) {
+		struct Ui *ui = element->data;
+		if(ui->history_calls) {
+			ui->history_calls();
+			backend_avail = true;
+			break;
+		}
+	}
+	if(!backend_avail) {
+		sphone_log(LL_WARN, "No backend for %s", __func__);
+	}
 }
 
 void gui_contact_show(const Contact *contact, void (*callback)(Contact*, void*), void *user_data)
@@ -142,7 +178,9 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 			 bool (*sms_send_show)(const MessageProperties* call),
 			 bool (*options_open)(void),
 			 bool (*history_sms)(void),
-			 bool (*contact_shown)(const Contact *contact),
+			 bool (*contact_thread_shown)(const Contact *contact),
+			 void (*show_thread_for_contact)(const Contact *contact),
+			 void (*history_calls)(void),
 			 void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data),
 			 void (*close_contact_diag)(void))
 {
@@ -154,7 +192,9 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 	ui->sms_send_show = sms_send_show;
 	ui->options_open = options_open;
 	ui->history_sms = history_sms;
-	ui->contact_shown = contact_shown;
+	ui->contact_thread_shown = contact_thread_shown;
+	ui->show_thread_for_contact = show_thread_for_contact;
+	ui->history_calls = history_calls;
 	ui->contact_show = contact_show;
 	ui->close_contact_diag = close_contact_diag;
 	

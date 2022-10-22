@@ -240,7 +240,7 @@ const gchar *sphone_module_init(void** data)
 #ifdef ENABLE_LIBHILDON
 	hildon_init();
 #endif
-	gui_id = gui_register(NULL, gtk_gui_sms_send_show, NULL, NULL, NULL, NULL, NULL);
+	gui_id = gui_register(NULL, gtk_gui_sms_send_show, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 	return NULL;
 }
 

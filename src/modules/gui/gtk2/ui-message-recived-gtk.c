@@ -41,7 +41,7 @@ static void gui_sms_incoming_callback(gconstpointer data, gpointer user_data)
 	Contact contact = {0};
 	contact.line_identifier = message->line_identifier;
 	contact.backend = message->backend;
-	if(gui_contact_shown(&contact))
+	if(gui_contact_thread_shown(&contact))
 		return;
 
 	gui_sms_receive_show(message);

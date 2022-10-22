@@ -20,18 +20,18 @@
 #include "datapipes.h"
 #include "datapipe.h"
 
-GList *(*get_messages_for_contact_backend)(Contact *contact);
-GList *(*get_calls_for_contact_backend)(Contact *contact);
+GList *(*get_messages_for_contact_backend)(const Contact *contact);
+GList *(*get_calls_for_contact_backend)(const Contact *contact);
 
-int store_register_backend(GList *(*get_messages_for_contact)(Contact *contact),
-						   GList *(*get_calls_for_contact)(Contact *contact))
+int store_register_backend(GList *(*get_messages_for_contact)(const Contact *contact),
+						   GList *(*get_calls_for_contact)(const Contact *contact))
 {
 	get_messages_for_contact_backend = get_messages_for_contact;
 	get_calls_for_contact_backend = get_calls_for_contact;
 	return 0;
 }
 
-GList *store_get_messages_for_contact(Contact *contact)
+GList *store_get_messages_for_contact(const Contact *contact)
 {
 	if(!get_messages_for_contact_backend) {
 		sphone_log(LL_ERR, "%s used without backend", __func__);
@@ -40,7 +40,7 @@ GList *store_get_messages_for_contact(Contact *contact)
 	return get_messages_for_contact_backend(contact);
 }
 
-GList *store_get_calls_for_contact(Contact *contact)
+GList *store_get_calls_for_contact(const Contact *contact)
 {
 	if(!get_calls_for_contact_backend) {
 		sphone_log(LL_ERR, "%s used without backend", __func__);

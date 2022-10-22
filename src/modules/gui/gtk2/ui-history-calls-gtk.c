@@ -126,7 +126,7 @@ static GtkWidget *gui_dialer_build_list(void)
 	return scroll;
 }
 
-gint gui_history_calls(void)
+void gtk_gui_history_calls(void)
 {
 	sphone_log(LL_DEBUG, "gui_history_calls\n");
 	GtkTreeModel *calls;
@@ -138,7 +138,7 @@ gint gui_history_calls(void)
 		gtk_tree_view_set_model(GTK_TREE_VIEW(g_history_calls.dials_view), GTK_TREE_MODEL(calls));
 		g_object_unref(G_OBJECT(calls));
 		gtk_window_present(GTK_WINDOW(g_history_calls.window));
-		return 0;
+		return;
 	}
 
 	GtkWidget *v1 = gtk_vbox_new(FALSE, 0);
@@ -167,6 +167,4 @@ gint gui_history_calls(void)
 	g_object_unref(G_OBJECT(calls));
 	
 	gtk_widget_show_all(g_history_calls.window);
-
-	return 0;
 }

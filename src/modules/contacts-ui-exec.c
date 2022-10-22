@@ -47,6 +47,7 @@ static void contact_show_trigger(const Contact *data, void (*callback)(Contact*,
 {
 	(void)data;
 	(void)user_data;
+	(void)callback;
 	char *command = sphone_conf_get_string("ContactsUiExec", "ContactsExec", NULL, NULL);
 	if(command) {
 		sphone_module_log(LL_DEBUG, "%s", __func__);
@@ -60,7 +61,7 @@ G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
-	gui_id = gui_register(NULL, NULL, NULL, NULL, NULL, contact_show_trigger, NULL);
+	gui_id = gui_register(NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_show_trigger, NULL);
 	return NULL;
 }
 

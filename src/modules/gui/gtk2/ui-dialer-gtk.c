@@ -189,7 +189,7 @@ static int gui_dialer_close(GtkWidget *w)
 	return FALSE;
 }
 
-static void gui_history_show(void)
+static void gtk_gui_history_show(void)
 {
 	gui_history_calls();
 }
@@ -307,13 +307,13 @@ const gchar *sphone_module_init(void** data)
 	g_signal_connect(G_OBJECT(call_button),"clicked", G_CALLBACK(gui_call_callback),NULL);
 	g_signal_connect(G_OBJECT(cancel_button),"clicked", G_CALLBACK(gui_dialer_cancel_callback),NULL);
 	g_signal_connect(G_OBJECT(g_gui_calls.contacts_button),"clicked", G_CALLBACK(gui_contacts_callback),NULL);
-	g_signal_connect(G_OBJECT(recents_button),"clicked", G_CALLBACK(gui_history_show),NULL);
+	g_signal_connect(G_OBJECT(recents_button),"clicked", G_CALLBACK(gtk_gui_history_show),NULL);
 	g_signal_connect(G_OBJECT(g_gui_calls.main_window),"delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 	g_signal_connect(G_OBJECT(g_gui_calls.main_window),"delete-event", G_CALLBACK(gui_dialer_close), NULL);
 	g_signal_connect(G_OBJECT(display_back), "clicked", G_CALLBACK(gui_dialer_back_presses_callback), display);
 	g_signal_connect(G_OBJECT(display), "insert_text", G_CALLBACK(gui_dialer_validate_callback),NULL);
 	
-	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL, NULL, NULL);
+	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL, NULL, gtk_gui_history_show, NULL, NULL);
 	return NULL;
 }
 

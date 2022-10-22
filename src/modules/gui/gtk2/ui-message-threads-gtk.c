@@ -16,8 +16,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ui-message-threads-gtk.h"
-
 #ifdef ENABLE_LIBHILDON
 #include <hildon/hildon.h>
 #include <hildon/hildon-gtk.h>
@@ -145,7 +143,7 @@ static GtkTextBuffer *gtk_gui_build_text_buffer(GList *msg_list)
 	return text;
 }
 
-void gtk_gui_show_thread_for_contact(Contact *contact)
+static void gtk_gui_show_thread_for_contact(const Contact *contact)
 {
 	sphone_log(LL_DEBUG, "gtk_gui_thread_calls\n");
 
@@ -218,7 +216,7 @@ const gchar *sphone_module_init(void** data)
 #ifdef ENABLE_LIBHILDON
 	hildon_init();
 #endif
-	gui_id = gui_register(NULL, NULL, NULL, gtk_gui_msg_threads, gtk_gui_contact_shown, NULL, NULL);
+	gui_id = gui_register(NULL, NULL, NULL, gtk_gui_msg_threads, gtk_gui_contact_shown, gtk_gui_show_thread_for_contact, NULL, NULL, NULL);
 	return NULL;
 }
 

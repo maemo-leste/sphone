@@ -60,7 +60,7 @@ static void message_received_trigger(gconstpointer data, gpointer user_data)
 		contact->backend = message->backend;
 	}
 
-	if(gui_contact_shown(contact)) {
+	if(gui_contact_thread_shown(contact)) {
 		contact_free(contact);
 		return;
 	}
