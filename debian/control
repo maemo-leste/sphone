@@ -5,7 +5,8 @@ Build-Depends: debhelper (>> 10), cmake,
   libgtk2.0-dev, libdbus-glib-1-dev, libsqlite3-dev,
   libgstreamer1.0-dev, libasound2-dev, intltool, libosso-abook-dev,
   maemo-system-services-dev, libhildon1-dev, libprofile-dev, libpulse-dev,
-  libebook-contacts1.2-dev, libebook1.2-dev, librtcom-eventlogger-dev
+  libebook-contacts1.2-dev, libebook1.2-dev, librtcom-eventlogger-dev,
+  libnotify-dev,
 Section: comm
 Standards-Version: 4.3.0
 
