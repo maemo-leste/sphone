@@ -41,7 +41,6 @@ static void notificaion_reply_cb(NotifyNotification *notification, char *action,
 	sphone_module_log(LL_DEBUG, "action %s in %s", action, __func__);
 
 	MessageProperties *msg = g_object_get_data(G_OBJECT(notification), "message-proparties");
-	Contact *contact;
 	if(msg->contact)
 		gui_show_thread_for_contact(msg->contact);
 	else
@@ -93,6 +92,7 @@ static void message_received_trigger(gconstpointer data, gpointer user_data)
 static void notificaion_call_back_cb(NotifyNotification *notification, char *action, gpointer user_data)
 {
 	(void)user_data;
+	(void)notification;
 	if(g_strcmp0(action, "default") != 0) {
 		sphone_module_log(LL_WARN, "unkown action %s in %s", action, __func__);
 		return;
@@ -150,6 +150,7 @@ void sphone_module_exit(void* data)
 	(void)data;
 	remove_trigger_from_datapipe(&message_received_pipe, message_received_trigger, NULL);
 	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, NULL);
+
 	if(notify_is_initted())
 		notify_uninit();
 }
