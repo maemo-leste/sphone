@@ -179,9 +179,9 @@ static void gtk_gui_show_thread_for_contact(const Contact *contact)
 	gtk_box_pack_start(GTK_BOX(v1), actions_bar, FALSE, FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(window), v1);
 
-	GList *msg_list = store_get_messages_for_contact(contact);
-	GtkTextBuffer *text = gtk_gui_build_text_buffer(msg_list);
 	Contact *contact_cpy = contact_copy(contact);
+	GList *msg_list = store_get_messages_for_contact(contact_cpy);
+	GtkTextBuffer *text = gtk_gui_build_text_buffer(msg_list);
 	g_object_set_data_full(G_OBJECT(text), "contact", contact_cpy, (GDestroyNotify)contact_free);
 	g_signal_connect(GTK_WIDGET(window), "hide", G_CALLBACK(remove_thread_view), text_view);
 	shown_contacts = g_slist_prepend(shown_contacts, contact_cpy);

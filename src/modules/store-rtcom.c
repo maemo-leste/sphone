@@ -195,7 +195,7 @@ static MessageProperties *convert_to_message_properties(RTComElIter *iter, const
 	return msg;
 }
 
-static GList *get_messages_for_contact(const Contact *contact)
+static GList *get_messages_for_contact(Contact *contact)
 {
 	if(!evlog)
 		return NULL;
@@ -263,7 +263,7 @@ static GList *get_messages_for_contact(const Contact *contact)
 	return messages;
 }
 
-static GList *get_calls_for_contact(const Contact *contact)
+static GList *get_calls_for_contact(Contact *contact)
 {
 	if(!evlog)
 		return 0;
