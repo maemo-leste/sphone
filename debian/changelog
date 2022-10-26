@@ -1,3 +1,9 @@
+sphone (0.6.8) unstable; urgency=medium
+
+  * Fix hang when entering call history
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Tue, 25 Oct 2022 22:30:32 +0100
+
 sphone (0.6.7) unstable; urgency=medium
 
   * notify-libnotify: show thread instead of sms-new when reply is clicked
@@ -5,7 +11,7 @@ sphone (0.6.7) unstable; urgency=medium
   * storage: make paramters const that can be
   * qtloop: fix obvious boolaean inversion _again_
 
- -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 23 Oct 00:40:32  +0100
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 23 Oct 2022 00:40:32 +0100
 
 sphone (0.6.6) unstable; urgency=medium
 
@@ -14,7 +20,7 @@ sphone (0.6.6) unstable; urgency=medium
   * notify-libnotify: add some hildon specific hints
   * gui: fix gui_contact_shown behavior when more than one module registers to serve this function
 
- -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 16 Oct 20:52:32  +0100
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 16 Oct 2022 20:52:32 +0100
 
 sphone (0.6.5) unstable; urgency=medium
 
