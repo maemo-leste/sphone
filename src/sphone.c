@@ -216,6 +216,65 @@ static void send_command(GDBusConnection *connection, struct sphone_options *opt
 		g_variant_unref(resp);
 }
 
+static char* get_scheme_from_uri(const char* uri)
+{
+	GUri* guri = g_uri_parse(uri, G_URI_FLAGS_SCHEME_NORMALIZE, NULL);
+
+	if(!guri)
+		return NULL;
+
+	char* scheme = g_strdup(g_uri_get_scheme(guri));
+	g_uri_unref(guri);
+	return scheme;
+}
+
+static int get_backend_id(const char* uri, const char* backend_name, BackendFlag flags)
+{
+	int ret = -1;
+	if(g_str_equal(backend_name, "default")) {
+		char* scheme = get_scheme_from_uri(uri);
+		if(scheme) {
+			sphone_log(LL_DEBUG, "got %s scheme for uri %s", scheme, uri);
+			CommBackend* backend = sphone_comm_get_backend_for_scheme(scheme, flags);
+			if(backend) {
+				sphone_log(LL_DEBUG, "using backend %s for scheme %s", backend->name, scheme);
+				ret = backend->id;
+			}
+			else {
+				sphone_log(LL_WARN, "No backend to handle scheme %s avaialble", scheme);
+			}
+			g_free(scheme);
+		}
+		else {
+			sphone_log(LL_DEBUG, "%s is not a uri", uri);
+		}
+	}
+	else {
+		ret = sphone_comm_find_backend_id(backend_name);
+	}
+
+	return ret;
+}
+
+static char* remove_scheme(const char* uri)
+{
+	gchar** split = g_strsplit(uri, ":", 2);
+	char* ret = NULL;
+	if(split[1] != NULL) {
+		if(split[1][0] == '/' && split[1][1] == '/') {
+			ret = g_strdup((split[1])+2);
+		}
+		else {
+			ret = g_strdup(split[1]);
+		}
+	}
+	else {
+		ret = g_strdup(uri);
+	}
+	g_strfreev(split);
+	return ret;
+}
+
 static void method_call_callback(GDBusConnection* connection,
 						  const gchar* sender,
 						  const gchar* object_path,
@@ -241,8 +300,10 @@ static void method_call_callback(GDBusConnection* connection,
 		if(g_strcmp0(g_variant_get_type_string(parameters), "(ss)") == 0) {
 			call = g_malloc0(sizeof(*call));
 			char *backend_name;
-			g_variant_get(parameters, "(ss)", &call->line_identifier, &backend_name);
-			call->backend = sphone_comm_find_backend_id(backend_name);
+			char *line_identifier;
+			g_variant_get(parameters, "(ss)", &line_identifier, &backend_name);
+			call->backend = get_backend_id(line_identifier, backend_name, BACKEND_FLAG_CALL);
+			call->line_identifier = remove_scheme(line_identifier);
 		}
 		gui_dialer_show(call);
 		g_free(call);
@@ -252,8 +313,10 @@ static void method_call_callback(GDBusConnection* connection,
 		if(g_strcmp0(g_variant_get_type_string(parameters), "(sss)") == 0) {
 			message = g_malloc0(sizeof(*message));
 			char *backend_name;
-			g_variant_get(parameters, "(sss)", &message->line_identifier, &message->text, &backend_name);
-			message->backend = sphone_comm_find_backend_id(backend_name);
+			char *line_identifier;
+			g_variant_get(parameters, "(sss)", &line_identifier, &message->text, &backend_name);
+			message->backend = get_backend_id(line_identifier, backend_name, BACKEND_FLAG_MESSAGE);
+			message->line_identifier = remove_scheme(line_identifier);
 		}
 		gui_sms_send_show(message);
 		g_free(message);
@@ -415,18 +478,6 @@ int main (int argc, char *argv[])
 		return -1;
 	}
 
-	gchar** numbersplit = NULL;
-	if(options.number) {
-		numbersplit = g_strsplit(options.number, ":", 2);
-		if(numbersplit[1] != NULL) {
-			options.number = numbersplit[1];
-		}
-		else {
-			g_strfreev(numbersplit);
-			numbersplit = NULL;
-		}
-	}
-
 	load_loop_module(&loop_module);
 	main_loop_init(argc, argv);
 
@@ -456,9 +507,6 @@ int main (int argc, char *argv[])
 	
 	if(owner_id > 0)
 		g_bus_unown_name(owner_id);
-
-	if(numbersplit)
-		 g_strfreev(numbersplit);
 	
 	return 0;
 }

@@ -46,6 +46,18 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 10
 };
 
+static const Scheme call_scheme =
+{
+	.scheme = (char*)"tel",
+	.flags = BACKEND_FLAG_CALL | BACKEND_FLAG_CELLULAR
+};
+
+static const Scheme sms_scheme =
+{
+	.scheme = (char*)"sms",
+	.flags = BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CELLULAR
+};
+
 enum {
 	NEW_CALL_HANDLE_ID = 0,
 	END_CALL_HANDLE_ID,
@@ -608,8 +620,15 @@ const gchar *sphone_module_init(void** data)
 	
 	if(!priv->s_bus_conn)
 		return "Unable to connect to dbus!";
+
+	const Scheme* schemes[3] =
+	{
+		&call_scheme,
+		&sms_scheme,
+		NULL
+	};
 	
-	priv->backend_id = sphone_comm_add_backend("ofono");
+	priv->backend_id = sphone_comm_add_backend("ofono", schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_CELLULAR);
 
 	priv->ofono_service_watcher =
 						g_bus_watch_name_on_connection(priv->s_bus_conn, OFONO_SERVICE, 

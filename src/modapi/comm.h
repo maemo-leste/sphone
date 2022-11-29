@@ -24,12 +24,25 @@
 extern "C" {
 #endif
 
+typedef enum {
+	BACKEND_FLAG_MESSAGE = 1,
+	BACKEND_FLAG_CALL = 1<<1,
+	BACKEND_FLAG_CELLULAR = 1<<2
+} BackendFlag;
+
+typedef struct _Scheme {
+	char* scheme;
+	BackendFlag flags;
+} Scheme;
+
 typedef struct  _CommBackend {
 	char* name;
+	Scheme** schemes;
+	BackendFlag flags;
 	int id;
 } CommBackend;
 
-int sphone_comm_add_backend(const char* name);
+int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags);
 
 void sphone_comm_remove_backend(int id);
 
@@ -38,6 +51,8 @@ GSList *sphone_comm_get_backends(void);
 CommBackend *sphone_comm_default_backend(void);
 
 CommBackend *sphone_comm_get_backend(int id);
+
+CommBackend *sphone_comm_get_backend_for_scheme(const char* scheme, BackendFlag requiredFlags);
 
 bool sphone_comm_set_default_backend(int id);
 

@@ -22,7 +22,42 @@ static GSList *backends;
 
 static CommBackend *default_backend;
 
-int sphone_comm_add_backend(const char* name)
+static Scheme *sphone_comm_copy_scheme(const Scheme* scheme)
+{
+	Scheme* copy = g_malloc0(sizeof(*copy));
+	copy->scheme = g_strdup(scheme->scheme);
+	copy->flags = scheme->flags;
+	return copy;
+}
+
+static void sphone_comm_free_scheme(Scheme* scheme)
+{
+	g_free(scheme->scheme);
+	g_free(scheme);
+}
+
+static Scheme **sphone_comm_copy_scheme_array(const Scheme** schemes)
+{
+	size_t len = 0;
+	while(schemes[len])
+		++len;
+	++len;
+	Scheme** copy = g_malloc0(sizeof(*copy)*len);
+
+	for(len = 0; schemes[len]; ++len)
+		copy[len] = sphone_comm_copy_scheme(schemes[len]);
+
+	return copy;
+}
+
+static void sphone_comm_free_scheme_array(Scheme** schemes)
+{
+	for(size_t i = 0; schemes[i]; ++i)
+		sphone_comm_free_scheme(schemes[i]);
+	g_free(schemes);
+}
+
+int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags)
 {
 	CommBackend *backend = g_malloc0(sizeof(*backend));
 	int id = 0;
@@ -33,6 +68,8 @@ int sphone_comm_add_backend(const char* name)
 	}
 	backend->id = id;
 	backend->name = g_strdup(name);
+	backend->flags = flags;
+	backend->schemes = sphone_comm_copy_scheme_array(schemes);
 	
 	sphone_log(LL_INFO, "Comm backend added: %s", backend->name);
 
@@ -55,10 +92,25 @@ void sphone_comm_remove_backend(int id)
 	if(default_backend && default_backend->id == id)
 		default_backend = NULL;
 
-	g_free(((CommBackend*)(element->data))->name);
+	CommBackend* backend = (CommBackend*)(element->data);
+	g_free(backend->name);
+	sphone_comm_free_scheme_array(backend->schemes);
 	g_free(element->data);
 
 	backends = g_slist_remove(backends, element->data);
+}
+
+CommBackend *sphone_comm_get_backend_for_scheme(const char* scheme, BackendFlag requiredFlags)
+{
+	GSList *element;
+	for(element = backends; element; element = element->next) {
+		CommBackend *backend = (CommBackend*)element->data;
+		for(size_t i = 0; backend->schemes[i]; ++i) {
+			if((requiredFlags & ~backend->schemes[i]->flags) == 0 && g_str_equal(backend->schemes[i]->scheme, scheme))
+				return backend;
+		}
+	}
+	return NULL;
 }
 
 GSList *sphone_comm_get_backends(void)
@@ -81,7 +133,6 @@ CommBackend *sphone_comm_get_backend(int id)
 	}
 	return NULL;
 }
-
 
 bool sphone_comm_set_default_backend(int id)
 {
