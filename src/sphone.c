@@ -218,14 +218,12 @@ static void send_command(GDBusConnection *connection, struct sphone_options *opt
 
 static char* get_scheme_from_uri(const char* uri)
 {
-	GUri* guri = g_uri_parse(uri, G_URI_FLAGS_SCHEME_NORMALIZE, NULL);
-
-	if(!guri)
-		return NULL;
-
-	char* scheme = g_strdup(g_uri_get_scheme(guri));
-	g_uri_unref(guri);
-	return scheme;
+	gchar** split = g_strsplit(uri, ":", 2);
+	char* ret = NULL;
+	if(split[1] != NULL)
+		ret = g_strdup(split[0]);
+	g_strfreev(split);
+	return ret;
 }
 
 static int get_backend_id(const char* uri, const char* backend_name, BackendFlag flags)
