@@ -91,6 +91,7 @@ static void message_received_trigger(gconstpointer data, gpointer user_data)
 
 static void notificaion_call_back_cb(NotifyNotification *notification, char *action, gpointer user_data)
 {
+	(void)notification;
 	(void)user_data;
 	(void)notification;
 	if(g_strcmp0(action, "default") != 0) {
