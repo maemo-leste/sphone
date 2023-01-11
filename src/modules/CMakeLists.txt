@@ -17,7 +17,21 @@ if(DEFINED Qt${QT_VERSION_MAJOR}_FOUND)
 	target_link_libraries(qtloop ${COMMON_LIBRARIES} Qt${QT_VERSION_MAJOR}::Widgets)
 	target_include_directories(qtloop SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 	target_include_directories(qtloop PRIVATE ${MODULE_INCLUDE_DIRS})
+
 	install(TARGETS qtloop DESTINATION ${SPHONE_MODULE_DIR})
+
+	add_library(tpqt SHARED tpqt.cpp)
+	target_link_libraries(tpqt ${COMMON_LIBRARIES} Qt${QT_VERSION_MAJOR}::Widgets ${TELEPATHY_QT5_LIBRARIES})
+
+	target_compile_definitions(tpqt PUBLIC ${Qt5DBus_DEFINITIONS})
+	target_include_directories(tpqt SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+	target_include_directories(tpqt PRIVATE ${MODULE_INCLUDE_DIRS})
+	target_include_directories(tpqt PRIVATE ${TELEPATHY_QT5_INCLUDE_DIR})
+	target_include_directories(tpqt PRIVATE ${Qt5DBus_INCLUDE_DIRS})
+
+	set_property(TARGET tpqt PROPERTY AUTOMOC ON)
+
+	install(TARGETS tpqt DESTINATION ${SPHONE_MODULE_DIR})
 endif(DEFINED Qt${QT_VERSION_MAJOR}_FOUND)
 
 add_library(manager SHARED manager.c)
