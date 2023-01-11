@@ -207,7 +207,7 @@ static void gui_calls_select_callback(void)
 		gtk_widget_hide(g_calls_manager.answer_waiting_button);
 		gtk_widget_show(g_calls_manager.answer_button);
 		gtk_widget_show(g_calls_manager.hangup_button);
-	} else if(call->state == SPHONE_CALL_WATING) {
+	} else if(call->state == SPHONE_CALL_WAITING) {
 		gtk_widget_hide(g_calls_manager.activate_button);
 		gtk_widget_show(g_calls_manager.answer_waiting_button);
 		gtk_widget_hide(g_calls_manager.answer_button);
@@ -355,7 +355,7 @@ static void gui_calls_answer_callback(void)
 	gtk_tree_path_free(path);
 	gtk_tree_model_get_value(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter, GUI_CALLS_COLUMN_CALL, &value);
 	CallProperties *call = (CallProperties*)g_value_get_pointer(&value);
-	call->awnserd = TRUE;
+	call->answered = TRUE;
 
 	execute_datapipe(&call_accept_pipe, call);
 	

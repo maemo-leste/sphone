@@ -109,9 +109,9 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 	(void)user_data;
 	const CallProperties *call = data;
 
-	sphone_module_log(LL_DEBUG, "%s, %i %i %i",  __func__, call->state != SPHONE_CALL_DISCONNECTED, call->outbound, call->awnserd);
+	sphone_module_log(LL_DEBUG, "%s, %i %i %i",  __func__, call->state != SPHONE_CALL_DISCONNECTED, call->outbound, call->answered);
 
-	if(call->state != SPHONE_CALL_DISCONNECTED || call->outbound || call->awnserd)
+	if(call->state != SPHONE_CALL_DISCONNECTED || call->outbound || call->answered)
 		return;
 
 	CallProperties *call_copy = call_properties_copy(call);

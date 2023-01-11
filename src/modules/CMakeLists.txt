@@ -1,3 +1,4 @@
+find_package(PkgConfig)
 set(MODULE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../modapi)
 
 add_library(test SHARED test.c)
@@ -17,6 +18,7 @@ if(DEFINED Qt${QT_VERSION_MAJOR}_FOUND)
 	target_link_libraries(qtloop ${COMMON_LIBRARIES} Qt${QT_VERSION_MAJOR}::Widgets)
 	target_include_directories(qtloop SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 	target_include_directories(qtloop PRIVATE ${MODULE_INCLUDE_DIRS})
+
 	install(TARGETS qtloop DESTINATION ${SPHONE_MODULE_DIR})
 endif(DEFINED Qt${QT_VERSION_MAJOR}_FOUND)
 
@@ -124,3 +126,4 @@ if(DEFINED NOTIFY_LIBRARIES)
 endif(DEFINED NOTIFY_LIBRARIES)
 
 add_subdirectory(gui)
+add_subdirectory(telepathy)
