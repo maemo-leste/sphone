@@ -23,8 +23,10 @@ pkg_search_module(GMODULE REQUIRED gmodule-2.0)
 pkg_search_module(DBUS REQUIRED dbus-glib-1)
 pkg_search_module(SQL REQUIRED sqlite3)
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets)
+find_package(QT NAMES Qt6 Qt5 COMPONENTS Widgets DBus)
+find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Widgets DBus)
+find_package(TelepathyQt5 0.9.7)
+
 pkg_search_module(GSTREAMER gstreamer-1.0)
 pkg_search_module(PULSE libpulse)
 pkg_search_module(LIBHILDON hildon-1)
@@ -149,6 +151,13 @@ if(DEFINED NOTIFY_LIBRARIES)
 else()
 	message("libnotify support disabled")
 endif(DEFINED NOTIFY_LIBRARIES)
+
+if(DEFINED TELEPATHY_QT5_LIBRARIES)
+	message("Qt Telepathy support enabled")
+else()
+	message("Telepathy support disabled")
+endif(DEFINED TELEPATHY_QT5_LIBRARIES)
+
 
 add_subdirectory(src)
 add_subdirectory(src/modules)
