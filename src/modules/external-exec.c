@@ -64,7 +64,7 @@ static void call_properties_changed_trigger(gconstpointer data, gpointer user_da
 		command = sphone_conf_get_string("ExternalExec", "OutgoingCall", NULL, NULL);
 	else if(call->state == SPHONE_CALL_ACTIVE)
 		command = sphone_conf_get_string("ExternalExec", "CallAnswered", NULL, NULL);
-	else if(call->state == SPHONE_CALL_DISCONNECTED && !call->awnserd)
+	else if(call->state == SPHONE_CALL_DISCONNECTED && !call->answered)
 		command = sphone_conf_get_string("ExternalExec", "CallMissed", NULL, NULL);
 
 	if(command) {

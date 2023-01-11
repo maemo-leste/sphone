@@ -258,7 +258,7 @@ static sphone_call_state_t ofono_string_to_call_state(const gchar *state)
 	else if(g_strcmp0(state, "incoming") == 0)
 		return SPHONE_CALL_INCOMING;
 	else if(g_strcmp0(state, "waiting") == 0)
-		return SPHONE_CALL_WATING;
+		return SPHONE_CALL_WAITING;
 	else if(g_strcmp0(state, "disconnected") == 0)
 		return SPHONE_CALL_DISCONNECTED;
 	sphone_module_log(LL_WARN, "Got invalid call state %s", state);
@@ -449,7 +449,7 @@ static void call_accept_trigger(gconstpointer data, gpointer user_data)
 			OFONO_VOICECALL_IFACE, "Answer", NULL, NULL,
 			G_DBUS_CALL_FLAGS_NONE, -1, NULL, &gerror);
 
-		call->awnserd = true;
+		call->answered = true;
 
 		g_variant_unref(result);
 

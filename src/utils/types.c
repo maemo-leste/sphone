@@ -32,7 +32,7 @@ const char *sphone_get_state_string(sphone_call_state_t state)
 			return "Alerting";
 		case SPHONE_CALL_INCOMING:
 			return "Incoming";
-		case SPHONE_CALL_WATING:
+		case SPHONE_CALL_WAITING:
 			return "Wating";
 		case SPHONE_CALL_DISCONNECTED:
 			return "Disconnected";
@@ -129,7 +129,7 @@ CallProperties *call_properties_copy(const CallProperties *properties)
 	new_props->backend_data = g_strdup(properties->backend_data);
 	new_props->start_time = properties->start_time;
 	new_props->end_time = properties->end_time;
-	new_props->awnserd = properties->awnserd;
+	new_props->answered = properties->answered;
 	new_props->backend = properties->backend;
 	new_props->state = properties->state;
 	new_props->needs_route = properties->needs_route;
@@ -153,8 +153,8 @@ void call_properties_print(const CallProperties *call, const char *module_name)
 	sphone_log(LL_DEBUG, "%s%sCall: %s from %s", module_name ?: "", module_name ? ": " : "",
 		       call->line_identifier, backend->name);
 	contact_print(call->contact, module_name);
-	sphone_log(LL_DEBUG, "%s%sstart_time: %ld awnserd: %d state: %s outbound: %d ", module_name ?: "", module_name ? ": " : "",
-		       call->start_time, call->awnserd, sphone_get_state_string(call->state), call->outbound);
+	sphone_log(LL_DEBUG, "%s%sstart_time: %ld answered: %d state: %s outbound: %d ", module_name ?: "", module_name ? ": " : "",
+		       call->start_time, call->answered, sphone_get_state_string(call->state), call->outbound);
 }
 
 MessageProperties *message_properties_copy(const MessageProperties *properties)
