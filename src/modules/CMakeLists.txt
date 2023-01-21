@@ -1,3 +1,4 @@
+find_package(PkgConfig)
 set(MODULE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../modapi)
 
 add_library(test SHARED test.c)
@@ -20,8 +21,14 @@ if(DEFINED Qt${QT_VERSION_MAJOR}_FOUND)
 
 	install(TARGETS qtloop DESTINATION ${SPHONE_MODULE_DIR})
 
+    pkg_check_modules(QTVOICECALL REQUIRED qtvoicecall)
+
 	add_library(tpqt SHARED tpqt.cpp)
 	target_link_libraries(tpqt ${COMMON_LIBRARIES} Qt${QT_VERSION_MAJOR}::Widgets ${TELEPATHY_QT5_LIBRARIES})
+
+    target_link_libraries(tpqt ${QTVOICECALL_LIBRARIES})
+    target_include_directories(tpqt PUBLIC ${QTVOICECALL_INCLUDE_DIRS})
+    target_compile_options(tpqt PUBLIC ${QTVOICECALL_CFLAGS_OTHER})
 
 	target_compile_definitions(tpqt PUBLIC ${Qt5DBus_DEFINITIONS})
 	target_include_directories(tpqt SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
