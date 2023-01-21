@@ -207,7 +207,7 @@ static void gui_calls_select_callback(void)
 		gtk_widget_hide(g_calls_manager.answer_waiting_button);
 		gtk_widget_show(g_calls_manager.answer_button);
 		gtk_widget_show(g_calls_manager.hangup_button);
-	} else if(call->state == SPHONE_CALL_WATING) {
+	} else if(call->state == SPHONE_CALL_WAITING) {
 		gtk_widget_hide(g_calls_manager.activate_button);
 		gtk_widget_show(g_calls_manager.answer_waiting_button);
 		gtk_widget_hide(g_calls_manager.answer_button);
