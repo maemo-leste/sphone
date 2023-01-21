@@ -448,7 +448,7 @@ static void call_accept_trigger(gconstpointer data, gpointer user_data)
 			OFONO_VOICECALL_IFACE, "Answer", NULL, NULL,
 			G_DBUS_CALL_FLAGS_NONE, -1, NULL, &gerror);
 
-		call->awnserd = true;
+		call->answered = true;
 
 		g_variant_unref(result);
 
