@@ -31,7 +31,8 @@ void MaemoManager::setup(void) {
         qDebug() << "provider model: " << i << providermodel->id(i) << providermodel->type(i) << providermodel->label(i);
 
         // XXX: Let's do only telepathy-ring atm
-        if (providermodel->type(i) == "tel") {
+        //if (providermodel->type(i) == "tel") {
+        if (true) {
             MaemoProvider* provider = new MaemoProvider(this, providermodel->id(i), providermodel->type(i), providermodel->label(i));
             provider->registerBackend();
 
@@ -200,5 +201,22 @@ void MaemoManager::hangupTrigger(const CallProperties *call) {
 }
 
 void MaemoManager::dialTrigger(const CallProperties *call) {
+    QHashIterator<QString, MaemoProvider*> i(maemo_providers);
+    while (i.hasNext()) {
+        i.next();
+
+        QString providerid = i.key();
+        MaemoProvider* mp = i.value();
+
+        qDebug() << "providerid:" << providerid;
+
+        if ((mp->sphone_backend_id) == call->backend) {
+            qDebug() << "found matching backend for call";
+            mgr->dial(mp->id, call->line_identifier);
+            break;
+        }
+
+    }
+    // TODO: use call->backend_id to find the right provider
     // TODO: Find out what backend to use, then use dial()
 }

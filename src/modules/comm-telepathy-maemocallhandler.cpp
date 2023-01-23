@@ -48,7 +48,7 @@ void MaemoCallHandler::statusChanged() {
 
     qDebug() << "statusChanged status:" << current_status << "old status:" << call_status;
 
-    if ((call_status == VoiceCallHandler::STATUS_NULL) && (current_status = VoiceCallHandler::STATUS_INCOMING)) {
+    if (call_status == VoiceCallHandler::STATUS_NULL) {
         qDebug() << "Creating call";
         call_properties = (CallProperties*)g_malloc0(sizeof(*call_properties));
 
@@ -56,7 +56,16 @@ void MaemoCallHandler::statusChanged() {
         call_properties->needs_route = backend->type == "tel";
         call_properties->outbound = !voicecall_handler->isIncoming();
 
-        call_properties->state = SPHONE_CALL_INCOMING;
+        if (current_status == VoiceCallHandler::STATUS_INCOMING)
+            call_properties->state = SPHONE_CALL_INCOMING;
+        else if (current_status == VoiceCallHandler::STATUS_DIALING)
+            call_properties->state = SPHONE_CALL_DIALING;
+        else if (current_status == VoiceCallHandler::STATUS_ALERTING)
+            call_properties->state = SPHONE_CALL_ALERTING;
+        else
+            qDebug() << "Not sure what initial state to assign to call!!!";
+
+
         call_properties->emergency = voicecall_handler->isEmergency();
         call_properties->line_identifier = g_strdup(voicecall_handler->lineId().toStdString().c_str());
         call_properties->backend_data = g_strdup(voicecall_handler->handlerId().toStdString().c_str());
@@ -71,6 +80,12 @@ void MaemoCallHandler::statusChanged() {
         call_properties->answered = true;
 
         call_properties->state = SPHONE_CALL_ACTIVE;
+        execute_datapipe(&call_properties_changed_pipe, call_properties);
+    } else if (current_status == VoiceCallHandler::STATUS_DIALING) {
+        call_properties->state = SPHONE_CALL_DIALING;
+        execute_datapipe(&call_properties_changed_pipe, call_properties);
+    } else if (current_status == VoiceCallHandler::STATUS_ALERTING) {
+        call_properties->state = SPHONE_CALL_ALERTING;
         execute_datapipe(&call_properties_changed_pipe, call_properties);
     } else if (current_status == VoiceCallHandler::STATUS_DISCONNECTED) {
         qDebug() << "call status: disconnected";
