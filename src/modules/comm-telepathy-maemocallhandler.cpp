@@ -1,3 +1,5 @@
+#include <time.h>
+
 #include "comm-telepathy-maemocallhandler.h"
 
 #include "moc_comm-telepathy-maemocallhandler.cpp"
@@ -65,6 +67,7 @@ void MaemoCallHandler::statusChanged() {
         else
             qDebug() << "Not sure what initial state to assign to call!!!";
 
+        call_properties->start_time = time(NULL);
 
         call_properties->emergency = voicecall_handler->isEmergency();
         call_properties->line_identifier = g_strdup(voicecall_handler->lineId().toStdString().c_str());
@@ -90,6 +93,8 @@ void MaemoCallHandler::statusChanged() {
     } else if (current_status == VoiceCallHandler::STATUS_DISCONNECTED) {
         qDebug() << "call status: disconnected";
         call_properties->state = SPHONE_CALL_DISCONNECTED;
+        call_properties->end_time = time(NULL);
+
         execute_datapipe(&call_properties_changed_pipe, call_properties);
     }
 
@@ -107,6 +112,7 @@ void MaemoCallHandler::hangup() {
     qDebug() << "hangup()";
     voicecall_handler->hangup();
     call_properties->state = SPHONE_CALL_DISCONNECTED;
+    call_properties->end_time = time(NULL);
     execute_datapipe(&call_properties_changed_pipe, call_properties);
 }
 
