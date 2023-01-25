@@ -20,11 +20,14 @@ public:
 
     void acceptTrigger(const CallProperties*);
     void hangupTrigger(const CallProperties*);
+    void holdTrigger(const CallProperties*);
     void dialTrigger(const CallProperties*);
 
 public slots:
-    void providersChanged();
     void voiceCallsChanged();
+    void providersChanged();
+#if 0
+
     void defaultProviderChanged();
     void activeVoiceCallChanged();
 
@@ -33,18 +36,18 @@ public slots:
     void microphoneMutedChanged();
     void speakerMutedChanged();
 
-
     void voiceCallStatusChanged();
-
-    /*
-     * TODO: we can hook these up just for testing:
-    */
+#endif
 
 signals:
 
 private:
+    /* List of (active) voice calls, mapping the VoiceCallHandler->handlerId()
+     * to our class, so that we can find the right calls in the callbacks */
     QHash <QString, MaemoCallHandler*> voicecalls;
-    VoiceCallManager *mgr; // TODO: rename
+
+    /* qt voicecall manager */
+    VoiceCallManager *qt_voicecall_manager;
 
 public:
     QHash <QString, MaemoProvider*> maemo_providers;

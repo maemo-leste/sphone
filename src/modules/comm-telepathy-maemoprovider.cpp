@@ -21,8 +21,6 @@ MaemoProvider::MaemoProvider(MaemoManager* mgr, QString id_, QString type_, QStr
 }
 
 void MaemoProvider::registerBackend() {
-    // TODO: guard against this being called already
-
     // This is different for ring than it is for sip (where we can do both sip and tel?)
 	const Scheme* schemes[2] =
 	{
@@ -30,16 +28,17 @@ void MaemoProvider::registerBackend() {
 		NULL
 	};
 
-    backend_name = strdup(id.toStdString().c_str());
+    backend_id = id;
+    backend_name = strdup(backend_id.toStdString().c_str());
 	sphone_backend_id = sphone_comm_add_backend(backend_name, schemes, BACKEND_FLAG_CALL);
 
-    qDebug() << "Registered backend";
-
+    qDebug() << "Registered backend" << backend_id;
 }
 
 void MaemoProvider::unregisterBackend() {
-    // TODO
-    // free(backend_name);
+    qDebug() << "Unregistering backend" << backend_id;
+    sphone_comm_remove_backend(sphone_backend_id);
+    g_free(backend_name);
 }
 
 MaemoProvider::~MaemoProvider() {

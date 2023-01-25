@@ -11,22 +11,14 @@ MaemoCallHandler::MaemoCallHandler(MaemoManager* mgr_, VoiceCallHandler* handler
     this->call_properties = NULL;
     this->call_status = VoiceCallHandler::STATUS_NULL;
 
-    // Setup signals here
+    // Setup signals here, we could add more like line id changes, duration
+    // changes (I suppose hold might influence the duration)
     connect(voicecall_handler, &VoiceCallHandler::statusChanged, this, &MaemoCallHandler::statusChanged);
-    // TODO: Set up signals for duration changes, line id changes, etc?
 }
 
 MaemoCallHandler::~MaemoCallHandler() {
     disconnect(voicecall_handler);
     call_properties_free(call_properties);
-
-    // XXX: I don't think we free this
-    //if (call_properties) {
-    //    g_free(call_properties->line_identifier);
-    //    g_free(call_properties->backend_data);
-
-    //    g_free(call_properties);
-    //}
 }
 
 void MaemoCallHandler::setupProvider() {
@@ -90,6 +82,12 @@ void MaemoCallHandler::statusChanged() {
     } else if (current_status == VoiceCallHandler::STATUS_ALERTING) {
         call_properties->state = SPHONE_CALL_ALERTING;
         execute_datapipe(&call_properties_changed_pipe, call_properties);
+    } else if (current_status == VoiceCallHandler::STATUS_HELD) {
+        call_properties->state = SPHONE_CALL_HELD;
+        execute_datapipe(&call_properties_changed_pipe, call_properties);
+    } else if (current_status == VoiceCallHandler::STATUS_WAITING) {
+        call_properties->state = SPHONE_CALL_WAITING;
+        execute_datapipe(&call_properties_changed_pipe, call_properties);
     } else if (current_status == VoiceCallHandler::STATUS_DISCONNECTED) {
         qDebug() << "call status: disconnected";
         call_properties->state = SPHONE_CALL_DISCONNECTED;
@@ -99,13 +97,16 @@ void MaemoCallHandler::statusChanged() {
     }
 
     call_status = current_status;
-
-    // TODO: STATUS_HELD, STATUS_DIALING, STATUS_ALERTING, STATUS_WAITING
 }
 
 void MaemoCallHandler::answer() {
     qDebug() << "accept()";
     voicecall_handler->answer();
+}
+
+void MaemoCallHandler::hold(bool hold) {
+    qDebug() << "hold()" << hold;
+    voicecall_handler->hold(hold);
 }
 
 void MaemoCallHandler::hangup() {

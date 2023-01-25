@@ -22,6 +22,7 @@ public:
 
     void answer();
     void hangup();
+    void hold(bool);
 
 public slots:
 //    void error(const QString &error);

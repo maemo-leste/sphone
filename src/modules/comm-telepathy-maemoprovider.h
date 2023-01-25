@@ -20,11 +20,12 @@ public:
     void registerBackend();
     void unregisterBackend();
 
-    // TODO: make these private?
+    // XXX: make these private or at least protected?
     QString id;
     QString type;
     QString label;
     char* backend_name;
+    QString backend_id;
     int sphone_backend_id;
 
 private:

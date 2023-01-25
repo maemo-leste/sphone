@@ -42,26 +42,11 @@ G_MODULE_EXPORT module_info_struct module_info = {
 extern "C" 
 {
 
-/* Pipes in play:
- *
- * - &call_properties_changed_pipe:
- *      trigger this when the call state or properties have changed
- * - &call_dial_pipe:
- *      read from this to start a new dial
- * - &call_accept_trigger:
- *      read from this to accept the call
- * - &call_hangup_trigger
- *      read from this to hang up the call
- * - &call_hold_trigger
- *      read from this to hold the call (how do we resume?) - probably hold
- *      again?
- */
-
-static void call_hangup_trigger(gconstpointer data, gpointer user_data) {
+static void call_dial_trigger(gconstpointer data, gpointer user_data) {
     const CallProperties *call = (const CallProperties*)data;
     MaemoManager* maemo_mgr = (MaemoManager*)user_data;
 
-    maemo_mgr->hangupTrigger(call);
+    maemo_mgr->dialTrigger(call);
 }
 
 static void call_accept_trigger(gconstpointer data, gpointer user_data) {
@@ -70,12 +55,19 @@ static void call_accept_trigger(gconstpointer data, gpointer user_data) {
     maemo_mgr->acceptTrigger(call);
 }
 
-static void call_dial_trigger(gconstpointer data, gpointer user_data) {
+static void call_hold_trigger(gconstpointer data, gpointer user_data) {
+    const CallProperties *call = (const CallProperties*)data;
+    MaemoManager* maemo_mgr = (MaemoManager*)user_data;
+    maemo_mgr->holdTrigger(call);
+}
+
+static void call_hangup_trigger(gconstpointer data, gpointer user_data) {
     const CallProperties *call = (const CallProperties*)data;
     MaemoManager* maemo_mgr = (MaemoManager*)user_data;
 
-    maemo_mgr->dialTrigger(call);
+    maemo_mgr->hangupTrigger(call);
 }
+
 
 G_MODULE_EXPORT const gchar *sphone_module_init(void **data);
 const gchar *sphone_module_init(void **data)
@@ -86,12 +78,11 @@ const gchar *sphone_module_init(void **data)
 
     maemo_mgr->setup();
 
-    fprintf(stderr, "maemo_mgr: %x\n", (void*)maemo_mgr);
 	*data = maemo_mgr;
 
 	append_trigger_to_datapipe(&call_dial_pipe,   call_dial_trigger, maemo_mgr);
 	append_trigger_to_datapipe(&call_accept_pipe, call_accept_trigger, maemo_mgr);
-	//append_trigger_to_datapipe(&call_hold_pipe,   call_hold_trigger, maemo_mgr);
+	append_trigger_to_datapipe(&call_hold_pipe,   call_hold_trigger, maemo_mgr);
 	append_trigger_to_datapipe(&call_hangup_pipe, call_hangup_trigger, maemo_mgr);
 
 	return NULL;
@@ -102,12 +93,12 @@ void sphone_module_exit(void* data)
 {
     MaemoManager* maemo_mgr = (MaemoManager*)data;
 
-    // TODO: clean up here
-
 	remove_trigger_from_datapipe(&call_dial_pipe,   call_dial_trigger, maemo_mgr);
 	remove_trigger_from_datapipe(&call_accept_pipe, call_accept_trigger, maemo_mgr);
-	//remove_trigger_from_datapipe(&call_hold_pipe,   call_hold_trigger, maemo_mgr);
+	remove_trigger_from_datapipe(&call_hold_pipe,   call_hold_trigger, maemo_mgr);
 	remove_trigger_from_datapipe(&call_hangup_pipe, call_hangup_trigger, maemo_mgr);
+
+    delete maemo_mgr;
 }
 
 }
