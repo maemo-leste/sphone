@@ -1,10 +1,9 @@
 #ifndef __MAEMOCALLHANDLER_H__
 #define __MAEMOCALLHANDLER_H__
 // Prevent type issues/conficts between glib and qt
-#include "types.h"
 #include "datapipe.h"
 #include "datapipes.h"
-
+#include "types.h"
 
 #include <QtCore>
 
@@ -12,8 +11,7 @@
 
 #include <voicecallmanager.h>
 
-class MaemoCallHandler : public QObject
-{
+class MaemoCallHandler : public QObject {
     Q_OBJECT
 
 public:
@@ -25,7 +23,7 @@ public:
     void hold(bool);
 
 public slots:
-//    void error(const QString &error);
+    //    void error(const QString &error);
     void statusChanged();
 #if 0
     void lineIdChanged();
@@ -48,12 +46,11 @@ private:
     MaemoProvider* backend;
     CallProperties* call_properties;
     int call_status;
-    //VoiceCallHandler::VoiceCallStatus call_status;
+    // VoiceCallHandler::VoiceCallStatus call_status;
 
     // Do we store just the QString handler ID, or do we store the pointer to
     // the handler? We can use the VoiceCallModel->instance(handler_id) code to
     // find a pointer.
-
 };
 
 #if 0

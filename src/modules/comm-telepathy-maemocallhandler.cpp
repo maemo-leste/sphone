@@ -4,7 +4,8 @@
 
 #include "moc_comm-telepathy-maemocallhandler.cpp"
 
-MaemoCallHandler::MaemoCallHandler(MaemoManager* mgr_, VoiceCallHandler* handler_) {
+MaemoCallHandler::MaemoCallHandler(MaemoManager* mgr_, VoiceCallHandler* handler_)
+{
     this->mgr = mgr_;
     this->voicecall_handler = handler_;
     this->backend = NULL;
@@ -16,12 +17,14 @@ MaemoCallHandler::MaemoCallHandler(MaemoManager* mgr_, VoiceCallHandler* handler
     connect(voicecall_handler, &VoiceCallHandler::statusChanged, this, &MaemoCallHandler::statusChanged);
 }
 
-MaemoCallHandler::~MaemoCallHandler() {
+MaemoCallHandler::~MaemoCallHandler()
+{
     disconnect(voicecall_handler);
     call_properties_free(call_properties);
 }
 
-void MaemoCallHandler::setupProvider() {
+void MaemoCallHandler::setupProvider()
+{
     if (backend != NULL)
         return;
 
@@ -34,7 +37,8 @@ void MaemoCallHandler::setupProvider() {
     backend = mgr->maemo_providers[provider_id];
 }
 
-void MaemoCallHandler::statusChanged() {
+void MaemoCallHandler::statusChanged()
+{
     // Since it's not setup upon creation, let's check here first
     setupProvider();
 
@@ -99,22 +103,23 @@ void MaemoCallHandler::statusChanged() {
     call_status = current_status;
 }
 
-void MaemoCallHandler::answer() {
+void MaemoCallHandler::answer()
+{
     qDebug() << "accept()";
     voicecall_handler->answer();
 }
 
-void MaemoCallHandler::hold(bool hold) {
+void MaemoCallHandler::hold(bool hold)
+{
     qDebug() << "hold()" << hold;
     voicecall_handler->hold(hold);
 }
 
-void MaemoCallHandler::hangup() {
+void MaemoCallHandler::hangup()
+{
     qDebug() << "hangup()";
     voicecall_handler->hangup();
     call_properties->state = SPHONE_CALL_DISCONNECTED;
     call_properties->end_time = time(NULL);
     execute_datapipe(&call_properties_changed_pipe, call_properties);
 }
-
-

@@ -9,8 +9,7 @@
 class MaemoProvider;
 class MaemoCallHandler;
 
-class MaemoManager : public QObject
-{
+class MaemoManager : public QObject {
     Q_OBJECT
 
 public:
@@ -44,14 +43,13 @@ signals:
 private:
     /* List of (active) voice calls, mapping the VoiceCallHandler->handlerId()
      * to our class, so that we can find the right calls in the callbacks */
-    QHash <QString, MaemoCallHandler*> voicecalls;
+    QHash<QString, MaemoCallHandler*> voicecalls;
 
     /* qt voicecall manager */
-    VoiceCallManager *qt_voicecall_manager;
+    VoiceCallManager* qt_voicecall_manager;
 
 public:
-    QHash <QString, MaemoProvider*> maemo_providers;
-
+    QHash<QString, MaemoProvider*> maemo_providers;
 };
 
 #endif /* __MAEMOMANAGER_H__ */

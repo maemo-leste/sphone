@@ -3,10 +3,12 @@
 
 #include "moc_comm-telepathy-maemomanager.cpp"
 
-MaemoManager::MaemoManager() {
+MaemoManager::MaemoManager()
+{
 }
 
-MaemoManager::~MaemoManager() {
+MaemoManager::~MaemoManager()
+{
     /* TODO: delete all voicecalls */
 
     /* TODO: delete all providers */
@@ -15,13 +17,14 @@ MaemoManager::~MaemoManager() {
     delete qt_voicecall_manager;
 }
 
-void MaemoManager::setup(void) {
+void MaemoManager::setup(void)
+{
     qt_voicecall_manager = new VoiceCallManager(qApp);
 
     connect(qt_voicecall_manager, &VoiceCallManager::voiceCallsChanged, this, &MaemoManager::voiceCallsChanged);
     connect(qt_voicecall_manager, &VoiceCallManager::providersChanged, this, &MaemoManager::providersChanged);
 
-    VoiceCallProviderModel * providermodel = qt_voicecall_manager->providers();
+    VoiceCallProviderModel* providermodel = qt_voicecall_manager->providers();
     for (int i = 0; i < providermodel->count(); i++) {
         MaemoProvider* provider = new MaemoProvider(this, providermodel->id(i), providermodel->type(i), providermodel->label(i));
         provider->registerBackend();
@@ -30,7 +33,8 @@ void MaemoManager::setup(void) {
     }
 }
 
-void MaemoManager::voiceCallsChanged(void) {
+void MaemoManager::voiceCallsChanged(void)
+{
     // So we should check if there is a new call, and if so, create
     // MaemoCallHandler, the VoiceCallHandler already exists, just check
     // qt_voicecall_manager->voiceCalls() - which returns the VoiceCallModel, which can be used
@@ -76,10 +80,11 @@ void MaemoManager::voiceCallsChanged(void) {
     }
 }
 
-void MaemoManager::providersChanged(void) {
+void MaemoManager::providersChanged(void)
+{
     qDebug() << "providersChanged";
 
-    VoiceCallProviderModel * providermodel = qt_voicecall_manager->providers();
+    VoiceCallProviderModel* providermodel = qt_voicecall_manager->providers();
     for (int i = 0; i < providermodel->count(); i++) {
         if (!maemo_providers.contains(providermodel->id(i))) {
             MaemoProvider* provider = new MaemoProvider(this, providermodel->id(i), providermodel->type(i), providermodel->label(i));
@@ -112,37 +117,41 @@ void MaemoManager::providersChanged(void) {
     }
 }
 
-void MaemoManager::acceptTrigger(const CallProperties *call) {
+void MaemoManager::acceptTrigger(const CallProperties* call)
+{
     QString call_handler = QString(call->backend_data);
     qDebug() << "call handler id" << call_handler;
 
     if (voicecalls.contains(call_handler)) {
-        MaemoCallHandler *mch = voicecalls[call_handler];
+        MaemoCallHandler* mch = voicecalls[call_handler];
         mch->answer();
     }
 }
 
-void MaemoManager::holdTrigger(const CallProperties *call) {
+void MaemoManager::holdTrigger(const CallProperties* call)
+{
     QString call_handler = QString(call->backend_data);
     qDebug() << "hold handler id" << call_handler;
 
     if (voicecalls.contains(call_handler)) {
-        MaemoCallHandler *mch = voicecalls[call_handler];
+        MaemoCallHandler* mch = voicecalls[call_handler];
         mch->hold(!(call->state == SPHONE_CALL_HELD));
     }
 }
 
-void MaemoManager::hangupTrigger(const CallProperties *call) {
+void MaemoManager::hangupTrigger(const CallProperties* call)
+{
     QString call_handler = QString(call->backend_data);
     qDebug() << "call handler id" << call_handler;
 
     if (voicecalls.contains(call_handler)) {
-        MaemoCallHandler *mch = voicecalls[call_handler];
+        MaemoCallHandler* mch = voicecalls[call_handler];
         mch->hangup();
     }
 }
 
-void MaemoManager::dialTrigger(const CallProperties *call) {
+void MaemoManager::dialTrigger(const CallProperties* call)
+{
     QHashIterator<QString, MaemoProvider*> i(maemo_providers);
     while (i.hasNext()) {
         i.next();
