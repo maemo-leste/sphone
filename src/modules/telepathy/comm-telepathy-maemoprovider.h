@@ -5,8 +5,8 @@
 
 #include <QtCore>
 
-#include "comm-telepathy-maemocallhandler.h"
 #include "comm-telepathy-maemomanager.h"
+#include "comm-telepathy-maemocallhandler.h"
 
 class MaemoProvider : public QObject {
     Q_OBJECT
