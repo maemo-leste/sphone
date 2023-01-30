@@ -492,6 +492,8 @@ int main (int argc, char *argv[])
 		return -1;
 	}
 
+	datapipes_init();
+
 	load_loop_module(&loop_module);
 	main_loop_init(argc, argv);
 
