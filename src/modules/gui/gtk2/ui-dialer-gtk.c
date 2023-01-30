@@ -34,7 +34,6 @@
 #include "types.h"
 #include "sphone-log.h"
 #include "keypad.h"
-#include "ui-history-calls-gtk.h"
 #include "gui.h"
 #include "sphone-modules.h"
 
@@ -42,7 +41,7 @@
 #define MODULE_NAME		"ui-dialer-gtk"
 
 /** Functionality provided by this module */
-static const gchar *const provides[] = { MODULE_NAME, NULL };
+static const gchar *const provides[] = { MODULE_NAME, "ui-dialer", NULL };
 
 /** Module information */
 G_MODULE_EXPORT module_info_struct module_info = {
@@ -308,7 +307,7 @@ const gchar *sphone_module_init(void** data)
 	g_signal_connect(G_OBJECT(display_back), "clicked", G_CALLBACK(gui_dialer_back_presses_callback), display);
 	g_signal_connect(G_OBJECT(display), "insert_text", G_CALLBACK(gui_dialer_validate_callback),NULL);
 	
-	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL, NULL, gtk_gui_history_calls, NULL, NULL);
+	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 	return NULL;
 }
 

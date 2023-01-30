@@ -1,8 +1,14 @@
-add_library(ui-dialer-gtk SHARED ui-dialer-gtk.c ui-history-calls-gtk.c gtk-gui-utils.c keypad.c)
+add_library(ui-dialer-gtk SHARED ui-dialer-gtk.c gtk-gui-utils.c keypad.c)
 target_link_libraries(ui-dialer-gtk ${COMMON_LIBRARIES})
 target_include_directories(ui-dialer-gtk SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 target_include_directories(ui-dialer-gtk PRIVATE ${MODULE_INCLUDE_DIRS})
 install(TARGETS ui-dialer-gtk DESTINATION ${SPHONE_MODULE_DIR})
+
+add_library(ui-history-calls-gtk SHARED ui-history-calls-gtk.c gtk-gui-utils.c)
+target_link_libraries(ui-history-calls-gtk ${COMMON_LIBRARIES})
+target_include_directories(ui-history-calls-gtk SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
+target_include_directories(ui-history-calls-gtk PRIVATE ${MODULE_INCLUDE_DIRS})
+install(TARGETS ui-history-calls-gtk DESTINATION ${SPHONE_MODULE_DIR})
 
 add_library(ui-messages-gtk SHARED ui-messages-gtk.c gtk-gui-utils.c)
 target_link_libraries(ui-messages-gtk ${COMMON_LIBRARIES})

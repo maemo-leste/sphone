@@ -34,10 +34,28 @@
 #include "storage.h"
 #include "gui.h"
 
+#include "sphone-modules.h"
+
+/** Module name */
+#define MODULE_NAME		"ui-history-calls-gtk"
+
+/** Functionality provided by this module */
+static const gchar *const provides[] = { MODULE_NAME, "ui-history-calls", NULL };
+
+/** Module information */
+G_MODULE_EXPORT module_info_struct module_info = {
+	/** Name of the module */
+	.name = MODULE_NAME,
+	/** Module provides */
+	.provides = provides,
+	/** Module priority */
+	.priority = 250
+};
+
 struct{
 	GtkWidget *window;
 	GtkWidget *dials_view;
-}g_history_calls;
+} g_history_calls;
 
 static gboolean gui_history_make_null(GtkWidget *w, GdkEvent *event, GtkWidget **window)
 {
@@ -158,7 +176,7 @@ void gtk_gui_history_calls(void)
 	gtk_container_add (GTK_CONTAINER(v1), list);
 	gtk_container_add (GTK_CONTAINER(g_history_calls.window), v1);
 
-	g_signal_connect(G_OBJECT(g_history_calls.window),"delete-event", G_CALLBACK(gui_history_make_null), &g_history_calls.window);
+	g_signal_connect(G_OBJECT(g_history_calls.window), "delete-event", G_CALLBACK(gui_history_make_null), &g_history_calls.window);
 
 	GList *calls_list = store_get_all_calls();
 	calls = gtk_gui_new_model_from_calls(calls_list);
@@ -167,4 +185,24 @@ void gtk_gui_history_calls(void)
 	g_object_unref(G_OBJECT(calls));
 	
 	gtk_widget_show_all(g_history_calls.window);
+}
+
+G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+const gchar *sphone_module_init(void** data)
+{
+	(void)data;
+
+#ifdef ENABLE_LIBHILDON
+	hildon_init();
+#endif
+
+	*data = GINT_TO_POINTER(gui_register(NULL, NULL, NULL, NULL, NULL, NULL, gtk_gui_history_calls, NULL, NULL));
+	return NULL;
+}
+
+G_MODULE_EXPORT void sphone_module_exit(void* data);
+void sphone_module_exit(void* data)
+{
+	(void)data;
+	gui_remove(GPOINTER_TO_INT(data));
 }
