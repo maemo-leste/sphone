@@ -35,6 +35,7 @@ struct callback {
 gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer indata)
 {
 	gpointer data = indata;
+	bool entryNull = !indata;
 
 	if (datapipe == NULL) {
 		sphone_log(LL_ERR, "%s called without a valid datapipe", __func__);
@@ -45,6 +46,8 @@ gconstpointer execute_datapipe_filters(datapipe_struct *const datapipe, gpointer
 	for (int i = 0; (cb = g_slist_nth_data(datapipe->filters, i)) != NULL; i++) {
 		gpointer (*filter)(gpointer data, gpointer user_data) = cb->callback;
 		gpointer tmp = filter(data, cb->data);
+		if(!entryNull && !tmp)
+			return NULL;
 
 		data = tmp;
 	}
@@ -94,13 +97,15 @@ gconstpointer execute_datapipe(datapipe_struct *const datapipe, gpointer indata)
 
 	data = execute_datapipe_filters(datapipe, indata);
 
+	if(!data && indata)
+		return NULL;
+
 	execute_datapipe_output_triggers(datapipe, data);
 
 	datapipe->last_data = data;
 
 	return data;
 }
-
 
 int datapipe_get_last_data_int(datapipe_struct *const datapipe)
 {
