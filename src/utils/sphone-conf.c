@@ -258,6 +258,30 @@ EXIT:
 	return tmp;
 }
 
+sphone_feature_t sphone_conf_get_features(void)
+{
+	static sphone_feature_t features = SPHONE_FEATURE_NONE;
+
+	if(features != SPHONE_FEATURE_NONE)
+		return features;
+
+	gsize size;
+	gchar** featureList = sphone_conf_get_string_list("Sphone", "Features", &size, NULL);
+	if(!featureList) {
+		sphone_log(LL_ERR, "sphone-conf: No sphone feature list found");
+		return SPHONE_FEATURE_NONE;
+	}
+
+	for(gsize i = 0; i < size; ++i) {
+		if(g_str_equal(featureList[i], "calls"))
+			features |= SPHONE_FEATURE_CALLS;
+		else if(g_str_equal(featureList[i], "messages"))
+			features |= SPHONE_FEATURE_MESSAGES;
+	}
+	g_strfreev(featureList);
+	return features;
+}
+
 /**
  * Free configuration file
  *

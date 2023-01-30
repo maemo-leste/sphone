@@ -24,6 +24,12 @@
 extern "C" {
 #endif
 
+typedef enum {
+	SPHONE_FEATURE_NONE = 0,
+	SPHONE_FEATURE_CALLS = 1,
+	SPHONE_FEATURE_MESSAGES = 1<<1,
+} sphone_feature_t;
+
 gboolean sphone_conf_get_bool(const gchar *group, const gchar *key,
 			   const gboolean defaultval, gpointer keyfileptr);
 gint sphone_conf_get_int(const gchar *group, const gchar *key,
@@ -34,6 +40,7 @@ gchar *sphone_conf_get_string(const gchar *group, const gchar *key,
 			   const gchar *defaultval, gpointer keyfileptr);
 gchar **sphone_conf_get_string_list(const gchar *group, const gchar *key,
 				 gsize *length, gpointer keyfileptr);
+sphone_feature_t sphone_conf_get_features(void);
 
 gpointer sphone_conf_read_conf_file(const gchar *const conffile);
 void sphone_conf_free_conf_file(gpointer keyfileptr);
