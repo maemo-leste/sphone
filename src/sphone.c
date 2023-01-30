@@ -66,6 +66,7 @@ typedef enum {
 	SPHONE_CMD_DIALER_OPEN=1,
 	SPHONE_CMD_SMS_NEW,
 	SPHONE_CMD_HISTORY_SMS,
+	SPHONE_CMD_HISTORY_CALLS,
 	SPHONE_CMD_OPTIONS,
 	SPHONE_CMD_NONE,
 } sphone_cmd;
@@ -87,6 +88,8 @@ static const gchar dbus_introspection_xml[] =
 "		<method name='OpenOptions'>"
 "		</method>"
 "		<method name='OpenMessageHistory'>"
+"		</method>"
+"		<method name='OpenCallHistory'>"
 "		</method>"
 "	</interface>"
 "</node>"; 
@@ -156,6 +159,9 @@ static void run_command(const struct sphone_options *options)
 		case SPHONE_CMD_HISTORY_SMS:
 			gui_history_sms();
 			break;
+		case SPHONE_CMD_HISTORY_CALLS:
+			gui_history_calls();
+			break;
 		case SPHONE_CMD_OPTIONS:
 			gui_options_open();
 			break;
@@ -180,6 +186,12 @@ static void send_command(GDBusConnection *connection, struct sphone_options *opt
 			resp = g_dbus_connection_call_sync(connection,
 				SPHONE_SERVICE, SPHONE_PATH,
 				SPHONE_INTERFACE, "OpenDialer", params, NULL,
+				(GDBusCallFlags)G_DBUS_SEND_MESSAGE_FLAGS_NONE, -1, NULL, &error);
+			break;
+		case SPHONE_CMD_HISTORY_CALLS:
+			resp = g_dbus_connection_call_sync(connection,
+				SPHONE_SERVICE, SPHONE_PATH,
+				SPHONE_INTERFACE, "OpenCallHistory", NULL, NULL,
 				(GDBusCallFlags)G_DBUS_SEND_MESSAGE_FLAGS_NONE, -1, NULL, &error);
 			break;
 		case SPHONE_CMD_SMS_NEW:
@@ -323,6 +335,8 @@ static void method_call_callback(GDBusConnection* connection,
 		gui_options_open();
 	else if(g_strcmp0(method_name, "OpenMessageHistory") == 0)
 		gui_history_sms();
+	else if(g_strcmp0(method_name, "OpenCallHistory") == 0)
+		gui_history_calls();
 	else
 		sphone_log(LL_WARN, "Unkown dbus method %s called", method_name);
 	g_dbus_method_invocation_return_value(invocation, NULL);
@@ -445,12 +459,14 @@ int main (int argc, char *argv[])
 				      "   -h\tDisplay this help\n"
 				      "   -v\tEnable debug\n"
 				      "   -n [number]\topen with number\n"
-				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, sms-new, history-sms, options\n"
+				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, history-calls, sms-new, history-sms, options\n"
 				      , argv[0]);
 				return 0;
 			case 'c':
 				if(!g_strcmp0(optarg,"dialer-open"))
 					options.command = SPHONE_CMD_DIALER_OPEN;
+				else if(!g_strcmp0(optarg,"history-calls"))
+					options.command = SPHONE_CMD_HISTORY_CALLS;
 				else if(!g_strcmp0(optarg,"sms-new"))
 					options.command = SPHONE_CMD_SMS_NEW;
 				else if(!g_strcmp0(optarg,"history-sms"))
