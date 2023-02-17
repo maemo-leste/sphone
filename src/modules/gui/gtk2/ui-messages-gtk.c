@@ -146,12 +146,14 @@ static bool gtk_gui_sms_send_show(const MessageProperties *msg)
 	                                 HILDON_TOUCH_SELECTOR(selector));
 	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(main_window), HILDON_PORTRAIT_MODE_SUPPORT);
 	g_object_set_data(G_OBJECT(main_window), "backend-combo-box", selector);
-	hildon_touch_selector_set_active(HILDON_TOUCH_SELECTOR(selector), 0, msg->backend);
+	if(msg)
+		hildon_touch_selector_set_active(HILDON_TOUCH_SELECTOR(selector), 0, msg->backend);
 #else
 	GtkWidget *main_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 	backend_combo = gui_sms_create_backend_combo();
 	g_object_set_data(G_OBJECT(main_window), "backend-combo-box", backend_combo);
-	gtk_combo_box_set_active(GTK_COMBO_BOX(backend_combo), msg->backend);
+	if(msg)
+		gtk_combo_box_set_active(GTK_COMBO_BOX(backend_combo), msg->backend);
 #endif
 
 	gtk_window_set_title(GTK_WINDOW(main_window),"Send SMS");
