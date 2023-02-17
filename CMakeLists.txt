@@ -5,7 +5,7 @@ project(sphone LANGUAGES C CXX VERSION 0.6)
 set(CMAKE_INSTALL_PREFIX "/usr")
 
 set(SPHONE_SYSCONF_DIR /usr/share/sphone)
-set(SPHONE_SYSCONF_OVR_DIR .sphone/)
+set(SPHONE_SYSCONF_OVR_DIR .config/sphone/)
 set(SPHONE_MODULE_DIR /usr/lib/sphone/modules)
 
 add_definitions(-D_GNU_SOURCE)
