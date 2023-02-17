@@ -1,3 +1,14 @@
+sphone (0.7.1) unstable; urgency=medium
+
+  * gui: gtk2: split ui-dialer-gtk into seperate dialer and history modules
+  * add call history as dbus entry point
+  * sphone-conf: add sphone_conf_get_features
+  * allow slectively disabeling features
+  * fix nullpointer deref in gtk ui
+  * move user config to .config
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Tue, 29 Nov 20:20:32  +0100
+
 sphone (0.7.0) unstable; urgency=medium
 
   * comm: add sheme handling to comm plugin support, also backend capabilites flags
