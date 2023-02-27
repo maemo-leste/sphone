@@ -45,43 +45,40 @@ struct evolution_priv {
 	EBookClient *ebook;
 };
 
-
-static bool fill_contact(EBookClient *ebook, const char *line_id, Contact *contact, int id)
+static GSList *find_e_contacts(EBookClient *ebook, const char *line_id, int id)
 {
-	(void)id;
-	
 	EPhoneNumber *enumber = e_phone_number_from_string(line_id, NULL, NULL);
-	
+
 	if(enumber) {
 		gchar *number = e_phone_number_to_string(enumber, E_PHONE_NUMBER_FORMAT_E164);
 		EBookQuery *query = e_book_query_orv(
-			e_book_query_field_test(E_CONTACT_PHONE_ASSISTANT, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_ASSISTANT, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_BUSINESS, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_BUSINESS_2, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_BUSINESS_2, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_BUSINESS_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_CALLBACK, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_CALLBACK, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_CAR, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_COMPANY, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_COMPANY, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_HOME, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_HOME_2, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_HOME_2, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_HOME_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_ISDN, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_ISDN, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_MOBILE, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_OTHER, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_OTHER, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_OTHER_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_PAGER, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_PAGER, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_PRIMARY, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_RADIO, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_TELEX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number), 
+			e_book_query_field_test(E_CONTACT_PHONE_TELEX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			e_book_query_field_test(E_CONTACT_PHONE_TTYTDD, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			NULL);
 
 		gchar *query_string = e_book_query_to_string(query);
 		e_book_query_unref(query);
-		
+
 		g_free(number);
 		e_phone_number_free(enumber);
-		
+
 		GError* error;
 
 		GSList *contacts = NULL;
@@ -89,27 +86,30 @@ static bool fill_contact(EBookClient *ebook, const char *line_id, Contact *conta
 		if(!e_book_client_get_contacts_sync(ebook, query_string, &contacts, NULL, &error)) {
 			g_free(query_string);
 			sphone_module_log(LL_DEBUG, "e_book_client_get_contacts_sync failed %s", error ? error->message : "");
-			return false;
-		}
-		
-		if(!contacts) {
-			g_free(query_string);
-			return false;
+			return NULL;
 		}
 
-		g_free(query_string);
-		
-		EContact *econtact = contacts->data;
-		contact->name = g_strdup(e_contact_get_const(econtact, E_CONTACT_FULL_NAME));
-		e_client_util_free_object_slist(contacts);
-		
-		contact->line_identifier = g_strdup(line_id);
-		contact->backend = id;
-		
-		return (bool)contact->name;
+		return contacts;
 	}
-	
-	return false;
+
+	return NULL;
+}
+
+static bool fill_contact(EBookClient *ebook, const char *line_id, Contact *contact, int id)
+{
+	GSList *contacts = find_e_contacts(ebook, line_id, id);
+
+	if(!contacts)
+		return false;
+
+	EContact *econtact = contacts->data;
+	contact->name = g_strdup(e_contact_get_const(econtact, E_CONTACT_FULL_NAME));
+	e_client_util_free_object_slist(contacts);
+
+	contact->line_identifier = g_strdup(line_id);
+	contact->backend = id;
+
+	return (bool)contact->name;
 }
 
 static gpointer call_filter(gpointer data, gpointer user_data)
