@@ -78,16 +78,16 @@ static void gui_history_list_double_click_callback(GtkTreeView *view, GtkTreePat
 	if(path){
 		GtkTreeModel *model=gtk_tree_view_get_model(view);
 		GtkTreeIter iter;
-		CallProperties msg = {0};
+		Contact contact = {0};
 		CommBackend *backend = sphone_comm_default_backend();
-		GValue value={0};
+		GValue value = {0};
 		gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path);
 		gtk_tree_model_get_value(model, &iter, GTK_UI_MOD_LINE_ID, &value);
-		msg.backend = backend ? backend->id : 0;
-		msg.line_identifier = (char*)g_value_get_string(&value);
+		contact.backend = backend ? backend->id : 0;
+		contact.line_identifier = (char*)g_value_get_string(&value);
 		gdk_window_destroy(gtk_widget_get_window(GTK_WIDGET(g_history_calls.window)));
 		g_history_calls.window = NULL;
-		gui_dialer_show(&msg);
+		gui_contact_show(&contact, NULL, NULL);
 		g_value_unset(&value);
 	}
 }
