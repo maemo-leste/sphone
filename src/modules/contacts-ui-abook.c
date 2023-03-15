@@ -39,6 +39,7 @@ static const gchar *const provides[] = { "contacts-ui", NULL };
 struct UiAbookPriv
 {
 	EBook* ebook;
+	OssoABookRoster *roster;
 	GtkWidget *chooser;
 	GtkWidget *card;
 	void (*callback)(Contact*, void*);
@@ -56,9 +57,18 @@ G_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 10
 };
 
-static GList *find_abook_contacts(EBook *ebook, const char *line_id, int id)
+static GList *find_abook_contacts(const char *line_id, int id)
 {
 	(void)id;
+
+	if(osso_abook_aggregator_get_state(OSSO_ABOOK_AGGREGATOR(abook_priv.roster)) != OSSO_ABOOK_AGGREGATOR_READY) {
+		sphone_module_log(LL_WARN, "Abook is not ready %i", osso_abook_aggregator_get_state(OSSO_ABOOK_AGGREGATOR(abook_priv.roster)));
+		//return NULL;
+	}
+	else {
+		sphone_module_log(LL_DEBUG, "Abook is ready");
+	}
+
 	EPhoneNumber *enumber = e_phone_number_from_string(line_id, NULL, NULL);
 
 	if(enumber) {
@@ -85,17 +95,8 @@ static GList *find_abook_contacts(EBook *ebook, const char *line_id, int id)
 			e_book_query_field_test(E_CONTACT_PHONE_TTYTDD, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
 			NULL);
 
-		GError *err;
-		OssoABookRoster *roster = osso_abook_aggregator_new(ebook, &err);
-		if(!roster) {
-			sphone_module_log(LL_WARN, "Could not get abook aggregator: %s", err->message);
-			g_error_free(err);
-		}
-
-		GList *contacts = osso_abook_aggregator_find_contacts(OSSO_ABOOK_AGGREGATOR(roster), query);
+		GList *contacts = osso_abook_aggregator_find_contacts(OSSO_ABOOK_AGGREGATOR(abook_priv.roster), query);
 		e_book_query_unref(query);
-		g_object_unref(roster);
-
 		return contacts;
 	}
 
@@ -177,7 +178,7 @@ static void abook_contact_show(const Contact *contact, void (*callback)(Contact*
 			sphone_module_log(LL_WARN, "Can not display card for contact with no line_identifier");
 			return;
 		}
-		GList *contacts = find_abook_contacts(abook_priv.ebook, contact->line_identifier, contact->backend);
+		GList *contacts = find_abook_contacts(contact->line_identifier, contact->backend);
 		if(!contacts) {
 			sphone_module_log(LL_INFO, "Could not find abook contact for %s", contact->line_identifier);
 			CallProperties msg = {0};
@@ -245,6 +246,12 @@ const gchar *sphone_module_init(void** data)
 		return "Can not open ebook";
 	}
 
+	abook_priv.roster = osso_abook_aggregator_new(abook_priv.ebook, &err);
+	if(!abook_priv.roster) {
+		sphone_module_log(LL_WARN, "Could not get abook aggregator: %s", err->message);
+		g_error_free(err);
+	}
+
 	hildon_init();
 	osso_abook_init_with_name("sphone", NULL);
 
@@ -259,9 +266,11 @@ void sphone_module_exit(void* data)
 	(void)data;
 	gui_remove(abook_priv.ui_id);
 	abook_dialog_close();
+	g_object_unref(abook_priv.roster);
 	g_object_unref(abook_priv.ebook);
 	if(abook_priv.chooser)
 		gtk_widget_destroy(abook_priv.chooser);
 	if(abook_priv.card)
 		gtk_widget_destroy(abook_priv.card);
+
 }
