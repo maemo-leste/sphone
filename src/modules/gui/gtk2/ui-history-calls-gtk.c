@@ -150,7 +150,7 @@ void gtk_gui_history_calls(void)
 	GtkTreeModel *calls;
 
 	if(g_history_calls.window){
-		GList *calls_list = store_get_all_calls();
+		GList *calls_list = store_get_all_calls(100);
 		calls = gtk_gui_new_model_from_calls(calls_list);
 		store_free_call_list(calls_list);
 		gtk_tree_view_set_model(GTK_TREE_VIEW(g_history_calls.dials_view), GTK_TREE_MODEL(calls));
@@ -178,7 +178,7 @@ void gtk_gui_history_calls(void)
 
 	g_signal_connect(G_OBJECT(g_history_calls.window), "delete-event", G_CALLBACK(gui_history_make_null), &g_history_calls.window);
 
-	GList *calls_list = store_get_all_calls();
+	GList *calls_list = store_get_all_calls(100);
 	calls = gtk_gui_new_model_from_calls(calls_list);
 	store_free_call_list(calls_list);
 	gtk_tree_view_set_model(GTK_TREE_VIEW(g_history_calls.dials_view), GTK_TREE_MODEL(calls));

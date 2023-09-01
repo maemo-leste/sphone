@@ -20,33 +20,33 @@
 #include "datapipes.h"
 #include "datapipe.h"
 
-GList *(*get_messages_for_contact_backend)(Contact *contact);
-GList *(*get_calls_for_contact_backend)(Contact *contact);
+GList *(*get_messages_for_contact_backend)(Contact *contact, unsigned int limit);
+GList *(*get_calls_for_contact_backend)(Contact *contact, unsigned int limit);
 
-int store_register_backend(GList *(*get_messages_for_contact)(Contact *contact),
-						   GList *(*get_calls_for_contact)(Contact *contact))
+int store_register_backend(GList *(*get_messages_for_contact)(Contact *contact, unsigned int limit),
+						   GList *(*get_calls_for_contact)(Contact *contact, unsigned int limit))
 {
 	get_messages_for_contact_backend = get_messages_for_contact;
 	get_calls_for_contact_backend = get_calls_for_contact;
 	return 0;
 }
 
-GList *store_get_messages_for_contact(Contact *contact)
+GList *store_get_messages_for_contact(Contact *contact, unsigned int limit)
 {
 	if(!get_messages_for_contact_backend) {
 		sphone_log(LL_ERR, "%s used without backend", __func__);
 		return NULL;
 	}
-	return get_messages_for_contact_backend(contact);
+	return get_messages_for_contact_backend(contact, limit);
 }
 
-GList *store_get_calls_for_contact(Contact *contact)
+GList *store_get_calls_for_contact(Contact *contact, unsigned int limit)
 {
 	if(!get_calls_for_contact_backend) {
 		sphone_log(LL_ERR, "%s used without backend", __func__);
 		return NULL;
 	}
-	return get_calls_for_contact_backend(contact);
+	return get_calls_for_contact_backend(contact, limit);
 }
 
 static bool store_is_contact_in_list(GList *contacts, const char* line_id, int backend)
@@ -61,7 +61,7 @@ static bool store_is_contact_in_list(GList *contacts, const char* line_id, int b
 
 GList *store_get_interacted_msg_contacts(void)
 {
-	GList *messages = store_get_messages();
+	GList *messages = store_get_messages(0);
 	GList *contacts = NULL;
 	for(GList *element = messages; element; element = element->next) {
 		MessageProperties* msg = element->data;
@@ -83,14 +83,14 @@ GList *store_get_interacted_msg_contacts(void)
 	return contacts;
 }
 
-GList *store_get_all_calls(void)
+GList *store_get_all_calls(unsigned int limit)
 {
-	return store_get_calls_for_contact(NULL);
+	return store_get_calls_for_contact(NULL, limit);
 }
 
-GList *store_get_messages(void)
+GList *store_get_messages(unsigned int limit)
 {
-	return store_get_messages_for_contact(NULL);
+	return store_get_messages_for_contact(NULL, limit);
 }
 
 void store_free_call_list(GList *list)

@@ -195,13 +195,19 @@ static MessageProperties *convert_to_message_properties(RTComElIter *iter, const
 	return msg;
 }
 
-static GList *get_messages_for_contact(Contact *contact)
+static GList *get_messages_for_contact(Contact *contact, unsigned int limit)
 {
 	if(!evlog)
 		return NULL;
 
 	RTComElQuery* querySms = rtcom_el_query_new(evlog);
 	RTComElQuery* queryChat = rtcom_el_query_new(evlog);
+
+	if(limit > 0)
+	{
+		rtcom_el_query_set_limit(querySms, limit);
+		rtcom_el_query_set_limit(queryChat, limit);
+	}
 
 	if(!contact) {
 		if(!rtcom_el_query_prepare(querySms, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_SMS"), RTCOM_EL_OP_EQUAL,
@@ -263,12 +269,15 @@ static GList *get_messages_for_contact(Contact *contact)
 	return messages;
 }
 
-static GList *get_calls_for_contact(Contact *contact)
+static GList *get_calls_for_contact(Contact *contact, unsigned int limit)
 {
 	if(!evlog)
 		return 0;
 
 	RTComElQuery* query = rtcom_el_query_new(evlog);
+
+	if(limit > 0)
+		rtcom_el_query_set_limit(query, limit);
 
 	if(!contact) {
 		if(!rtcom_el_query_prepare(query, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_CALL"), RTCOM_EL_OP_EQUAL, NULL))
