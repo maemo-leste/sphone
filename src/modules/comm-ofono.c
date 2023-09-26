@@ -29,6 +29,7 @@
 #include "datapipe.h"
 #include "datapipes.h"
 #include "types.h"
+#include "sphone-conf.h"
 
 /** Module name */
 #define MODULE_NAME		"comm-ofono"
@@ -541,7 +542,7 @@ static void new_sms_cb(GDBusConnection *connection,
 		g_variant_unref(var);
 		g_free(key);
 	}
-	
+
 	message->time = mktime(&tm);
 	
 	if(message->line_identifier && message->text)
@@ -556,14 +557,15 @@ static void call_dial_trigger(gconstpointer data, gpointer user_data)
 {
 	const CallProperties *call = (const CallProperties*)data;
 	struct ofono_if_priv_s *priv = (struct ofono_if_priv_s*)user_data;
-	
+
 	if(call->backend == priv->backend_id && ofono_init_valid(priv)) {
 		sphone_module_log(LL_DEBUG, "Dialing number: %s", call->line_identifier);
 		GVariant *val;
 		GVariant *result;
 		GError *gerror = NULL;
-		
-		val = g_variant_new("(ss)", call->line_identifier, "enabled");
+		bool hidden_line_id = sphone_conf_get_bool("Comm", "HiddenLineId", false, NULL);
+
+		val = g_variant_new("(ss)", call->line_identifier, hidden_line_id ? "enabled" : "disabled");
 		result = g_dbus_connection_call_sync(priv->s_bus_conn, OFONO_SERVICE, priv->modem,
 			OFONO_VOICECALL_MANAGER_IFACE, "Dial", val, NULL,
 			G_DBUS_CALL_FLAGS_NONE, -1, NULL, &gerror);
