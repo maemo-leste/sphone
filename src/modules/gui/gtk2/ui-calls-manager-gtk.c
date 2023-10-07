@@ -31,6 +31,7 @@
 #include "sphone-modules.h"
 #include "gui.h"
 #include "comm.h"
+#include "sphone-conf.h"
 
 /** Module name */
 #define MODULE_NAME		"ui-calls-manager-gtk"
@@ -441,7 +442,9 @@ const gchar *sphone_module_init(void** data)
 	GtkTreeViewColumn *column;
 	
 #ifdef ENABLE_LIBHILDON
-	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_calls_manager.main_window), HILDON_PORTRAIT_MODE_REQUEST);
+	bool landscape_calls = sphone_conf_get_bool("Gui", "LandscapeCalls", false, NULL);
+	hildon_gtk_window_set_portrait_flags(GTK_WINDOW(g_calls_manager.main_window),
+		landscape_calls ? HILDON_PORTRAIT_MODE_SUPPORT : HILDON_PORTRAIT_MODE_REQUEST);
 #endif
 
 	renderer = gtk_cell_renderer_pixbuf_new();
