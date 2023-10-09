@@ -48,6 +48,19 @@ G_MODULE_EXPORT module_info_struct module_info = {
 static RTComEl *evlog;
 int id = -1;
 
+static void add_event(RTComEl *el, RTComElEvent *ev)
+{
+	GError *error = NULL;
+	int eid;
+
+	if((eid = rtcom_el_add_event(el, ev, &error)) < 0 ||
+	   rtcom_el_add_header(el, eid, "vcard-field", "tel", &error) < 0) {
+		sphone_module_log(LL_ERR, "failed to add event to rtcom: %s", error->message);
+	}
+
+	g_clear_error(&error);
+}
+
 static void call_properties_changed_trigger(const void *data, void *user_data)
 {
 	RTComEl *el = user_data;
@@ -81,9 +94,7 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 
 	RTCOM_EL_EVENT_SET_FIELD(ev, remote_uid, g_strdup(call->line_identifier));
 
-	if(rtcom_el_add_event(el, ev, NULL) < 0)
-		sphone_module_log(LL_ERR, "failed to add event to rtcom");
-	
+	add_event(el, ev);
 	rtcom_el_event_free(ev);
 }
 
@@ -127,9 +138,7 @@ static void message_received_trigger(const void *data, void *user_data)
 	RTComElEvent *ev = create_message_event(msg);
 	RTCOM_EL_EVENT_SET_FIELD(ev, outgoing, false);
 
-	if(rtcom_el_add_event(el, ev, NULL) < 0)
-		sphone_module_log(LL_ERR, "failed to add event to rtcom");
-	
+	add_event(el, ev);
 	rtcom_el_event_free(ev);
 }
 
@@ -145,9 +154,7 @@ static void message_send_trigger(const void *data, void *user_data)
 	RTComElEvent *ev = create_message_event(msg);
 	RTCOM_EL_EVENT_SET_FIELD(ev, outgoing, true);
 
-	if(rtcom_el_add_event(el, ev, NULL) < 0)
-		sphone_module_log(LL_ERR, "failed to add event to rtcom");
-
+	add_event(el, ev);
 	rtcom_el_event_free(ev);
 }
 
