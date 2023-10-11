@@ -1,3 +1,10 @@
+sphone (0.7.3) unstable; urgency=medium
+
+  * gui: gtk: support calls in landscape view
+  * modules: store-rtcom: Add "vcard-field" header to help abook find contact
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Wed, 11 Oct 2023 21:17:57 +0200
+
 sphone (0.7.2) unstable; urgency=medium
 
   * allow the user to decide if phone call numbers should be hidden
