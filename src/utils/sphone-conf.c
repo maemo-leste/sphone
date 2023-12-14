@@ -362,28 +362,43 @@ static gboolean sphone_conf_is_ini_file(const char *filename)
 gboolean sphone_conf_init(void)
 {
 	DIR *dir = NULL;
-	sphone_conf_file_count = 1;
 	struct dirent *direntry;
+	GSList *filePaths = NULL;
 
-	const char *home = getenv("HOME");
-	if(!home)
-		home = "/home/user";
-
-	gchar *override_dir_path = g_strconcat(home, "/", G_STRINGIFY(SPHONE_SYSCONF_OVR_DIR), NULL);
-	dir = opendir(override_dir_path);
+	dir = opendir(G_STRINGIFY(SPHONE_SYSCONF_OVR_DIR));
 	if (dir) {
 		while ((direntry = readdir(dir)) != NULL && telldir(dir)) {
 			if ((direntry->d_type == DT_REG || direntry->d_type == DT_LNK) && 
 				sphone_conf_is_ini_file(direntry->d_name))
-				++sphone_conf_file_count;
+				filePaths = g_slist_prepend(filePaths,
+				                            g_strconcat(G_STRINGIFY(SPHONE_SYSCONF_OVR_DIR), "/", direntry->d_name, NULL));
 		}
-		rewinddir(dir);
+		closedir(dir);
 	} else {
 		sphone_log(LL_DEBUG, "sphone-conf: Could not open config overide dir %s",
-				   override_dir_path);
+				   G_STRINGIFY(SPHONE_SYSCONF_OVR_DIR));
 	}
-	g_free(override_dir_path);
 
+	const char *home = getenv("HOME");
+	if(!home)
+		home = "/home/user";
+	gchar *usr_override_dir_path = g_strconcat(home, "/", G_STRINGIFY(SPHONE_SYSCONF_USR_OVR_DIR), NULL);
+	dir = opendir(usr_override_dir_path);
+	if (dir) {
+		while ((direntry = readdir(dir)) != NULL && telldir(dir)) {
+			if ((direntry->d_type == DT_REG || direntry->d_type == DT_LNK) &&
+				sphone_conf_is_ini_file(direntry->d_name))
+			filePaths = g_slist_prepend(filePaths,
+				                        g_strconcat(usr_override_dir_path, "/", direntry->d_name, NULL));
+		}
+		closedir(dir);
+	} else {
+		sphone_log(LL_DEBUG, "sphone-conf: Could not open config overide dir %s",
+				   usr_override_dir_path);
+	}
+	g_free(usr_override_dir_path);
+
+	sphone_conf_file_count = g_slist_length(filePaths)+1;
 	conf_files = calloc(sphone_conf_file_count, sizeof(*conf_files));
 	
 	conf_files[0].filename = g_strdup(G_STRINGIFY(SPHONE_SYSCONF_INI));
@@ -396,29 +411,33 @@ gboolean sphone_conf_init(void)
 		g_free(conf_files[0].filename);
 		g_free(conf_files[0].path);
 		free(conf_files);
+		g_slist_free_full(filePaths, &g_free);
 		conf_files = NULL;
 		return FALSE;
 	}
 	conf_files[0].keyfile = main_conf_file;
 
-	if (dir) {
+	if (filePaths) {
 		size_t i = 1;
-		direntry = readdir(dir);
-		while (direntry != NULL && i < sphone_conf_file_count && telldir(dir)) {
-			if ((direntry->d_type == DT_REG || direntry->d_type == DT_LNK) && 
-				sphone_conf_is_ini_file(direntry->d_name)) {
-				conf_files[i].filename = g_strdup(direntry->d_name);
-				conf_files[i].path     = g_strconcat(home, "/", G_STRINGIFY(SPHONE_SYSCONF_OVR_DIR),
-													 "/", conf_files[i].filename, NULL);
-				conf_files[i].keyfile  = sphone_conf_read_conf_file(conf_files[i].path);
-				 ++i;
+		for(GSList *item = filePaths; item != NULL; item = item->next) {
+			conf_files[i].path = g_strdup((const gchar*)item->data);
+			conf_files[i].filename = g_path_get_basename((const gchar*)item->data);
+			conf_files[i].keyfile = sphone_conf_read_conf_file(conf_files[i].path);
+
+			if(conf_files[i].keyfile) {
+				++i;
+			} else {
+				g_free(conf_files[i].path);
+				g_free(conf_files[i].filename);
+				conf_files[i].path = NULL;
+				conf_files[i].filename = NULL;
+				--sphone_conf_file_count;
 			}
-			direntry = readdir(dir);
 		}
-		closedir(dir);
 		
 		qsort(conf_files, sphone_conf_file_count, sizeof(*conf_files), &sphone_conf_compare_file_prio);
 	}
+	g_slist_free_full(filePaths, &g_free);
 	
 	for (size_t i = 0; i < sphone_conf_file_count; ++i)
 		sphone_log(LL_DEBUG, "sphone-conf: found conf file %lu: %s", (unsigned long)i, conf_files[i].filename);
