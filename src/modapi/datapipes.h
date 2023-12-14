@@ -77,6 +77,10 @@ extern datapipe_struct contact_fill_pipe;
 //input: NotificationProperties
 extern datapipe_struct notification_raise_pipe;
 
+//input: CommBackend
+extern datapipe_struct comm_backend_added_pipe;
+extern datapipe_struct comm_backend_removed_pipe;
+
 void datapipes_init(void);
 void datapipes_exit(void);
 

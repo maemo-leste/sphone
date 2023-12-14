@@ -43,6 +43,9 @@ datapipe_struct contact_fill_pipe;
 datapipe_struct notification_raise_pipe;
 datapipe_struct contact_show_pipe;
 
+datapipe_struct comm_backend_added_pipe;
+datapipe_struct comm_backend_removed_pipe;
+
 static gpointer drop(gpointer data, gpointer user_data)
 {
 	(void)data;
@@ -70,6 +73,8 @@ void datapipes_init(void)
 	setup_datapipe(&notification_raise_pipe);
 	setup_datapipe(&call_accept_pipe);
 	setup_datapipe(&contact_fill_pipe);
+	setup_datapipe(&comm_backend_added_pipe);
+	setup_datapipe(&comm_backend_removed_pipe);
 
 	if(!(sphone_conf_get_features() & SPHONE_FEATURE_CALLS)) {
 		append_filter_to_datapipe(&call_new_pipe, drop, NULL);
@@ -118,4 +123,6 @@ void datapipes_exit(void)
 	free_datapipe(&notification_raise_pipe);
 	free_datapipe(&call_accept_pipe);
 	free_datapipe(&contact_fill_pipe);
+	free_datapipe(&comm_backend_added_pipe);
+	free_datapipe(&comm_backend_removed_pipe);
 }

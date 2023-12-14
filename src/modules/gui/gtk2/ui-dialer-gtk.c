@@ -64,40 +64,90 @@ struct{
 	GtkWidget *spinner;
 	GtkWidget *contacts_button;
 	int gui_id;
-}g_gui_calls;
+} g_gui_calls;
 
 static bool gtk_gui_dialer_show(const CallProperties* call);
 
 #ifdef ENABLE_LIBHILDON
+
+static int gui_dialer_add_backends_to_selector(HildonTouchSelector *selector)
+{
+	GSList *list = sphone_comm_get_backends();
+	for(GSList *element = list; element; element = element->next) {
+		CommBackend *backend = element->data;
+		hildon_touch_selector_append_text(selector, backend->name);
+	}
+	return g_slist_length(list);
+}
+
 static GtkWidget *gui_dialer_create_selector(void)
 {
 	GtkWidget *selector = hildon_touch_selector_new_text();
-	GSList *list = sphone_comm_get_backends();
 
-	for(GSList *element = list; element; element = element->next) {
-		CommBackend *backend = element->data; 
-		hildon_touch_selector_append_text(HILDON_TOUCH_SELECTOR(selector), backend->name);
-	}
+	int backend_count = gui_dialer_add_backends_to_selector(HILDON_TOUCH_SELECTOR(selector));
 
-	hildon_touch_selector_set_active(HILDON_TOUCH_SELECTOR(selector), 0, 0);
+	if(backend_count > 0)
+		hildon_touch_selector_set_active(HILDON_TOUCH_SELECTOR(selector), 0, 0);
 
 	return selector;
 }
 
+static void gui_dialer_backend_added(gconstpointer data, gpointer user_data)
+{
+	(void)user_data;
+	CommBackend *backend = (CommBackend*)data;
+	hildon_touch_selector_append_text(HILDON_TOUCH_SELECTOR(g_gui_calls.selector), backend->name);
+}
+
+static void gui_dialer_backend_removed(gconstpointer data, gpointer user_data)
+{
+	(void)user_data;
+	(void)data;
+	g_object_unref(g_gui_calls.selector);
+	g_gui_calls.selector = gui_dialer_create_selector();
+	hildon_picker_button_set_selector(HILDON_PICKER_BUTTON(g_gui_calls.backend_combo),
+	                                 HILDON_TOUCH_SELECTOR(g_gui_calls.selector));
+}
+
 #else
+
+static void gui_dialer_add_backends_to_combo(GtkComboBoxText *combo)
+{
+	GSList *list = sphone_comm_get_backends();
+	for(GSList *element = list; element; element = element->next) {
+		CommBackend *backend = element->data;
+		gtk_combo_box_text_append_text(combo, backend->name);
+	}
+}
+
 static GtkWidget *gui_dialer_create_backend_combo(void)
 {
 	GtkComboBoxText *combo = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-	GSList *list = sphone_comm_get_backends();
 
-	for(GSList *element = list; element; element = element->next) {
-		CommBackend *backend = element->data; 
-		gtk_combo_box_text_append_text(combo, backend->name);
-	}
+	gui_dialer_add_backends_to_combo(combo);
+
 	gtk_combo_box_set_active(GTK_COMBO_BOX(combo), 0);
 
 	return GTK_WIDGET(combo);
 }
+
+static void gui_dialer_backend_added(gconstpointer data, gpointer user_data)
+{
+	(void)user_data;
+	CommBackend *backend = (CommBackend*)data;
+
+	gtk_combo_box_text_append_text(g_gui_calls.backend_combo, backend->name);
+}
+
+static void gui_dialer_backend_removed(gconstpointer data, gpointer user_data)
+{
+	(void)user_data;
+	(void)data;
+
+	gtk_combo_box_text_remove_all(g_gui_calls.backend_combo);
+	gui_dialer_add_backends_to_combo(g_gui_calls.backend_combo);
+}
+
 #endif
 
 static void gui_call_callback(GtkButton button)
@@ -156,7 +206,7 @@ static void gui_dialer_back_presses_callback(GtkWidget *button, GtkWidget *targe
 {
 	(void)button;
 	gtk_editable_set_position(GTK_EDITABLE(target),-1);
-	gint position=gtk_editable_get_position(GTK_EDITABLE(target));
+	gint position = gtk_editable_get_position(GTK_EDITABLE(target));
 	gtk_editable_delete_text (GTK_EDITABLE(target),position-1, position);
 
 	gtk_editable_set_position(GTK_EDITABLE(target),position);
@@ -306,6 +356,9 @@ const gchar *sphone_module_init(void** data)
 	g_signal_connect(G_OBJECT(g_gui_calls.main_window),"delete-event", G_CALLBACK(gui_dialer_close), NULL);
 	g_signal_connect(G_OBJECT(display_back), "clicked", G_CALLBACK(gui_dialer_back_presses_callback), display);
 	g_signal_connect(G_OBJECT(display), "insert_text", G_CALLBACK(gui_dialer_validate_callback),NULL);
+
+	append_trigger_to_datapipe(&comm_backend_added_pipe, &gui_dialer_backend_added, NULL);
+	append_trigger_to_datapipe(&comm_backend_removed_pipe, &gui_dialer_backend_removed, NULL);
 	
 	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 	return NULL;
@@ -315,5 +368,7 @@ G_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
 	(void)data;
+	remove_trigger_from_datapipe(&comm_backend_added_pipe, &gui_dialer_backend_added, NULL);
+	remove_trigger_from_datapipe(&comm_backend_removed_pipe, &gui_dialer_backend_removed, NULL);
 	gui_remove(g_gui_calls.gui_id);
 }

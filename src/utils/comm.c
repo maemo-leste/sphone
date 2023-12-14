@@ -16,6 +16,7 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "comm.h"
+#include "datapipes.h"
 #include "sphone-log.h"
 
 static GSList *backends;
@@ -75,6 +76,9 @@ int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFla
 
 	backends = g_slist_append(backends, backend);
 	default_backend = backend;
+
+	execute_datapipe(&comm_backend_added_pipe, backend);
+
 	return id;
 }
 
@@ -93,6 +97,9 @@ void sphone_comm_remove_backend(int id)
 		default_backend = NULL;
 
 	CommBackend* backend = (CommBackend*)(element->data);
+
+	execute_datapipe(&comm_backend_removed_pipe, backend);
+
 	g_free(backend->name);
 	sphone_comm_free_scheme_array(backend->schemes);
 	g_free(element->data);
