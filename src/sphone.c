@@ -518,8 +518,10 @@ int main (int argc, char *argv[])
 	
 	sphone_log(LL_INFO, "shuting down");
 
+	append_filter_to_datapipe(&comm_backend_removed_pipe, drop, NULL);
 	sphone_modules_exit();
 	datapipes_exit();
+	remove_filter_from_datapipe(&comm_backend_removed_pipe, drop, NULL);
 	
 	if(owner_id > 0)
 		g_bus_unown_name(owner_id);

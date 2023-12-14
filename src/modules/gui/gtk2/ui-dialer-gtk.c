@@ -103,7 +103,6 @@ static void gui_dialer_backend_removed(gconstpointer data, gpointer user_data)
 {
 	(void)user_data;
 	(void)data;
-	g_object_unref(g_gui_calls.selector);
 	g_gui_calls.selector = gui_dialer_create_selector();
 	hildon_picker_button_set_selector(HILDON_PICKER_BUTTON(g_gui_calls.backend_combo),
 	                                 HILDON_TOUCH_SELECTOR(g_gui_calls.selector));
@@ -362,6 +361,7 @@ const gchar *sphone_module_init(void** data)
 	append_trigger_to_datapipe(&comm_backend_removed_pipe, &gui_dialer_backend_removed, NULL);
 	
 	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
 	return NULL;
 }
 

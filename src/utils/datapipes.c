@@ -46,7 +46,7 @@ datapipe_struct contact_show_pipe;
 datapipe_struct comm_backend_added_pipe;
 datapipe_struct comm_backend_removed_pipe;
 
-static gpointer drop(gpointer data, gpointer user_data)
+void *drop(void *data, void *user_data)
 {
 	(void)data;
 	(void)user_data;

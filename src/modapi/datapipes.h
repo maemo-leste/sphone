@@ -84,6 +84,8 @@ extern datapipe_struct comm_backend_removed_pipe;
 void datapipes_init(void);
 void datapipes_exit(void);
 
+void *drop(void *data, void *user_data);
+
 #ifdef __cplusplus
 }
 #endif
