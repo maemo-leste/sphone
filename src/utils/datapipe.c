@@ -237,7 +237,7 @@ void remove_trigger_from_datapipe(datapipe_struct *const datapipe, void (*trigge
 
 	/* Did we remove any entry? */
 	if (!removed)
-		sphone_log(LL_WARN, "Trying to remove non-existing trigger");
+		sphone_log(LL_WARN, "Trying to remove non-existing trigger. Offending callback: %p", trigger);
 }
 
 /**
