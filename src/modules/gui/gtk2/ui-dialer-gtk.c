@@ -136,7 +136,7 @@ static void gui_dialer_backend_added(gconstpointer data, gpointer user_data)
 	(void)user_data;
 	CommBackend *backend = (CommBackend*)data;
 
-	gtk_combo_box_text_append_text(g_gui_calls.backend_combo, backend->name);
+	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(g_gui_calls.backend_combo), backend->name);
 }
 
 static void gui_dialer_backend_removed(gconstpointer data, gpointer user_data)
@@ -144,8 +144,9 @@ static void gui_dialer_backend_removed(gconstpointer data, gpointer user_data)
 	(void)user_data;
 	(void)data;
 
-	gtk_combo_box_text_remove_all(g_gui_calls.backend_combo);
-	gui_dialer_add_backends_to_combo(g_gui_calls.backend_combo);
+	while(gtk_combo_box_get_has_entry(GTK_COMBO_BOX(g_gui_calls.backend_combo)))
+		gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(g_gui_calls.backend_combo), 0);
+	gui_dialer_add_backends_to_combo(GTK_COMBO_BOX_TEXT(g_gui_calls.backend_combo));
 }
 
 #endif
