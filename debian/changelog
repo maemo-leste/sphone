@@ -1,3 +1,10 @@
+sphone (0.7.4) unstable; urgency=medium
+
+  * sphone-conf: add /usr/share/sphone/sphone.ini.d as another override directory
+  * comm: add a signal to allow the gui to refresh the list of backends when on is registered or removed
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Thu, 14 Dec 2023 22:16:38 +0100
+
 sphone (0.7.3) unstable; urgency=medium
 
   * gui: gtk: support calls in landscape view
