@@ -230,7 +230,7 @@ const gchar *sphone_module_init(void** data)
 		return "Can not register for ebook source";
 	}
 
-	GError* err;
+	GError* err = NULL;
 	abook_priv.ebook = e_book_new(address_book_src, &err);
 	g_object_unref(address_book_src);
 	if(err) {
