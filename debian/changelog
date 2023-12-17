@@ -1,3 +1,9 @@
+sphone (0.8.0) unstable; urgency=medium
+
+  * comm: add is_valid_ch function pointer to backedn to allow backends the ui to detimine what charecters are valid for a given backend
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 17 Dec 2023 23:08:08 +0100
+
 sphone (0.7.5) unstable; urgency=medium
 
   * modules: contacts-ui-abook: fix segfault on start
