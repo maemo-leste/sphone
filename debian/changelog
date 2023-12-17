@@ -1,3 +1,9 @@
+sphone (0.7.5) unstable; urgency=medium
+
+  * modules: contacts-ui-abook: fix segfault on start
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sun, 17 Dec 2023 12:16:26 +0100
+
 sphone (0.7.4) unstable; urgency=medium
 
   * sphone-conf: add /usr/share/sphone/sphone.ini.d as another override directory
