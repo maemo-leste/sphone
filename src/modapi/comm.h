@@ -19,6 +19,7 @@
 #pragma once
 #include <glib.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,9 +41,10 @@ typedef struct  _CommBackend {
 	Scheme** schemes;
 	BackendFlag flags;
 	int id;
+	bool (*is_valid_ch)(uint32_t codepoint);
 } CommBackend;
 
-int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags);
+int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags, bool (*is_valid_ch)(uint32_t codepoint));
 
 void sphone_comm_remove_backend(int id);
 
@@ -57,6 +59,10 @@ CommBackend *sphone_comm_get_backend_for_scheme(const char* scheme, BackendFlag 
 bool sphone_comm_set_default_backend(int id);
 
 int sphone_comm_find_backend_id(const char* name);
+
+bool sphone_comm_valid_string(int id, const char* str);
+
+char *sphone_comm_create_cleaned_string(int id, const char* str);
 
 #ifdef __cplusplus
 }

@@ -584,6 +584,14 @@ static void call_dial_trigger(gconstpointer data, gpointer user_data)
 	}
 }
 
+static bool is_numeric(uint32_t codepoint)
+{
+	if((codepoint >= 0x30 && codepoint <= 0x39) || codepoint == 0x2b)
+		return true;
+	else
+		return false;
+}
+
 static void message_send_trigger(gconstpointer data, gpointer user_data)
 {
 	const MessageProperties *message = (const MessageProperties*)data;
@@ -630,7 +638,7 @@ const gchar *sphone_module_init(void** data)
 		NULL
 	};
 	
-	priv->backend_id = sphone_comm_add_backend("ofono", schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_CELLULAR);
+	priv->backend_id = sphone_comm_add_backend("ofono", schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_CELLULAR, &is_numeric);
 
 	priv->ofono_service_watcher =
 						g_bus_watch_name_on_connection(priv->s_bus_conn, OFONO_SERVICE, 

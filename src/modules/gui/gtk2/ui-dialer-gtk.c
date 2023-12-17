@@ -150,23 +150,31 @@ static void gui_dialer_backend_removed(gconstpointer data, gpointer user_data)
 
 #endif
 
+static int gui_dialer_current_backend_id(void)
+{
+	char *backend_name = NULL;
+	#ifdef ENABLE_LIBHILDON
+		backend_name = hildon_touch_selector_get_current_text(HILDON_TOUCH_SELECTOR(g_gui_calls.selector));
+	#else
+		backend_name = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(g_gui_calls.backend_combo));
+	#endif
+
+	if(!backend_name)
+		return -1;
+
+	return sphone_comm_find_backend_id(backend_name);
+}
+
 static void gui_call_callback(GtkButton button)
 {
 	(void)button;
 
 	const gchar *dial = gtk_entry_get_text(GTK_ENTRY(g_gui_calls.display));
-	char *backend_name = NULL;
-	
-#ifdef ENABLE_LIBHILDON
-	backend_name = hildon_touch_selector_get_current_text(HILDON_TOUCH_SELECTOR(g_gui_calls.selector));
-#else
-	backend_name = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(g_gui_calls.backend_combo));
-#endif
 
-	if(strlen(dial) > 0 && backend_name) {
+	if(strlen(dial) > 0) {
 		CallProperties *call = g_malloc0(sizeof(*call));
 		call->line_identifier = g_strdup(dial);
-		call->backend = sphone_comm_find_backend_id(backend_name);
+		call->backend = gui_dialer_current_backend_id();
 		call->state = SPHONE_CALL_DIALING;
 		execute_datapipe(&call_dial_pipe, call);
 		call_properties_free(call);
@@ -238,25 +246,24 @@ static int gui_dialer_close(GtkWidget *w)
 	return FALSE;
 }
 
-static void gui_dialer_validate_callback(GtkEntry *entry,const gchar *text, gint length, gint *position,gpointer data)
+static void gui_dialer_validate_callback(GtkEntry *entry, const gchar *text, gint length, gint *position, gpointer data)
 {
-	int count = 0;
-	gchar *result = g_new(gchar, length+1);
+	(void)length;
+	int id = gui_dialer_current_backend_id();
 
-	for (int i = 0; i < length && text[i]; ++i) {
-		if (!isdigit(text[i]) && text[i] != '*' && text[i] != '#'  && text[i] != '+')
-			continue;
-		result[count++] = text[i];
-	}
-	result[count] = '\0';
+	if(id < 0)
+		return;
 
-	if (count > 0) {
-		GtkEditable *editable  = GTK_EDITABLE(entry);
-		g_signal_handlers_block_by_func (G_OBJECT (editable),	G_CALLBACK (gui_dialer_validate_callback),data);
-		gtk_editable_insert_text (editable, result, count, position);
-		g_signal_handlers_unblock_by_func (G_OBJECT (editable),	G_CALLBACK (gui_dialer_validate_callback),data);
-	}
-	g_signal_stop_emission_by_name (G_OBJECT(entry), "insert_text");
+	char *result = sphone_comm_create_cleaned_string(id, text);
+
+	if(!result)
+		return;
+
+	GtkEditable *editable  = GTK_EDITABLE(entry);
+	g_signal_handlers_block_by_func(G_OBJECT (editable),	G_CALLBACK (gui_dialer_validate_callback),data);
+	gtk_editable_insert_text(editable, result, -1, position);
+	g_signal_handlers_unblock_by_func(G_OBJECT (editable),	G_CALLBACK (gui_dialer_validate_callback),data);
+	g_signal_stop_emission_by_name(G_OBJECT(entry), "insert_text");
 
 	g_free (result);
 }
@@ -355,7 +362,7 @@ const gchar *sphone_module_init(void** data)
 	g_signal_connect(G_OBJECT(g_gui_calls.main_window),"delete-event", G_CALLBACK(gtk_widget_hide_on_delete), NULL);
 	g_signal_connect(G_OBJECT(g_gui_calls.main_window),"delete-event", G_CALLBACK(gui_dialer_close), NULL);
 	g_signal_connect(G_OBJECT(display_back), "clicked", G_CALLBACK(gui_dialer_back_presses_callback), display);
-	g_signal_connect(G_OBJECT(display), "insert_text", G_CALLBACK(gui_dialer_validate_callback),NULL);
+	g_signal_connect(G_OBJECT(display), "insert_text", G_CALLBACK(gui_dialer_validate_callback), NULL);
 
 	append_trigger_to_datapipe(&comm_backend_added_pipe, &gui_dialer_backend_added, NULL);
 	append_trigger_to_datapipe(&comm_backend_removed_pipe, &gui_dialer_backend_removed, NULL);

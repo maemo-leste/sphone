@@ -185,6 +185,14 @@ static void message_send_trigger(const void *data, void *user_data)
 	
 }
 
+static bool is_not_special(uint32_t codepoint)
+{
+	if(codepoint >= 0x40)
+		return true;
+	else
+		return false;
+}
+
 G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
@@ -198,7 +206,7 @@ const gchar *sphone_module_init(void** data)
 		NULL
 	};
 	
-	id = sphone_comm_add_backend(MODULE_NAME, commtest_schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL);
+	id = sphone_comm_add_backend(MODULE_NAME, commtest_schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL, &is_not_special);
 
 	append_trigger_to_datapipe(&call_dial_pipe, call_dial_trigger, NULL);
 	append_trigger_to_datapipe(&call_accept_pipe, call_accept_trigger, NULL);

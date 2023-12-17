@@ -18,6 +18,7 @@
 #include "comm.h"
 #include "datapipes.h"
 #include "sphone-log.h"
+#include <sys/types.h>
 
 static GSList *backends;
 
@@ -51,6 +52,12 @@ static Scheme **sphone_comm_copy_scheme_array(const Scheme** schemes)
 	return copy;
 }
 
+static bool sphone_comm_any_ch(uint32_t codepoint)
+{
+	(void)codepoint;
+	return true;
+}
+
 static void sphone_comm_free_scheme_array(Scheme** schemes)
 {
 	for(size_t i = 0; schemes[i]; ++i)
@@ -58,7 +65,7 @@ static void sphone_comm_free_scheme_array(Scheme** schemes)
 	g_free(schemes);
 }
 
-int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags)
+int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags, bool (*is_valid_ch)(uint32_t codepoint))
 {
 	CommBackend *backend = g_malloc0(sizeof(*backend));
 	int id = 0;
@@ -71,6 +78,7 @@ int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFla
 	backend->name = g_strdup(name);
 	backend->flags = flags;
 	backend->schemes = sphone_comm_copy_scheme_array(schemes);
+	backend->is_valid_ch = is_valid_ch ?: &sphone_comm_any_ch;
 	
 	sphone_log(LL_INFO, "Comm backend added: %s", backend->name);
 
@@ -163,4 +171,59 @@ int sphone_comm_find_backend_id(const char* name)
 			return last_backend->id;
 	}
 	return -1;
+}
+
+bool sphone_comm_valid_string(int id, const char* str)
+{
+	GError *err = NULL;
+	glong cpoints;
+	CommBackend *backend = sphone_comm_get_backend(id);
+	uint32_t *unistring = g_utf8_to_ucs4(str, -1, NULL, &cpoints, &err);
+
+	if(err) {
+		sphone_log(LL_DEBUG, "user input contains an invalid unicode codepoint");
+		g_clear_error(&err);
+		return false;
+	}
+
+	bool ret = true;
+	for(ssize_t i = 0; i < cpoints && ret; ++i) {
+		if(!backend->is_valid_ch(unistring[i]))
+			ret = false;
+	}
+
+	g_free(unistring);
+
+	return ret;
+}
+
+char *sphone_comm_create_cleaned_string(int id, const char* str)
+{
+	GError *err = NULL;
+	glong cpoints;
+	CommBackend *backend = sphone_comm_get_backend(id);
+	uint32_t *unistring = g_utf8_to_ucs4(str, -1, NULL, &cpoints, &err);
+	uint32_t *resultunistring = g_malloc0(sizeof(*resultunistring)*cpoints+1);
+
+	if(err) {
+		sphone_log(LL_DEBUG, "user input contains an invalid unicode codepoint");
+		g_clear_error(&err);
+		return NULL;
+	}
+
+	ssize_t j = 0;
+	for(ssize_t i = 0; i < cpoints; ++i) {
+		if(backend->is_valid_ch(unistring[i])) {
+			resultunistring[j] = unistring[i];
+			++j;
+		}
+	}
+
+	g_free(unistring);
+
+	char *result = g_ucs4_to_utf8(resultunistring, -1, NULL, NULL, NULL);
+
+	g_free(resultunistring);
+
+	return result;
 }
