@@ -64,7 +64,7 @@ static gboolean call_remote_accept(void *data)
 		return true;
 	}  else if(call->state == SPHONE_CALL_ALERTING) {
 		call->state = SPHONE_CALL_ACTIVE;
-		call->awnserd = true;
+		call->answered = true;
 		call->start_time = time(NULL);
 		execute_datapipe(&call_properties_changed_pipe, call);
 		sphone_module_log(LL_DEBUG, "set state active on %s", call->line_identifier);
@@ -121,7 +121,7 @@ static void call_accept_trigger(const void *data, void *user_data)
 	if(icall->backend == id && icall->state == SPHONE_CALL_INCOMING) {
 		CallProperties *call = find_call(icall);
 		if(call) {
-			call->awnserd = true;
+			call->answered = true;
 			call->state = SPHONE_CALL_ACTIVE;
 			call->start_time = time(NULL);
 			execute_datapipe(&call_properties_changed_pipe, call);
@@ -149,7 +149,7 @@ static void call_hangup_trigger(const void *data, void *user_data)
 			call->end_time = time(NULL);
 			execute_datapipe(&call_properties_changed_pipe, call);
 			
-			if(call->awnserd) {
+			if(call->answered) {
 				char *line_id = g_strdup(call->line_identifier);
 				sphone_module_log(LL_DEBUG, "%s will call back in 10s", line_id);
 				g_timeout_add_seconds(10, mock_incomeing_call, line_id);

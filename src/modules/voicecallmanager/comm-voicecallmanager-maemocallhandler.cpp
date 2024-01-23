@@ -76,9 +76,9 @@ void MaemoCallHandler::statusChanged()
 #if 0
 		// Is this the right place?
 		if (call_properties->outbound)
-			call_properties->awnserd = true;
+			call_properties->answered = true;
 #endif
-		call_properties->awnserd = true;
+		call_properties->answered = true;
 
 		call_properties->state = SPHONE_CALL_ACTIVE;
 		execute_datapipe(&call_properties_changed_pipe, call_properties);
