@@ -77,7 +77,7 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 
 	RTCOM_EL_EVENT_SET_FIELD(ev, service, g_strdup("RTCOM_EL_SERVICE_CALL"));
 
-	if(!call->awnserd && !call->outbound) {
+	if(!call->answered && !call->outbound) {
 		RTCOM_EL_EVENT_SET_FIELD(ev, event_type,  g_strdup("RTCOM_EL_EVENTTYPE_CALL_MISSED"));
 	} else {
 		RTCOM_EL_EVENT_SET_FIELD(ev, event_type,  g_strdup("RTCOM_EL_EVENTTYPE_CALL"));
@@ -333,7 +333,7 @@ static GList *get_calls_for_contact(Contact *contact, unsigned int limit)
 		}
 		sphone_module_log(LL_DEBUG, "got line: %s", line_identifier ?: "NULL");
 		call->line_identifier = g_strdup(line_identifier);
-		call->awnserd = type != rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_CALL_MISSED");
+		call->answered = type != rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_CALL_MISSED");
 		call->outbound = outbound;
 		call->state = SPHONE_CALL_DISCONNECTED;
 

@@ -85,7 +85,7 @@ typedef struct _CallProperties{
 	time_t start_time;
 	time_t end_time;
 	bool emergency;
-	bool awnserd;
+	bool answered;
 	bool needs_route;
 	bool outbound;
 } CallProperties;
