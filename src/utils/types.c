@@ -32,7 +32,7 @@ const char *sphone_get_state_string(sphone_call_state_t state)
 			return "Alerting";
 		case SPHONE_CALL_INCOMING:
 			return "Incoming";
-		case SPHONE_CALL_WATING:
+		case SPHONE_CALL_WAITING:
 			return "Wating";
 		case SPHONE_CALL_DISCONNECTED:
 			return "Disconnected";

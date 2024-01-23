@@ -92,7 +92,7 @@ void MaemoCallHandler::statusChanged()
 		call_properties->state = SPHONE_CALL_HELD;
 		execute_datapipe(&call_properties_changed_pipe, call_properties);
 	} else if (current_status == VoiceCallHandler::STATUS_WAITING) {
-		call_properties->state = SPHONE_CALL_WATING;
+		call_properties->state = SPHONE_CALL_WAITING;
 		execute_datapipe(&call_properties_changed_pipe, call_properties);
 	} else if (current_status == VoiceCallHandler::STATUS_DISCONNECTED) {
 		sphone_module_log(LL_DEBUG, "call status: disconnected");
