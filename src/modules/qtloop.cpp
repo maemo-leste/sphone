@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "sphone-log.h"
+#include "sphone-modules.h"
 
 static QApplication *app;
 

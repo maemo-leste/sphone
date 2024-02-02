@@ -1,4 +1,3 @@
-find_package(PkgConfig)
 set(MODULE_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../modapi)
 
 add_library(test SHARED test.c)

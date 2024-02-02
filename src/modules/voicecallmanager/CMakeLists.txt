@@ -1,8 +1,12 @@
-find_package(PkgConfig)
-
 pkg_check_modules(QTVOICECALL qtvoicecall)
 
-if(DEFINED QTVOICECALL_FOUND)
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
+
+if(DEFINED QTVOICECALL_FOUND AND NOT QTVOICECALL_FOUND STREQUAL "" AND DEFINED Qt${QT_VERSION_MAJOR}_FOUND)
 	add_library(comm-voicecallmanager SHARED
 		comm-voicecallmanager.cpp
 		comm-voicecallmanager.h
@@ -29,4 +33,4 @@ if(DEFINED QTVOICECALL_FOUND)
 	set_property(TARGET comm-voicecallmanager PROPERTY AUTOMOC ON)
 
 	install(TARGETS comm-voicecallmanager DESTINATION ${SPHONE_MODULE_DIR})
-endif(DEFINED QTVOICECALL_FOUND)
+endif()

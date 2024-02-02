@@ -1,5 +1,7 @@
 #include <gtk/gtk.h>
 
+#include "sphone-modules.h"
+
 static GMainLoop *loop;
 
 SPHONE_MODULE_EXPORT void sphone_loop_setup(int argc, char *argv[]);
