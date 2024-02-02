@@ -1,3 +1,11 @@
+sphone (0.9.0) unstable; urgency=medium
+
+  * add comm-voicecallmanager backend using sfos's voicecallmanager
+  * modules: add the ability to insmod and rmmod modules while sphone is running
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Fri, 02 Feb 2024 21:46:36 +0100
+
+
 sphone (0.8.0) unstable; urgency=medium
 
   * comm: add is_valid_ch function pointer to backedn to allow backends the ui to detimine what charecters are valid for a given backend
