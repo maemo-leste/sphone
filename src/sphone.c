@@ -68,6 +68,8 @@ typedef enum {
 	SPHONE_CMD_HISTORY_SMS,
 	SPHONE_CMD_HISTORY_CALLS,
 	SPHONE_CMD_OPTIONS,
+	SPHONE_CMD_INSMOD,
+	SPHONE_CMD_RMMOD,
 	SPHONE_CMD_NONE,
 } sphone_cmd;
 
@@ -84,6 +86,12 @@ static const gchar dbus_introspection_xml[] =
 "			<arg name='line_identifier' type='s' direction='in'/>"
 "			<arg name='text' type='s' direction='in'/>"
 "			<arg name='protocoll' type='s' direction='in'/>"
+"		</method>"
+"		<method name='Insmod'>"
+"			<arg name='path' type='s' direction='in'/>"
+"		</method>"
+"		<method name='Rmmod'>"
+"			<arg name='name' type='s' direction='in'/>"
 "		</method>"
 "		<method name='OpenOptions'>"
 "		</method>"
@@ -165,6 +173,12 @@ static void run_command(const struct sphone_options *options)
 		case SPHONE_CMD_OPTIONS:
 			gui_options_open();
 			break;
+		case SPHONE_CMD_INSMOD:
+			sphone_module_insmod(options->number);
+			break;
+		case SPHONE_CMD_RMMOD:
+			sphone_module_unload(options->number);
+			break;
 		default:
 			break;
 	}
@@ -215,6 +229,21 @@ static void send_command(GDBusConnection *connection, struct sphone_options *opt
 				(GDBusCallFlags)G_DBUS_SEND_MESSAGE_FLAGS_NONE, -1, NULL, &error);
 			break;
 		}
+		case SPHONE_CMD_INSMOD:
+			params = g_variant_new("(s)", options->number ?: "none");
+			resp = g_dbus_connection_call_sync(connection,
+				SPHONE_SERVICE, SPHONE_PATH,
+				SPHONE_INTERFACE, "Insmod", params, NULL,
+				(GDBusCallFlags)G_DBUS_SEND_MESSAGE_FLAGS_NONE, -1, NULL, &error);
+			break;
+		case SPHONE_CMD_RMMOD:
+			params = g_variant_new("(s)", options->number ?: "none");
+			resp = g_dbus_connection_call_sync(connection,
+				SPHONE_SERVICE, SPHONE_PATH,
+				SPHONE_INTERFACE, "Rmmod", params, NULL,
+				(GDBusCallFlags)G_DBUS_SEND_MESSAGE_FLAGS_NONE, -1, NULL, &error);
+			break;
+		break;
 		default:
 			break;
 	}
@@ -337,6 +366,26 @@ static void method_call_callback(GDBusConnection* connection,
 		gui_history_sms();
 	else if(g_strcmp0(method_name, "OpenCallHistory") == 0)
 		gui_history_calls();
+	else if(g_strcmp0(method_name, "Insmod") == 0) {
+		if(g_strcmp0(g_variant_get_type_string(parameters), "(s)") == 0) {
+			char *path;
+			g_variant_get(parameters, "(s)", &path);
+			sphone_module_insmod(path);
+		}
+		else {
+			sphone_log(LL_WARN, "%s called with invalid parameters", method_name);
+		}
+	}
+	else if(g_strcmp0(method_name, "Rmmod") == 0) {
+		if(g_strcmp0(g_variant_get_type_string(parameters), "(s)") == 0) {
+			char *name;
+			g_variant_get(parameters, "(s)", &name);
+			sphone_module_unload(name);
+		}
+		else {
+			sphone_log(LL_WARN, "%s called with invalid parameters", method_name);
+		}
+	}
 	else
 		sphone_log(LL_WARN, "Unkown dbus method %s called", method_name);
 	g_dbus_method_invocation_return_value(invocation, NULL);
@@ -363,7 +412,7 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
 	sphone_log(LL_DEBUG, "Registered dbus object");
 }
 
-static void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data)
+static _Noreturn void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
 	struct sphone_options *options = user_data;
 	(void)name;
@@ -459,20 +508,25 @@ int main (int argc, char *argv[])
 				      "   -h\tDisplay this help\n"
 				      "   -v\tEnable debug\n"
 				      "   -n [number]\topen with number\n"
-				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, history-calls, sms-new, history-sms, options\n"
+				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, history-calls, sms-new, history-sms, options, insmod, rmmod\n"
 				      , argv[0]);
 				return 0;
 			case 'c':
-				if(!g_strcmp0(optarg,"dialer-open"))
+				if(!g_strcmp0(optarg, "dialer-open"))
 					options.command = SPHONE_CMD_DIALER_OPEN;
-				else if(!g_strcmp0(optarg,"history-calls"))
+				else if(!g_strcmp0(optarg, "history-calls"))
 					options.command = SPHONE_CMD_HISTORY_CALLS;
-				else if(!g_strcmp0(optarg,"sms-new"))
+				else if(!g_strcmp0(optarg, "sms-new"))
 					options.command = SPHONE_CMD_SMS_NEW;
 				else if(!g_strcmp0(optarg,"history-sms"))
 					options.command = SPHONE_CMD_HISTORY_SMS;
-				else if(!g_strcmp0(optarg,"options"))
+				else if(!g_strcmp0(optarg, "options"))
 					options.command = SPHONE_CMD_OPTIONS;
+				else if(!g_strcmp0(optarg, "insmod"))
+					options.command = SPHONE_CMD_INSMOD;
+				else if(!g_strcmp0(optarg, "rmmod"))
+					options.command = SPHONE_CMD_RMMOD;
+				break;
 				break;
 			case 'v':
 				verbosity = LL_DEBUG;

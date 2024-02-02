@@ -32,7 +32,7 @@
 static const gchar *const provides[] = { MODULE_NAME, NULL };
 
 /** Module information */
-G_MODULE_EXPORT module_info_struct module_info = {
+SPHONE_MODULE_EXPORT module_info_struct module_info = {
 	/** Name of the module */
 	.name = MODULE_NAME,
 	/** Module provides */
@@ -189,7 +189,7 @@ static void book_ready_callback(GObject *source_object, GAsyncResult *res, gpoin
 	}
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	struct evolution_priv *book = g_malloc0(sizeof(*book));
@@ -218,7 +218,7 @@ const gchar *sphone_module_init(void** data)
 	return NULL;
 }
 
-G_MODULE_EXPORT void sphone_module_exit(void* data);
+SPHONE_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
 	remove_filter_from_datapipe(&call_new_pipe, call_filter, data);

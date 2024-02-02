@@ -32,7 +32,7 @@
 static const gchar *const provides[] = { MODULE_NAME, NULL };
 
 /** Module information */
-G_MODULE_EXPORT module_info_struct module_info = {
+SPHONE_MODULE_EXPORT module_info_struct module_info = {
 	/** Name of the module */
 	.name = MODULE_NAME,
 	/** Module provides */
@@ -208,14 +208,14 @@ static void gui_options_play_callback(GtkButton *button, GtkFileChooser *chooser
 	g_free(file);
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	*data = GINT_TO_POINTER(gui_register(NULL, NULL, gtk_gui_options_open, NULL, NULL, NULL, NULL, NULL, NULL));
 	return NULL;
 }
 
-G_MODULE_EXPORT void sphone_module_exit(void* data);
+SPHONE_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
 	gui_remove(GPOINTER_TO_INT(data));

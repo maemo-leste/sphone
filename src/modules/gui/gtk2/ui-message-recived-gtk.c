@@ -14,7 +14,7 @@
 static const gchar *const provides[] = { MODULE_NAME, NULL };
 
 /** Module information */
-G_MODULE_EXPORT module_info_struct module_info = {
+SPHONE_MODULE_EXPORT module_info_struct module_info = {
 	/** Name of the module */
 	.name = MODULE_NAME,
 	/** Module provides */
@@ -125,7 +125,7 @@ static void gui_sms_receive_show(const MessageProperties *message)
 	g_free(desc);
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
@@ -133,7 +133,7 @@ const gchar *sphone_module_init(void** data)
 	return NULL;
 }
 
-G_MODULE_EXPORT void sphone_module_exit(void* data);
+SPHONE_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
 	(void)data;

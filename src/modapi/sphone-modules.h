@@ -20,8 +20,7 @@
 #ifndef _SPHONE_MODULES_H_
 #define _SPHONE_MODULES_H_
 
-#include <glib.h>
-#include <gmodule.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,16 +38,21 @@ extern "C" {
 /** Default value for module path */
 #define DEFAULT_SPHONE_MODULE_PATH		"/usr/lib/sphone/modules"
 
+#define SPHONE_MODULE_EXPORT
+
 typedef struct {
-	const gchar *const name;
-	const gchar *const *const provides;
+	const char *const name;
+	const char *const *const provides;
 // Module priority:
 // higher value == higher priority
-	const gint priority;
+	const int priority;
 } module_info_struct;
 
-gboolean sphone_modules_init(void);
+bool sphone_modules_init(void);
 void sphone_modules_exit(void);
+
+bool sphone_module_insmod(const char *path);
+bool sphone_module_unload(const char *name);
 
 typedef const char* sphone_module_init_fn(void** data);
 typedef void sphone_module_exit_fn(void* data);

@@ -32,7 +32,7 @@
 static const gchar *const provides[] = { "route", NULL };
 
 /** Module information */
-G_MODULE_EXPORT module_info_struct module_info = {
+SPHONE_MODULE_EXPORT module_info_struct module_info = {
 	/** Name of the module */
 	.name = MODULE_NAME,
 	/** Module provides */
@@ -244,7 +244,7 @@ static void call_mode_trigger(gconstpointer data, gpointer user_data)
 	}
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	struct sphone_pa_if *pa_if = g_malloc0(sizeof(*pa_if));
@@ -257,7 +257,7 @@ const gchar *sphone_module_init(void** data)
 	return NULL;
 }
 
-G_MODULE_EXPORT void sphone_module_exit(void* data);
+SPHONE_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
 	struct sphone_pa_if *pa_if = data;

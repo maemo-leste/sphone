@@ -29,7 +29,7 @@
 static const gchar *const provides[] = { "error", NULL };
 
 /** Module information */
-G_MODULE_EXPORT module_info_struct module_info = {
+SPHONE_MODULE_EXPORT module_info_struct module_info = {
 	/** Name of the module */
 	.name = MODULE_NAME,
 	/** Module provides */
@@ -47,7 +47,7 @@ static void backend_error_trigger(gconstpointer data, gpointer user_data)
 	gtk_widget_show_all(dialog);
 }
 
-G_MODULE_EXPORT const gchar *sphone_module_init(void** data);
+SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
@@ -55,7 +55,7 @@ const gchar *sphone_module_init(void** data)
 	return NULL;
 }
 
-G_MODULE_EXPORT void sphone_module_exit(void* data);
+SPHONE_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
 	remove_trigger_from_datapipe(&call_backend_error_pipe, backend_error_trigger, NULL);

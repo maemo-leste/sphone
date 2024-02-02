@@ -9,7 +9,7 @@ static QApplication *app;
 
 extern "C" {
 
-G_MODULE_EXPORT void sphone_loop_setup(int argc, char *argv[]);
+SPHONE_MODULE_EXPORT void sphone_loop_setup(int argc, char *argv[]);
 void sphone_loop_setup(int argc, char *argv[])
 {
 	gtk_set_locale();
@@ -24,7 +24,7 @@ void sphone_loop_setup(int argc, char *argv[])
 	}
 }
 
-G_MODULE_EXPORT void sphone_loop_run(int argc, char *argv[]);
+SPHONE_MODULE_EXPORT void sphone_loop_run(int argc, char *argv[]);
 void sphone_loop_run(int argc, char *argv[])
 {
 	(void)argc;
@@ -32,7 +32,7 @@ void sphone_loop_run(int argc, char *argv[])
 	app->exec();
 }
 
-G_MODULE_EXPORT void sphone_loop_exit(void);
+SPHONE_MODULE_EXPORT void sphone_loop_exit(void);
 void sphone_loop_exit(void)
 {
 	if(app)
