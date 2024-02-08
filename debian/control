@@ -6,7 +6,7 @@ Build-Depends: debhelper (>> 10), cmake,
   libgstreamer1.0-dev, libasound2-dev, intltool, libosso-abook-dev,
   maemo-system-services-dev, libhildon1-dev, libprofile-dev, libpulse-dev,
   libebook-contacts1.2-dev, libebook1.2-dev, librtcom-eventlogger-dev,
-  libnotify-dev,
+  libnotify-dev, voicecall-qt5
 Section: comm
 Standards-Version: 4.3.0
 
@@ -14,6 +14,8 @@ Package: sphone
 Section: comm
 Architecture: any
 Multi-Arch: same
-Depends: ofono, ${shlibs:Depends}
+Depends: libc6, libgdk-pixbuf-2.0-0, libglib2.0-0, libgtk2.0-0, libhildon1, libnotify4, libpango-1.0-0
+Recommends: ofono, libebook-1.2-20, libebook-contacts-1.2-3, libedataserver-1.2-25, libgstreamer1.0-0, libpulse0, librtcom-eventlogger1
+Suggests: libnotify4, libosso-abook, libprofile0, voicecall-qt5
 Description: Maemo Leste phone framework and GUI
  Maemo Leste phone framework and GUI
