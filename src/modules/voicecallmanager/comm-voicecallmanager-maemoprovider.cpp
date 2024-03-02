@@ -22,6 +22,7 @@ MaemoProvider::MaemoProvider(MaemoManager* mgr, QString id_, QString type_, QStr
 
 static bool char_valid (uint32_t codepoint)
 {
+	(void)codepoint;
 	return true;
 }
 
@@ -34,7 +35,7 @@ void MaemoProvider::registerBackend()
 	};
 
 	backend_id = id;
-	backend_name = backend_id.toStdString().c_str();
+	backend_name = g_strdup(backend_id.toStdString().c_str());
 	sphone_backend_id = sphone_comm_add_backend(backend_name, schemes, BACKEND_FLAG_CALL, char_valid);
 
 	sphone_module_log(LL_DEBUG, "Registered backend: %s", backend_name);
@@ -44,6 +45,7 @@ void MaemoProvider::unregisterBackend()
 {
 	sphone_module_log(LL_DEBUG, "Unregistering backend: %s", backend_id.toStdString().c_str());
 	sphone_comm_remove_backend(sphone_backend_id);
+	g_free(backend_name);
 }
 
 MaemoProvider::~MaemoProvider()
