@@ -1,3 +1,9 @@
+sphone (0.9.2) unstable; urgency=medium
+
+  * Add libtelepathy-qt5-dev build dependency
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sat, 02 Mar 2024 17:10:08 +0100
+
 sphone (0.9.1) unstable; urgency=medium
 
   * Debian dependancies changes only
