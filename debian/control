@@ -6,7 +6,7 @@ Build-Depends: debhelper (>> 10), cmake,
   libgstreamer1.0-dev, libasound2-dev, intltool, libosso-abook-dev,
   maemo-system-services-dev, libhildon1-dev, libprofile-dev, libpulse-dev,
   libebook-contacts1.2-dev, libebook1.2-dev, librtcom-eventlogger-dev,
-  libnotify-dev, voicecall-qt5
+  libnotify-dev, voicecall-qt5, libtelepathy-qt5-dev
 Section: comm
 Standards-Version: 4.3.0
 
