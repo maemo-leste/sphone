@@ -631,15 +631,13 @@ const gchar *sphone_module_init(void** data)
 	if(!priv->s_bus_conn)
 		return "Unable to connect to dbus!";
 
-	const Scheme* schemes[3] =
-	{
+	const Scheme* schemes[3] = {
 		&call_scheme,
 		&sms_scheme,
 		NULL
 	};
 
-	const sphone_contact_field_t fields[] =
-	{
+	const sphone_contact_field_t fields[] = {
 		SPHONE_FIELD_PHONE,
 		SPHONE_FIELD_LISTEND
 	};
