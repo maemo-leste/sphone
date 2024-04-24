@@ -4,9 +4,7 @@
 /** Module name */
 #define MODULE_NAME "comm-voicecallmanager"
 
-extern "C" {
 #include "sphone-log.h"
-}
 
 #endif /* __MAEMOVOICECALLMANAGER_H__ */
 

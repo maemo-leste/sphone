@@ -46,8 +46,6 @@ void contact_free(Contact *contact)
 	if(!contact)
 		return;
 	g_free(contact->name);
-	if(contact->photo)
-		g_object_unref(G_OBJECT(contact->photo));
 	g_free(contact->line_identifier);
 	g_free(contact);
 }
@@ -60,10 +58,6 @@ Contact *contact_copy(const Contact *contact)
 	new_contact->name = g_strdup(contact->name);
 	new_contact->line_identifier = g_strdup(contact->line_identifier);
 	new_contact->backend = contact->backend;
-	if(contact->photo) {
-		new_contact->photo = contact->photo;
-		g_object_ref(G_OBJECT(contact->photo));
-	}
 	return new_contact;
 }
 

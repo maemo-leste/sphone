@@ -45,42 +45,100 @@ struct evolution_priv {
 	EBookClient *ebook;
 };
 
-static GSList *find_e_contacts(EBookClient *ebook, const char *line_id, int id)
+
+static bool fields_contain(const sphone_contact_field_t *fields, sphone_contact_field_t field)
 {
-	EPhoneNumber *enumber = e_phone_number_from_string(line_id, NULL, NULL);
+	for(const sphone_contact_field_t *test_field = fields; *test_field != SPHONE_FIELD_LISTEND; ++test_field) {
+		if(*test_field == field)
+			return true;
+	}
 
-	if(enumber) {
-		gchar *number = e_phone_number_to_string(enumber, E_PHONE_NUMBER_FORMAT_E164);
-		EBookQuery *query = e_book_query_orv(
-			e_book_query_field_test(E_CONTACT_PHONE_ASSISTANT, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_BUSINESS, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_BUSINESS_2, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_BUSINESS_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_CALLBACK, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_CAR, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_COMPANY, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_HOME, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_HOME_2, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_HOME_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_ISDN, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_MOBILE, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_OTHER, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_OTHER_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_PAGER, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_PRIMARY, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_RADIO, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_TELEX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			e_book_query_field_test(E_CONTACT_PHONE_TTYTDD, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
-			NULL);
+	return false;
+}
 
+[[nodiscard]] static EBookQuery *join_query(EBookQuery *a, EBookQuery *b)
+{
+	if(a == NULL)
+		return b;
+	if(b == NULL)
+		return a;
+
+	EBookQuery *join[] = {a, b};
+	return e_book_query_or(2, join, true);
+}
+
+static EBookQuery *build_query(const char *line_id, int backend_id)
+{
+	CommBackend *backend = sphone_comm_get_backend(backend_id);
+
+	if(!backend) {
+		sphone_module_log(LL_WARN, "Got invalid backend id %i", backend_id);
+		return NULL;
+	}
+	const sphone_contact_field_t *fields = backend->applicable_fields;
+
+
+	EBookQuery *query = NULL;
+	if(fields_contain(fields, SPHONE_FIELD_PHONE) || fields_contain(fields, SPHONE_FIELD_SIP)) {
+		EPhoneNumber *enumber = e_phone_number_from_string(line_id, NULL, NULL);
+
+		if(enumber) {
+			gchar *number = e_phone_number_to_string(enumber, E_PHONE_NUMBER_FORMAT_E164);
+
+			EBookQuery *phonequery = e_book_query_orv(
+				e_book_query_field_test(E_CONTACT_PHONE_ASSISTANT, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_BUSINESS, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_BUSINESS_2, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_BUSINESS_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_CALLBACK, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_CAR, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_COMPANY, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_HOME, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_HOME_2, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_HOME_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_ISDN, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_MOBILE, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_OTHER, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_OTHER_FAX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_PAGER, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_PRIMARY, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_RADIO, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_TELEX, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				e_book_query_field_test(E_CONTACT_PHONE_TTYTDD, E_BOOK_QUERY_EQUALS_SHORT_PHONE_NUMBER, number),
+				NULL);
+
+			query = join_query(query, phonequery);
+
+			g_free(number);
+			g_free(enumber);
+		}
+	}
+
+	if(fields_contain(fields, SPHONE_FIELD_SIP))
+		query = join_query(query, e_book_query_field_test(E_CONTACT_SIP, E_BOOK_QUERY_IS, line_id));
+	if(fields_contain(fields, SPHONE_FIELD_EMAIL))
+		query = join_query(query, e_book_query_field_test(E_CONTACT_EMAIL, E_BOOK_QUERY_CONTAINS, line_id));
+	if(fields_contain(fields, SPHONE_FIELD_IM_SKYPE))
+		query = join_query(query, e_book_query_field_test(E_CONTACT_IM_SKYPE, E_BOOK_QUERY_CONTAINS, line_id));
+	if(fields_contain(fields, SPHONE_FIELD_IM_MATRIX))
+		query = join_query(query, e_book_query_field_test(E_CONTACT_IM_MATRIX, E_BOOK_QUERY_CONTAINS, line_id));
+	if(fields_contain(fields, SPHONE_FIELD_IM_TWITTER))
+		query = join_query(query, e_book_query_field_test(E_CONTACT_IM_TWITTER, E_BOOK_QUERY_CONTAINS, line_id));
+	if(!query)
+		query = e_book_query_any_field_contains(line_id);
+
+	return query;
+}
+
+static GSList *find_e_contacts(EBookClient *ebook, const char *line_id, int backend_id)
+{
+	EBookQuery *query = build_query(line_id, backend_id);
+	if(query)
+	{
 		gchar *query_string = e_book_query_to_string(query);
 		e_book_query_unref(query);
 
-		g_free(number);
-		e_phone_number_free(enumber);
-
 		GError* error;
-
 		GSList *contacts = NULL;
 
 		if(!e_book_client_get_contacts_sync(ebook, query_string, &contacts, NULL, &error)) {
@@ -117,17 +175,12 @@ static gpointer call_filter(gpointer data, gpointer user_data)
 	CallProperties *call = data;
 	struct evolution_priv *priv = user_data;
 	if(priv->ebook && !call->contact) {
-		const CommBackend *backend = sphone_comm_get_backend(call->backend);
-		if(backend && g_strcmp0(backend->name, "ofono") == 0) {
-			call->contact = g_malloc0(sizeof(*call->contact));
-			if(!fill_contact(priv->ebook, call->line_identifier, call->contact, call->backend)) {
-				g_free(call->contact);
-				call->contact = NULL;
-			} else {
-				sphone_module_log(LL_DEBUG, "got contact: %s", call->contact->name);
-			}
+		call->contact = g_malloc0(sizeof(*call->contact));
+		if(!fill_contact(priv->ebook, call->line_identifier, call->contact, call->backend)) {
+			g_free(call->contact);
+			call->contact = NULL;
 		} else {
-			sphone_module_log(LL_WARN, "can currently only fill contacts of ofono calls");
+			sphone_module_log(LL_DEBUG, "got contact: %s", call->contact->name);
 		}
 	}
 	return call;
@@ -138,17 +191,12 @@ static gpointer message_filter(gpointer data, gpointer user_data)
 	MessageProperties *msg = data;
 	struct evolution_priv *priv = user_data;
 	if(priv->ebook && !msg->contact) {
-		const CommBackend *backend = sphone_comm_get_backend(msg->backend);
-		if(backend && g_strcmp0(backend->name, "ofono") == 0) {
-			msg->contact = g_malloc0(sizeof(*msg->contact));
-			if(!fill_contact(priv->ebook, msg->line_identifier, msg->contact, msg->backend)) {
-				g_free(msg->contact);
-				msg->contact = NULL;
-			} else {
-				sphone_module_log(LL_DEBUG, "got contact: %s", msg->contact->name);
-			}
+		msg->contact = g_malloc0(sizeof(*msg->contact));
+		if(!fill_contact(priv->ebook, msg->line_identifier, msg->contact, msg->backend)) {
+			g_free(msg->contact);
+			msg->contact = NULL;
 		} else {
-			sphone_module_log(LL_WARN, "can currently only fill contacts of ofono calls");
+			sphone_module_log(LL_DEBUG, "got contact: %s", msg->contact->name);
 		}
 	}
 	return msg;
@@ -159,15 +207,10 @@ static gpointer contact_filter(gpointer data, gpointer user_data)
 	Contact *contact = data;
 	struct evolution_priv *priv = user_data;
 	if(priv->ebook && !contact->name) {
-		const CommBackend *backend = sphone_comm_get_backend(contact->backend);
-		if(backend && g_strcmp0(backend->name, "ofono") == 0) {
-			gchar *line_id = contact->line_identifier;
-			fill_contact(priv->ebook, line_id, contact, contact->backend);
-			if(line_id != contact->line_identifier)
-				g_free(line_id);
-		} else {
-			sphone_module_log(LL_WARN, "can currently only fill contacts of ofono calls");
-		}
+		gchar *line_id = contact->line_identifier;
+		fill_contact(priv->ebook, line_id, contact, contact->backend);
+		if(line_id != contact->line_identifier)
+			g_free(line_id);
 	}
 	return contact;
 }

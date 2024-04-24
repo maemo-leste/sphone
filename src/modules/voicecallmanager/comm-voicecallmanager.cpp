@@ -1,4 +1,5 @@
 #include <glib.h>
+#include <gmodule.h>
 
 #include "comm.h"
 #include "datapipe.h"
@@ -66,8 +67,6 @@ extern "C" {
     G_MODULE_EXPORT const gchar* sphone_module_init(void** data);
     const gchar* sphone_module_init(void** data)
     {
-        sphone_module_log(LL_DEBUG, "%s", __func__);
-
         MaemoManager* maemo_mgr = new MaemoManager();
 
         maemo_mgr->setup();

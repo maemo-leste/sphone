@@ -17,6 +17,7 @@
  */
 
 #pragma once
+#include "types.h"
 #include <glib.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -40,11 +41,13 @@ typedef struct  _CommBackend {
 	char* name;
 	Scheme** schemes;
 	BackendFlag flags;
+	sphone_contact_field_t* applicable_fields;
 	int id;
 	bool (*is_valid_ch)(uint32_t codepoint);
 } CommBackend;
 
-int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags, bool (*is_valid_ch)(uint32_t codepoint));
+int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags,
+                            const sphone_contact_field_t* fields, bool (*is_valid_ch)(uint32_t codepoint));
 
 void sphone_comm_remove_backend(int id);
 

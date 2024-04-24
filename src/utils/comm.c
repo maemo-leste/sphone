@@ -18,6 +18,8 @@
 #include "comm.h"
 #include "datapipes.h"
 #include "sphone-log.h"
+#include "types.h"
+#include <string.h>
 #include <sys/types.h>
 
 static GSList *backends;
@@ -65,7 +67,26 @@ static void sphone_comm_free_scheme_array(Scheme** schemes)
 	g_free(schemes);
 }
 
-int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags, bool (*is_valid_ch)(uint32_t codepoint))
+static sphone_contact_field_t* sphone_comm_copy_field_array(const sphone_contact_field_t* fields)
+{
+	sphone_contact_field_t *out;
+	if(!fields) {
+		out = g_malloc0(sizeof(sphone_contact_field_t));
+		*out = SPHONE_FIELD_INVALID;
+	}
+	else {
+		size_t length = 0;
+		for(const sphone_contact_field_t *field = fields; *field != SPHONE_FIELD_INVALID; ++field)
+			length++;
+
+		out = g_malloc0(sizeof(sphone_contact_field_t)*(length+1));
+		memcpy(out, fields, sizeof(sphone_contact_field_t)*length);
+	}
+
+	return out;
+}
+
+int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags, const sphone_contact_field_t* fields, bool (*is_valid_ch)(uint32_t codepoint))
 {
 	CommBackend *backend = g_malloc0(sizeof(*backend));
 	int id = 0;
@@ -78,6 +99,7 @@ int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFla
 	backend->name = g_strdup(name);
 	backend->flags = flags;
 	backend->schemes = sphone_comm_copy_scheme_array(schemes);
+	backend->applicable_fields = sphone_comm_copy_field_array(fields);
 	backend->is_valid_ch = is_valid_ch ?: &sphone_comm_any_ch;
 	
 	sphone_log(LL_INFO, "Comm backend added: %s", backend->name);
@@ -111,6 +133,7 @@ void sphone_comm_remove_backend(int id)
 	g_free(backend->name);
 	sphone_comm_free_scheme_array(backend->schemes);
 	g_free(element->data);
+	g_free(backend->applicable_fields);
 
 	backends = g_slist_remove(backends, element->data);
 }

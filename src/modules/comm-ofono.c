@@ -637,8 +637,14 @@ const gchar *sphone_module_init(void** data)
 		&sms_scheme,
 		NULL
 	};
+
+	const sphone_contact_field_t fields[] =
+	{
+		SPHONE_FIELD_PHONE,
+		SPHONE_FIELD_LISTEND
+	};
 	
-	priv->backend_id = sphone_comm_add_backend("ofono", schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_CELLULAR, &is_numeric);
+	priv->backend_id = sphone_comm_add_backend("ofono", schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_CELLULAR, fields, &is_numeric);
 
 	priv->ofono_service_watcher =
 						g_bus_watch_name_on_connection(priv->s_bus_conn, OFONO_SERVICE, 

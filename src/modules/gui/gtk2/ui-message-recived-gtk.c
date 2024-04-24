@@ -67,8 +67,8 @@ static void gui_sms_receive_show(const MessageProperties *message)
 
 	if(message->contact && message->contact->name) {
 		desc = g_strdup_printf("%s\n%s",message->contact->name, message->line_identifier);
-		if(message->contact->photo)
-			photo = message->contact->photo;
+		/*if(message->contact->photo)
+			photo = message->contact->photo;*/
 	} else {
 		desc = g_strdup_printf("<Unknown>\n%s\n", message->line_identifier);
 	}

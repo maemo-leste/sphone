@@ -18,7 +18,6 @@
 
 #pragma once
 
-#include <gtk/gtk.h>
 #include <time.h>
 #include <stdbool.h>
 
@@ -59,13 +58,34 @@ typedef enum {
 	SPHONE_CALL_DISCONNECTED,
 } sphone_call_state_t;
 
+typedef enum {
+	SPHONE_FIELD_LISTEND = 0,
+	SPHONE_FIELD_INVALID = 0,
+
+	SPHONE_FIELD_PHONE,
+	SPHONE_FIELD_SIP,
+
+	SPHONE_FIELD_EMAIL,
+
+	SPHONE_FIELD_IM_JABBER,
+	SPHONE_FIELD_IM_SKYPE,
+	SPHONE_FIELD_IM_GOOGLE_TALK,
+	SPHONE_FIELD_IM_TWITTER,
+	SPHONE_FIELD_IM_MATRIX,
+	SPHONE_FIELD_IM_IRC,
+	SPHONE_FIELD_IM_TELEGRAM,
+	SPHONE_FIELD_IM_SIGNAL,
+	SPHONE_FIELD_IM_WHATSAPP,
+	SPHONE_FIELD_IM_OTHER,
+} sphone_contact_field_t;
+
 const char *sphone_get_state_string(sphone_call_state_t state);
 
 typedef struct _Contact {
-	gchar *name;
-	GdkPixbuf *photo;
-	gchar *line_identifier;
-	gint backend;
+	char *name;
+	char *line_identifier;
+	sphone_contact_field_t line_identifier_field;
+	int backend;
 } Contact;
 
 void contact_free(Contact *contact);
@@ -78,10 +98,10 @@ void contact_print(const Contact *contact, const char *module_name);
 
 typedef struct _CallProperties{
 	Contact *contact;
-	gchar *line_identifier;
+	char *line_identifier;
 	sphone_call_state_t state;
-	gint backend;
-	gchar *backend_data;
+	int backend;
+	char *backend_data;
 	time_t start_time;
 	time_t end_time;
 	bool emergency;
@@ -100,11 +120,11 @@ CallProperties *call_properties_copy(const CallProperties *properties);
 
 typedef struct _MessageProperties{
 	Contact *contact;
-	gchar *line_identifier;
-	gchar *technology;
-	gchar *text;
-	gint backend;
-	gchar *backend_data;
+	char *line_identifier;
+	char *technology;
+	char *text;
+	int backend;
+	char *backend_data;
 	time_t time;
 	bool outbound;
 } MessageProperties;
@@ -116,8 +136,8 @@ void message_properties_print(const MessageProperties *call, const char *module_
 void message_properties_free(MessageProperties *properties);
 
 typedef struct _Notification{
-	gchar *title;
-	gchar *text;
+	char *title;
+	char *text;
 } Notification;
 
 void notification_free(Notification *notification);

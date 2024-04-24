@@ -318,10 +318,10 @@ static void gui_calls_utils_add_call(const CallProperties *call)
 
 	if(call->contact && call->contact->name) {
 		desc = g_strdup_printf("%s\n%s",call->contact->name, call->line_identifier);
-		if(call->contact->photo) {
+		/*if(call->contact->photo) {
 			photo = call->contact->photo;
 			g_object_ref(G_OBJECT(photo));
-		}
+		}*/
 	} else {
 		desc = g_strdup_printf("<Unknown>\n%s\n", call->line_identifier);
 	}
