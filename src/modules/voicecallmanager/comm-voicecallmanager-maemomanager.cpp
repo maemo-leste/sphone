@@ -72,7 +72,13 @@ void MaemoManager::voiceCallsChanged(void)
 
 		sphone_module_log(LL_DEBUG, "handlerid: %s", handlerid.toStdString().c_str());
 
+		/* voicecall is gone */
 		if (!voicecallmodel->instance(handlerid)) {
+			// If the remote party hung up on us, we still
+			// need to execute the datapipe, hangup does this
+			// for us
+			mh->hangup(); // If not already
+
 			sphone_module_log(LL_DEBUG, "Removing MaemoCallHandler with id %s", handlerid.toStdString().c_str());
 
 			// Remove from voicecalls using iterator
