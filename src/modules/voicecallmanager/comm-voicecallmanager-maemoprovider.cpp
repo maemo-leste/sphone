@@ -40,7 +40,8 @@ void MaemoProvider::registerBackend()
 	};
 
 	backend_id = id;
-	backend_name = g_strdup(backend_id.toStdString().c_str());
+	QString tmp = QString(backend_id).replace("/org/freedesktop/Telepathy/Account/", "");
+	backend_name = g_strdup(tmp.toStdString().c_str());
 	sphone_backend_id = sphone_comm_add_backend(backend_name, schemes, BACKEND_FLAG_CALL, fields, char_valid);
 
 	sphone_module_log(LL_DEBUG, "Registered backend: %s", backend_name);
