@@ -46,7 +46,8 @@ private:
 	VoiceCallHandler* voicecall_handler;
 	MaemoProvider* backend;
 	CallProperties* call_properties;
-	int call_status;
+	int call_status = VoiceCallHandler::STATUS_NULL;
+	int hangup_communicated = 0;
 	// VoiceCallHandler::VoiceCallStatus call_status;
 
 	// Do we store just the QString handler ID, or do we store the pointer to
