@@ -93,6 +93,8 @@ void MaemoManager::providersChanged(void)
 	sphone_module_log(LL_DEBUG, "providersChanged");
 
 	VoiceCallProviderModel* providermodel = qt_voicecall_manager->providers();
+
+	/* Add new providers that we do not know of yet */
 	for (int i = 0; i < providermodel->count(); i++) {
 		if (!maemo_providers.contains(providermodel->id(i))) {
 			MaemoProvider* provider = new MaemoProvider(this, providermodel->id(i), providermodel->type(i),
@@ -103,6 +105,7 @@ void MaemoManager::providersChanged(void)
 		}
 	}
 
+	/* Remove providers that are no longer in the provider model */
 	QHashIterator<QString, MaemoProvider*> i(maemo_providers);
 	while (i.hasNext()) {
 		i.next();
