@@ -96,10 +96,15 @@ void MaemoCallHandler::statusChanged()
 		execute_datapipe(&call_properties_changed_pipe, call_properties);
 	} else if (current_status == VoiceCallHandler::STATUS_DISCONNECTED) {
 		sphone_module_log(LL_DEBUG, "call status: disconnected");
-		call_properties->state = SPHONE_CALL_DISCONNECTED;
-		call_properties->end_time = time(NULL);
 
-		execute_datapipe(&call_properties_changed_pipe, call_properties);
+		
+		if (!hangup_communicated) {
+			call_properties->state = SPHONE_CALL_DISCONNECTED;
+			call_properties->end_time = time(NULL);
+
+			execute_datapipe(&call_properties_changed_pipe, call_properties);
+			hangup_communicated = 1;
+		}
 	}
 
 	call_status = current_status;
@@ -120,8 +125,18 @@ void MaemoCallHandler::hold(bool hold)
 void MaemoCallHandler::hangup()
 {
 	sphone_module_log(LL_DEBUG, "hangup()");
-	voicecall_handler->hangup();
-	call_properties->state = SPHONE_CALL_DISCONNECTED;
-	call_properties->end_time = time(NULL);
-	execute_datapipe(&call_properties_changed_pipe, call_properties);
+	sphone_module_log(LL_DEBUG, "hangup() status %d", voicecall_handler->status());
+
+	if (voicecall_handler->status() != VoiceCallHandler::STATUS_DISCONNECTED) {
+		/* This will not trigger statusChanged per se unfortunately, and currently there the voicecall_handler status also isn't STATUS_DISCONNECTED */
+		voicecall_handler->hangup();
+
+		if (!hangup_communicated) {
+			call_properties->state = SPHONE_CALL_DISCONNECTED;
+			call_properties->end_time = time(NULL);
+			execute_datapipe(&call_properties_changed_pipe, call_properties);
+		}
+	}
+
+	hangup_communicated = 1;
 }
