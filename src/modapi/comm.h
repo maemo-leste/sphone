@@ -29,7 +29,8 @@ extern "C" {
 typedef enum {
 	BACKEND_FLAG_MESSAGE = 1,
 	BACKEND_FLAG_CALL = 1<<1,
-	BACKEND_FLAG_CELLULAR = 1<<2
+	BACKEND_FLAG_CELLULAR = 1<<2,
+	BACKEND_FLAG_DTMF = 1<<3
 } BackendFlag;
 
 typedef struct _Scheme {

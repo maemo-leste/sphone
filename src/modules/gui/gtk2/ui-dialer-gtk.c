@@ -367,7 +367,7 @@ const gchar *sphone_module_init(void** data)
 	append_trigger_to_datapipe(&comm_backend_added_pipe, &gui_dialer_backend_added, NULL);
 	append_trigger_to_datapipe(&comm_backend_removed_pipe, &gui_dialer_backend_removed, NULL);
 	
-	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+	g_gui_calls.gui_id = gui_register(gtk_gui_dialer_show, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 	return NULL;
 }

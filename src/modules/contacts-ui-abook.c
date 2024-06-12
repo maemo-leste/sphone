@@ -255,7 +255,7 @@ const gchar *sphone_module_init(void** data)
 	hildon_init();
 	osso_abook_init_with_name("sphone", NULL);
 
-	abook_priv.ui_id = gui_register(NULL, NULL, NULL, NULL, NULL, NULL, NULL, abook_contact_show, abook_dialog_close);
+	abook_priv.ui_id = gui_register(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, abook_contact_show, abook_dialog_close);
 
 	return NULL;
 }

@@ -456,12 +456,12 @@ static void call_accept_trigger(gconstpointer data, gpointer user_data)
 		if(gerror) {
 			error_dbus(gerror);
 			gchar message[] = "Unable to awnser call via ofono";
-			execute_datapipe(&call_backend_error_pipe, message);
+			execute_datapipe(&gui_error_pipe, message);
 			return;
 		}
 	} else if(!ofono_init_valid(priv) && icall->backend == priv->backend_id) {
 		gchar message[] = "Ofono is not ready";
-		execute_datapipe(&call_backend_error_pipe, message);
+		execute_datapipe(&gui_error_pipe, message);
 	}
 }
 
@@ -481,14 +481,14 @@ static void call_hangup_trigger(gconstpointer data, gpointer user_data)
 		if(gerror) {
 			error_dbus(gerror);
 			gchar message[] = "Unable to hangup via ofono";
-			execute_datapipe(&call_backend_error_pipe, message);
+			execute_datapipe(&gui_error_pipe, message);
 			return;
 		}
 
 		g_variant_unref(result);
 	} else if(!ofono_init_valid(priv) && call->backend == priv->backend_id) {
 		gchar message[] = "Ofono is not ready";
-		execute_datapipe(&call_backend_error_pipe, message);
+		execute_datapipe(&gui_error_pipe, message);
 	}
 }
 
@@ -573,14 +573,14 @@ static void call_dial_trigger(gconstpointer data, gpointer user_data)
 		if(gerror) {
 			error_dbus(gerror);
 			gchar message[] = "Unable to transmit or dial number via ofono";
-			execute_datapipe(&call_backend_error_pipe, message);
+			execute_datapipe(&gui_error_pipe, message);
 			return;
 		}
 	
 		g_variant_unref(result);
 	} else if(!ofono_init_valid(priv) && call->backend == priv->backend_id) {
 		gchar message[] = "Ofono is not ready";
-		execute_datapipe(&call_backend_error_pipe, message);
+		execute_datapipe(&gui_error_pipe, message);
 	}
 }
 
@@ -610,14 +610,14 @@ static void message_send_trigger(gconstpointer data, gpointer user_data)
 		if(gerror) {
 			error_dbus(gerror);
 			gchar err_message[] = "Unable to transmit message via ofono";
-			execute_datapipe(&call_backend_error_pipe, err_message);
+			execute_datapipe(&gui_error_pipe, err_message);
 			return;
 		}
 
 		g_variant_unref(result);
 	} else if(!ofono_init_valid(priv) && message->backend == priv->backend_id) {
 		gchar message_text[] = "Ofono is not ready";
-		execute_datapipe(&call_backend_error_pipe, message_text);
+		execute_datapipe(&gui_error_pipe, message_text);
 	}
 }
 

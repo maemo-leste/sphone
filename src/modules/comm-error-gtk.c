@@ -51,13 +51,13 @@ SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
-	append_trigger_to_datapipe(&call_backend_error_pipe, backend_error_trigger, NULL);
+	append_trigger_to_datapipe(&gui_error_pipe, backend_error_trigger, NULL);
 	return NULL;
 }
 
 SPHONE_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
-	remove_trigger_from_datapipe(&call_backend_error_pipe, backend_error_trigger, NULL);
+	remove_trigger_from_datapipe(&gui_error_pipe, backend_error_trigger, NULL);
 	(void)data;
 }

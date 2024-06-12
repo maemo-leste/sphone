@@ -46,7 +46,7 @@ SPHONE_MODULE_EXPORT module_info_struct module_info = {
 static const Scheme test_scheme =
 {
 	.scheme = (char*)"test",
-	.flags = BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL
+	.flags = BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_DTMF
 };
 
 static gboolean call_remote_accept(void *data)
@@ -206,7 +206,7 @@ const gchar *sphone_module_init(void** data)
 		NULL
 	};
 	
-	id = sphone_comm_add_backend(MODULE_NAME, commtest_schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL, NULL, &is_not_special);
+	id = sphone_comm_add_backend(MODULE_NAME, commtest_schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_DTMF, NULL, &is_not_special);
 
 	append_trigger_to_datapipe(&call_dial_pipe, call_dial_trigger, NULL);
 	append_trigger_to_datapipe(&call_accept_pipe, call_accept_trigger, NULL);

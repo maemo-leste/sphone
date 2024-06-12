@@ -60,7 +60,7 @@ extern datapipe_struct call_dial_pipe;
 extern datapipe_struct call_hold_pipe;
 
 //input: string with error message
-extern datapipe_struct call_backend_error_pipe;
+extern datapipe_struct gui_error_pipe;
 
 //input: sphone_vibrate_type_t
 extern datapipe_struct vibrate_pipe;

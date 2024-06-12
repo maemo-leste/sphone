@@ -27,6 +27,8 @@ extern "C" {
 
 bool gui_dialer_show(const CallProperties* call);
 
+bool gui_dtmf_show(const CallProperties* call);
+
 bool gui_sms_send_show(const MessageProperties* message);
 
 bool gui_options_open(void);
@@ -44,14 +46,15 @@ void gui_contact_show(const Contact *contact, void (*callback)(Contact*, void*),
 void gui_close_contact_diag(void);
 
 int gui_register(bool (*dialer_show)(const CallProperties* call),
-			 bool (*sms_send_show)(const MessageProperties* call),
-			 bool (*options_open)(void),
-			 bool (*history_sms)(void),
-			 bool (*contact_thread_shown)(const Contact *contact),
-			 void (*show_thread_for_contact)(const Contact *contact),
-			 void (*history_calls)(void),
-			 void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data),
-			 void (*close_contact_diag)(void));
+                 bool (*dtmf_show)(const CallProperties* call),
+                 bool (*sms_send_show)(const MessageProperties* call),
+                 bool (*options_open)(void),
+                 bool (*history_sms)(void),
+                 bool (*contact_thread_shown)(const Contact *contact),
+                 void (*show_thread_for_contact)(const Contact *contact),
+                 void (*history_calls)(void),
+                 void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data),
+                 void (*close_contact_diag)(void));
 
 void gui_remove(int id);
 

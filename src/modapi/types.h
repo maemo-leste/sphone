@@ -79,6 +79,26 @@ typedef enum {
 	SPHONE_FIELD_IM_OTHER,
 } sphone_contact_field_t;
 
+
+typedef enum {
+	SPHONE_DTMF_STOP = 0,
+	SPHONE_DTMF_1,
+	SPHONE_DTMF_2,
+	SPHONE_DTMF_3,
+	SPHONE_DTMF_4,
+	SPHONE_DTMF_5,
+	SPHONE_DTMF_6,
+	SPHONE_DTMF_7,
+	SPHONE_DTMF_8,
+	SPHONE_DTMF_9,
+	SPHONE_DTMF_HASH,
+	SPHONE_DTMF_STAR,
+	SPHONE_DTMF_A,
+	SPHONE_DTMF_B,
+	SPHONE_DTMF_C,
+	SPHONE_DTMF_D,
+} sphone_dtmf_t;
+
 const char *sphone_get_state_string(sphone_call_state_t state);
 
 typedef struct _Contact {
@@ -149,6 +169,13 @@ struct str_list {
 
 const Contact *contact_from_message(const MessageProperties *msg);
 const Contact *contact_from_call(const CallProperties *call);
+
+typedef struct _DtmfRequest {
+	sphone_dtmf_t dtmf;
+	CallProperties *call;
+} DtmfRequest;
+
+void dtmf_request_free(DtmfRequest *request);
 
 #ifdef __cplusplus
 }

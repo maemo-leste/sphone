@@ -19,9 +19,11 @@
 
 #include "gui.h"
 #include "sphone-log.h"
+#include "datapipes.h"
 
 struct Ui {
 	bool (*dialer_show)(const CallProperties* call);
+	bool (*dtmf_show)(const CallProperties* call);
 	bool (*sms_send_show)(const MessageProperties* call);
 	bool (*options_open)(void);
 	bool (*history_sms)(void);
@@ -69,6 +71,8 @@ void gui_show_thread_for_contact(const Contact *contact)
 	}
 	if(!backend_avail) {
 		sphone_log(LL_WARN, "No backend for %s", __func__);
+		gchar message[] = "No gui available for threaded messages";
+		execute_datapipe(&gui_error_pipe, message);
 	}
 }
 
@@ -85,6 +89,8 @@ void gui_history_calls(void)
 	}
 	if(!backend_avail) {
 		sphone_log(LL_WARN, "No backend for %s", __func__);
+		gchar message[] = "No gui available for call history";
+		execute_datapipe(&gui_error_pipe, message);
 	}
 }
 
@@ -98,6 +104,8 @@ void gui_contact_show(const Contact *contact, void (*callback)(Contact*, void*),
 		}
 	}
 	sphone_log(LL_WARN, "No backend for %s", __func__);
+	gchar message[] = "No contacts gui available";
+	execute_datapipe(&gui_error_pipe, message);
 }
 
 void gui_close_contact_diag(void)
@@ -110,8 +118,11 @@ void gui_close_contact_diag(void)
 			backend_avail = true;
 		}
 	}
-	if(!backend_avail)
+	if(!backend_avail) {
 		sphone_log(LL_WARN, "No backend for %s", __func__);
+		gchar message[] = "No contacts gui contacts";
+		execute_datapipe(&gui_error_pipe, message);
+	}
 }
 
 bool gui_dialer_show(const CallProperties* call)
@@ -124,8 +135,29 @@ bool gui_dialer_show(const CallProperties* call)
 		else if(ui->dialer_show)
 			backend_avail = true;
 	}
-	if(!backend_avail)
+	if(!backend_avail) {
 		sphone_log(LL_WARN, "No backend for %s", __func__);
+		gchar message[] = "No dialer gui available";
+		execute_datapipe(&gui_error_pipe, message);
+	}
+	return true;
+}
+
+bool gui_dtmf_show(const CallProperties *call)
+{
+	bool backend_avail = false;
+	for(GSList *element = uis; element; element = element->next) {
+		struct Ui *ui = element->data;
+		if(ui->dtmf_show && !ui->dtmf_show(call))
+			return false;
+		else if(ui->dtmf_show)
+			backend_avail = true;
+	}
+	if(!backend_avail) {
+		sphone_log(LL_WARN, "No backend for %s", __func__);
+		gchar message[] = "No dtmf gui available";
+		execute_datapipe(&gui_error_pipe, message);
+	}
 	return true;
 }
 
@@ -139,8 +171,11 @@ bool gui_sms_send_show(const MessageProperties* message)
 		else if(ui->sms_send_show)
 			backend_avail = true;
 	}
-	if(!backend_avail)
+	if(!backend_avail) {
 		sphone_log(LL_WARN, "No backend for %s", __func__);
+		gchar errmessage[] = "No sms gui available";
+		execute_datapipe(&gui_error_pipe, errmessage);
+	}
 	return true;
 }
 
@@ -154,8 +189,11 @@ bool gui_options_open(void)
 		else if(ui->options_open)
 			backend_avail = true;
 	}
-	if(!backend_avail)
+	if(!backend_avail) {
 		sphone_log(LL_WARN, "No backend for %s", __func__);
+		gchar errmessage[] = "No options gui available";
+		execute_datapipe(&gui_error_pipe, errmessage);
+	}
 	return true;
 }
 
@@ -169,12 +207,16 @@ bool gui_history_sms(void)
 		else if(ui->history_sms)
 			backend_avail = true;
 	}
-	if(!backend_avail)
+	if(!backend_avail) {
 		sphone_log(LL_WARN, "No backend for %s", __func__);
+		gchar errmessage[] = "No sms history gpi available";
+		execute_datapipe(&gui_error_pipe, errmessage);
+	}
 	return true;
 }
 
 int gui_register(bool (*dialer_show)(const CallProperties* call),
+			 bool (*dtmf_show)(const CallProperties* call),
 			 bool (*sms_send_show)(const MessageProperties* call),
 			 bool (*options_open)(void),
 			 bool (*history_sms)(void),
@@ -189,6 +231,7 @@ int gui_register(bool (*dialer_show)(const CallProperties* call),
 
 	ui->id = id_counter++;
 	ui->dialer_show = dialer_show;
+	ui->dtmf_show = dtmf_show;
 	ui->sms_send_show = sms_send_show;
 	ui->options_open = options_open;
 	ui->history_sms = history_sms;

@@ -30,7 +30,7 @@ datapipe_struct call_hangup_pipe;
 datapipe_struct call_hold_pipe;
 datapipe_struct call_accept_pipe;
 datapipe_struct call_dial_pipe;
-datapipe_struct call_backend_error_pipe;
+datapipe_struct gui_error_pipe;
 datapipe_struct call_properties_changed_pipe;
 
 datapipe_struct vibrate_pipe;
@@ -61,7 +61,7 @@ void datapipes_init(void)
 	setup_datapipe(&audio_playing_pipe);
 	setup_datapipe(&audio_route_pipe);
 	setup_datapipe(&call_mode_pipe);
-	setup_datapipe(&call_backend_error_pipe);
+	setup_datapipe(&gui_error_pipe);
 	setup_datapipe(&call_new_pipe);
 	setup_datapipe(&call_hangup_pipe);
 	setup_datapipe(&call_hold_pipe);
@@ -115,7 +115,7 @@ void datapipes_exit(void)
 	free_datapipe(&call_hangup_pipe);
 	free_datapipe(&call_hold_pipe);
 	free_datapipe(&call_dial_pipe);
-	free_datapipe(&call_backend_error_pipe);
+	free_datapipe(&gui_error_pipe);
 	free_datapipe(&call_properties_changed_pipe);
 	free_datapipe(&vibrate_pipe);
 	free_datapipe(&message_send_pipe);

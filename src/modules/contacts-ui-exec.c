@@ -61,7 +61,7 @@ SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
 	(void)data;
-	gui_id = gui_register(NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_show_trigger, NULL);
+	gui_id = gui_register(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, contact_show_trigger, NULL);
 	return NULL;
 }
 

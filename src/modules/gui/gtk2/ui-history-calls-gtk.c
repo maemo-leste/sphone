@@ -196,7 +196,7 @@ const gchar *sphone_module_init(void** data)
 	hildon_init();
 #endif
 
-	*data = GINT_TO_POINTER(gui_register(NULL, NULL, NULL, NULL, NULL, NULL, gtk_gui_history_calls, NULL, NULL));
+	*data = GINT_TO_POINTER(gui_register(NULL, NULL, NULL, NULL, NULL, NULL, NULL, gtk_gui_history_calls, NULL, NULL));
 	return NULL;
 }
 
