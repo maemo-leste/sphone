@@ -1,3 +1,11 @@
+sphone (0.9.3) unstable; urgency=medium
+
+  * Stop ringing if the remote party hangs up before we answer
+  * Fix some string replacement bugs
+  * voicecallmanager: make names more usable/readable
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Thu, 11 Jul 2024 12:04:09 +0200
+
 sphone (0.9.2) unstable; urgency=medium
 
   * Add libtelepathy-qt5-dev build dependency
