@@ -121,7 +121,7 @@ static EBookQuery *build_query(const char *line_id, int backend_id)
 	if(fields_contain(fields, SPHONE_FIELD_IM_SKYPE))
 		query = join_query(query, e_book_query_field_test(E_CONTACT_IM_SKYPE, E_BOOK_QUERY_CONTAINS, line_id));
 	if(fields_contain(fields, SPHONE_FIELD_IM_MATRIX)) {
-		sphone_module_log(LL_WARN, "SPHONE_FIELD_IM_MATRIX is currently not supported, as the requirement to support ainchent ebook 3.38")
+		sphone_module_log(LL_WARN, "SPHONE_FIELD_IM_MATRIX is currently not supported, as the requirement to support ainchent ebook 3.38");
 		//query = join_query(query, e_book_query_field_test(E_CONTACT_IM_MATRIX, E_BOOK_QUERY_CONTAINS, line_id));
 	}
 	if(fields_contain(fields, SPHONE_FIELD_IM_TWITTER))
