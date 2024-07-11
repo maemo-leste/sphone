@@ -1,3 +1,9 @@
+sphone (0.9.4) unstable; urgency=medium
+
+  * disable SPHONE_FIELD_IM_MATRIX to support ainchent libebook
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Thu, 11 Jul 2024 19:46:59 +0200
+
 sphone (0.9.3) unstable; urgency=medium
 
   * Stop ringing if the remote party hangs up before we answer
