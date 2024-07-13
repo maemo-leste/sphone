@@ -86,8 +86,19 @@ static sphone_contact_field_t* sphone_comm_copy_field_array(const sphone_contact
 	return out;
 }
 
-int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags, const sphone_contact_field_t* fields, bool (*is_valid_ch)(uint32_t codepoint))
+int sphone_comm_add_backend(const char* name, const char* uid, const Scheme** schemes, BackendFlag flags, const sphone_contact_field_t* fields, bool (*is_valid_ch)(uint32_t codepoint))
 {
+	if(sphone_comm_find_backend_id_from_uid(uid) != -1) {
+		sphone_log(LL_WARN, "Can not register backend as the uid %s is already in use", uid);
+		return -1;
+	}
+
+	// TODO: remove this limitation
+	if(sphone_comm_find_backend_id(name) != -1) {
+		sphone_log(LL_WARN, "Can not register backend as the name %s is already in use", name);
+		return -1;
+	}
+
 	CommBackend *backend = g_malloc0(sizeof(*backend));
 	int id = 0;
 	if(backends != NULL) {
@@ -95,8 +106,10 @@ int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFla
 		CommBackend *last_backend = (CommBackend*)element->data;
 		id = last_backend->id+1;
 	}
+
 	backend->id = id;
 	backend->name = g_strdup(name);
+	backend->uid = g_strdup(uid);
 	backend->flags = flags;
 	backend->schemes = sphone_comm_copy_scheme_array(schemes);
 	backend->applicable_fields = sphone_comm_copy_field_array(fields);
@@ -191,6 +204,17 @@ int sphone_comm_find_backend_id(const char* name)
 	for(element = backends; element; element = element->next) {
 		CommBackend *last_backend = (CommBackend*)element->data;
 		if(g_strcmp0(last_backend->name, name) == 0)
+			return last_backend->id;
+	}
+	return -1;
+}
+
+int sphone_comm_find_backend_id_from_uid(const char* uid)
+{
+	GSList *element;
+	for(element = backends; element; element = element->next) {
+		CommBackend *last_backend = (CommBackend*)element->data;
+		if(g_strcmp0(last_backend->uid, uid) == 0)
 			return last_backend->id;
 	}
 	return -1;

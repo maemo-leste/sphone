@@ -76,7 +76,7 @@ void contact_print(const Contact *contact, const char *module_name)
 				   module_name ?: "", module_name ? ": " : "",
 				   contact->name ?: "<unknown>",
 				   contact->line_identifier ?: "",
-				   backend ? backend->name : "unknown");
+				   backend ? backend->uid : "unknown");
 	} else {
 		sphone_log(LL_DEBUG, "%s%sContact: NULL", module_name ?: "", module_name ? ": " : "" );
 	}
@@ -145,7 +145,7 @@ void call_properties_print(const CallProperties *call, const char *module_name)
 	}
 
 	sphone_log(LL_DEBUG, "%s%sCall: %s from %s", module_name ?: "", module_name ? ": " : "",
-		       call->line_identifier, backend->name);
+		       call->line_identifier, backend->uid);
 	contact_print(call->contact, module_name);
 	sphone_log(LL_DEBUG, "%s%sstart_time: %ld answered: %d state: %s outbound: %d ", module_name ?: "", module_name ? ": " : "",
 		       call->start_time, call->answered, sphone_get_state_string(call->state), call->outbound);
@@ -191,7 +191,7 @@ void message_properties_print(const MessageProperties *msg, const char *module_n
 	}
 
 	sphone_log(LL_DEBUG, "%s%sMessage: %s from %s", module_name ?: "", module_name ? ": " : "",
-		       msg->line_identifier, backend->name);
+		       msg->line_identifier, backend->uid);
 	contact_print(msg->contact, module_name);
 	sphone_log(LL_DEBUG, "%s%stime: %ld text: %s outbound: %d ", module_name ?: "", module_name ? ": " : "",
 		       msg->time, msg->text, msg->outbound);

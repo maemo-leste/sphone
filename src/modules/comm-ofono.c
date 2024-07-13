@@ -642,7 +642,7 @@ const gchar *sphone_module_init(void** data)
 		SPHONE_FIELD_LISTEND
 	};
 	
-	priv->backend_id = sphone_comm_add_backend("ofono", schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_CELLULAR, fields, &is_numeric);
+	priv->backend_id = sphone_comm_add_backend("cellular", "sphone/ofono", schemes, BACKEND_FLAG_MESSAGE | BACKEND_FLAG_CALL | BACKEND_FLAG_CELLULAR, fields, &is_numeric);
 
 	priv->ofono_service_watcher =
 						g_bus_watch_name_on_connection(priv->s_bus_conn, OFONO_SERVICE, 

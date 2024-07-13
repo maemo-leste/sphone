@@ -40,6 +40,7 @@ typedef struct _Scheme {
 
 typedef struct  _CommBackend {
 	char* name;
+	char* uid;
 	Scheme** schemes;
 	BackendFlag flags;
 	sphone_contact_field_t* applicable_fields;
@@ -47,7 +48,7 @@ typedef struct  _CommBackend {
 	bool (*is_valid_ch)(uint32_t codepoint);
 } CommBackend;
 
-int sphone_comm_add_backend(const char* name, const Scheme** schemes, BackendFlag flags,
+int sphone_comm_add_backend(const char* name, const char* uid, const Scheme** schemes, BackendFlag flags,
                             const sphone_contact_field_t* fields, bool (*is_valid_ch)(uint32_t codepoint));
 
 void sphone_comm_remove_backend(int id);
@@ -63,6 +64,7 @@ CommBackend *sphone_comm_get_backend_for_scheme(const char* scheme, BackendFlag 
 bool sphone_comm_set_default_backend(int id);
 
 int sphone_comm_find_backend_id(const char* name);
+int sphone_comm_find_backend_id_from_uid(const char* uid);
 
 bool sphone_comm_valid_string(int id, const char* str);
 

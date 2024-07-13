@@ -86,7 +86,7 @@ static void call_properties_changed_trigger(const void *data, void *user_data)
 	RTCOM_EL_EVENT_SET_FIELD(ev, start_time, call->start_time);
 	RTCOM_EL_EVENT_SET_FIELD(ev, end_time, time(NULL));
 
-	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("sphone/", backend->name, "/", "sphone", NULL));
+	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strdup(backend->uid));
 	RTCOM_EL_EVENT_SET_FIELD(ev, local_name, "<SelfHandle>");
 
 	if(call->contact && call->contact->name)
@@ -104,7 +104,7 @@ static RTComElEvent *create_message_event(const MessageProperties *msg)
 
 	CommBackend *backend = sphone_comm_get_backend(msg->backend);
 
-	if(g_strcmp0(backend->name, "ofono") == 0) {
+	if(g_strcmp0(backend->uid, "sphone/ofono") == 0) {
 		RTCOM_EL_EVENT_SET_FIELD(ev, service, g_strdup("RTCOM_EL_SERVICE_SMS"));
 		RTCOM_EL_EVENT_SET_FIELD(ev, event_type,  g_strdup("RTCOM_EL_EVENTTYPE_SMS_MESSAGE"));
 	} else {
@@ -114,7 +114,7 @@ static RTComElEvent *create_message_event(const MessageProperties *msg)
 
 	RTCOM_EL_EVENT_SET_FIELD(ev, start_time, msg->time);
 	RTCOM_EL_EVENT_SET_FIELD(ev, end_time, 0);
-	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strconcat("sphone/", backend->name, "/", "sphone", NULL));
+	RTCOM_EL_EVENT_SET_FIELD(ev, local_uid, g_strdup(backend->uid));
 	RTCOM_EL_EVENT_SET_FIELD(ev, local_name, "<SelfHandle>");
 
 	if(msg->contact && msg->contact->name)
@@ -181,16 +181,12 @@ static MessageProperties *convert_to_message_properties(RTComElIter *iter, const
 	msg->text = g_strdup(text);
 	msg->outbound = outbound;
 
-	char **tokens = g_strsplit_set(local_uid, "/", 0);
-
-	if(tokens && tokens[1] && g_strcmp0(tokens[0], "sphone") == 0) {
-		msg->backend = sphone_comm_find_backend_id(tokens[1]);
-	} else {
-		g_strfreev(tokens);
+	msg->backend = sphone_comm_find_backend_id_from_uid(local_uid);
+	if(msg->backend < 0) {
 		message_properties_free(msg);
 		return NULL;
 	}
-	g_strfreev(tokens);
+
 	if(name) {
 		msg->contact = g_malloc0(sizeof(*msg->contact));
 		msg->contact->name = g_strdup(name);
@@ -234,15 +230,14 @@ static GList *get_messages_for_contact(Contact *contact, unsigned int limit)
 		if(!backend)
 			return NULL;
 
-		char *localid = g_strconcat("sphone/", backend->name, "/", "sphone", NULL);
 		if(!rtcom_el_query_prepare(querySms, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_SMS"), RTCOM_EL_OP_EQUAL,
 			                       "event-type-id", rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_SMS_MESSAGE"), RTCOM_EL_OP_EQUAL,
-			                       "local-uid", localid, RTCOM_EL_OP_EQUAL, "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL, 
+			                       "local-uid", backend->uid, RTCOM_EL_OP_EQUAL, "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL,
 			                       NULL))
 			return NULL;
 		if(!rtcom_el_query_prepare(queryChat, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_CHAT"), RTCOM_EL_OP_EQUAL,
 			                       "event-type-id", rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_CHAT_MESSAGE"), RTCOM_EL_OP_EQUAL,
-			                       "local-uid", localid, RTCOM_EL_OP_EQUAL, "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL, 
+			                       "local-uid", backend->uid, RTCOM_EL_OP_EQUAL, "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL,
 			                       NULL))
 			return NULL;
 	}
@@ -299,9 +294,8 @@ static GList *get_calls_for_contact(Contact *contact, unsigned int limit)
 		if(!backend)
 			return NULL;
 
-		char *localid = g_strconcat("sphone/", backend->name, "/", "sphone", NULL);
 		if(!rtcom_el_query_prepare(query, "service-id", rtcom_el_get_service_id(evlog, "RTCOM_EL_SERVICE_CALL"), RTCOM_EL_OP_EQUAL,
-			                              "local-uid", localid, RTCOM_EL_OP_EQUAL,
+			                              "local-uid", backend->uid, RTCOM_EL_OP_EQUAL,
 			                              "remote-uid", contact->line_identifier, RTCOM_EL_OP_EQUAL, NULL))
 			return NULL;
 	}
@@ -336,14 +330,8 @@ static GList *get_calls_for_contact(Contact *contact, unsigned int limit)
 		call->answered = type != rtcom_el_get_eventtype_id(evlog, "RTCOM_EL_EVENTTYPE_CALL_MISSED");
 		call->outbound = outbound;
 		call->state = SPHONE_CALL_DISCONNECTED;
+		call->backend = sphone_comm_find_backend_id_from_uid(local_uid);
 
-		char **tokens = g_strsplit_set(local_uid, "/", 0);
-
-		if(tokens[0] && tokens[1] && g_strcmp0(tokens[0], "sphone") == 0)
-			call->backend = sphone_comm_find_backend_id(tokens[1]);
-		else
-			call->backend = -1;
-		g_strfreev(tokens);
 		if(name) {
 			call->contact = g_malloc0(sizeof(*call->contact));
 			call->contact->name = g_strdup(name);

@@ -1,10 +1,8 @@
 #include <glib.h>
 #include <gmodule.h>
 
-#include "comm.h"
 #include "datapipe.h"
 #include "datapipes.h"
-#include "sphone-log.h"
 #include "sphone-modules.h"
 #include "types.h"
 
