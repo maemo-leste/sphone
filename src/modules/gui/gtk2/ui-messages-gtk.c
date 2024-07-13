@@ -242,7 +242,11 @@ const gchar *sphone_module_init(void** data)
 #ifdef ENABLE_LIBHILDON
 	hildon_init();
 #endif
-	gui_id = gui_register(NULL, NULL, gtk_gui_sms_send_show, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+	struct GuiFunctions func = {};
+	func.sms_send_show = gtk_gui_sms_send_show;
+	gui_id = gui_register(func);
+
 	return NULL;
 }
 

@@ -22,16 +22,7 @@
 #include "datapipes.h"
 
 struct Ui {
-	bool (*dialer_show)(const CallProperties* call);
-	bool (*dtmf_show)(const CallProperties* call);
-	bool (*sms_send_show)(const MessageProperties* call);
-	bool (*options_open)(void);
-	bool (*history_sms)(void);
-	bool (*contact_thread_shown)(const Contact *contact);
-	void (*show_thread_for_contact)(const Contact *contact);
-	void (*history_calls)(void);
-	void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data);
-	void (*close_contact_diag)(void);
+	struct GuiFunctions functions;
 	int id;
 };
 
@@ -44,9 +35,9 @@ bool gui_contact_thread_shown(const Contact *contact)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->contact_thread_shown && ui->contact_thread_shown(contact))
+		if(ui->functions.contact_thread_shown && ui->functions.contact_thread_shown(contact))
 			return true;
-		else if(ui->contact_thread_shown)
+		else if(ui->functions.contact_thread_shown)
 			backend_avail = true;
 	}
 	if(!backend_avail) {
@@ -63,8 +54,8 @@ void gui_show_thread_for_contact(const Contact *contact)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->show_thread_for_contact) {
-			ui->show_thread_for_contact(contact);
+		if(ui->functions.show_thread_for_contact) {
+			ui->functions.show_thread_for_contact(contact);
 			backend_avail = true;
 			break;
 		}
@@ -81,8 +72,8 @@ void gui_history_calls(void)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->history_calls) {
-			ui->history_calls();
+		if(ui->functions.history_calls) {
+			ui->functions.history_calls();
 			backend_avail = true;
 			break;
 		}
@@ -98,8 +89,8 @@ void gui_contact_show(const Contact *contact, void (*callback)(Contact*, void*),
 {
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->contact_show) {
-			ui->contact_show(contact, callback, user_data);
+		if(ui->functions.contact_show) {
+			ui->functions.contact_show(contact, callback, user_data);
 			return;
 		}
 	}
@@ -113,8 +104,8 @@ void gui_close_contact_diag(void)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->close_contact_diag) {
-			ui->close_contact_diag();
+		if(ui->functions.close_contact_diag) {
+			ui->functions.close_contact_diag();
 			backend_avail = true;
 		}
 	}
@@ -130,9 +121,9 @@ bool gui_dialer_show(const CallProperties* call)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->dialer_show && !ui->dialer_show(call))
+		if(ui->functions.dialer_show && !ui->functions.dialer_show(call))
 			return false;
-		else if(ui->dialer_show)
+		else if(ui->functions.dialer_show)
 			backend_avail = true;
 	}
 	if(!backend_avail) {
@@ -148,9 +139,9 @@ bool gui_dtmf_show(const CallProperties *call)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->dtmf_show && !ui->dtmf_show(call))
+		if(ui->functions.dtmf_show && !ui->functions.dtmf_show(call))
 			return false;
-		else if(ui->dtmf_show)
+		else if(ui->functions.dtmf_show)
 			backend_avail = true;
 	}
 	if(!backend_avail) {
@@ -166,9 +157,9 @@ bool gui_sms_send_show(const MessageProperties* message)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->sms_send_show && !ui->sms_send_show(message))
+		if(ui->functions.sms_send_show && !ui->functions.sms_send_show(message))
 			return false;
-		else if(ui->sms_send_show)
+		else if(ui->functions.sms_send_show)
 			backend_avail = true;
 	}
 	if(!backend_avail) {
@@ -184,9 +175,9 @@ bool gui_options_open(void)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->options_open && !ui->options_open())
+		if(ui->functions.options_open && !ui->functions.options_open())
 			return false;
-		else if(ui->options_open)
+		else if(ui->functions.options_open)
 			backend_avail = true;
 	}
 	if(!backend_avail) {
@@ -202,9 +193,9 @@ bool gui_history_sms(void)
 	bool backend_avail = false;
 	for(GSList *element = uis; element; element = element->next) {
 		struct Ui *ui = element->data;
-		if(ui->history_sms && !ui->history_sms())
+		if(ui->functions.history_sms && !ui->functions.history_sms())
 			return false;
-		else if(ui->history_sms)
+		else if(ui->functions.history_sms)
 			backend_avail = true;
 	}
 	if(!backend_avail) {
@@ -215,31 +206,13 @@ bool gui_history_sms(void)
 	return true;
 }
 
-int gui_register(bool (*dialer_show)(const CallProperties* call),
-			 bool (*dtmf_show)(const CallProperties* call),
-			 bool (*sms_send_show)(const MessageProperties* call),
-			 bool (*options_open)(void),
-			 bool (*history_sms)(void),
-			 bool (*contact_thread_shown)(const Contact *contact),
-			 void (*show_thread_for_contact)(const Contact *contact),
-			 void (*history_calls)(void),
-			 void (*contact_show)(const Contact *contact, void (*callback)(Contact*, void*), void *user_data),
-			 void (*close_contact_diag)(void))
+int gui_register(const struct GuiFunctions functions)
 {
 	static int id_counter = 0;
 	struct Ui *ui = g_malloc(sizeof(*ui));
 
 	ui->id = id_counter++;
-	ui->dialer_show = dialer_show;
-	ui->dtmf_show = dtmf_show;
-	ui->sms_send_show = sms_send_show;
-	ui->options_open = options_open;
-	ui->history_sms = history_sms;
-	ui->contact_thread_shown = contact_thread_shown;
-	ui->show_thread_for_contact = show_thread_for_contact;
-	ui->history_calls = history_calls;
-	ui->contact_show = contact_show;
-	ui->close_contact_diag = close_contact_diag;
+	ui->functions = functions;
 	
 	uis = g_slist_prepend(uis, ui);
 	return id_counter-1;

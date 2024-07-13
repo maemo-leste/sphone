@@ -216,7 +216,13 @@ const gchar *sphone_module_init(void** data)
 #ifdef ENABLE_LIBHILDON
 	hildon_init();
 #endif
-	gui_id = gui_register(NULL, NULL, NULL, NULL, gtk_gui_msg_threads, gtk_gui_contact_shown, gtk_gui_show_thread_for_contact, NULL, NULL, NULL);
+
+	struct GuiFunctions func = {};
+	func.show_thread_for_contact = gtk_gui_show_thread_for_contact;
+	func.contact_thread_shown = gtk_gui_contact_shown;
+	func.history_sms = gtk_gui_msg_threads;
+	gui_id = gui_register(func);
+
 	return NULL;
 }
 

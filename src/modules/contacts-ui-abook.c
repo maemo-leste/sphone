@@ -255,7 +255,10 @@ const gchar *sphone_module_init(void** data)
 	hildon_init();
 	osso_abook_init_with_name("sphone", NULL);
 
-	abook_priv.ui_id = gui_register(NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, abook_contact_show, abook_dialog_close);
+	struct GuiFunctions func = {};
+	func.contact_show = abook_contact_show;
+	func.close_contact_diag = abook_dialog_close;
+	abook_priv.ui_id = gui_register(func);
 
 	return NULL;
 }

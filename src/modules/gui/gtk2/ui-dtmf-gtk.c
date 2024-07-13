@@ -39,7 +39,9 @@ static bool dtmf_show(const CallProperties *call)
 SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
-	*data = GINT_TO_POINTER(gui_register(NULL, &dtmf_show, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL));
+	struct GuiFunctions func = {};
+	func.dtmf_show = dtmf_show;
+	*data = GINT_TO_POINTER(gui_register(func));
 	return NULL;
 }
 
