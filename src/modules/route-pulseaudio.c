@@ -104,7 +104,7 @@ static void sphone_pa_state_callback(pa_context *c, void *userdata)
 			break;
 		case PA_CONTEXT_FAILED:
 		default:
-		sphone_module_log(LL_ERR, "Connection failure: %s", pa_strerror(pa_context_errno(c)));
+			sphone_module_log(LL_ERR, "Connection failure: %s", pa_strerror(pa_context_errno(c)));
 			sphone_pa_distroy_interface(iface);
 	}
 }
@@ -220,6 +220,11 @@ static void audio_route_trigger(gconstpointer data, gpointer user_data)
 {
 	struct sphone_pa_if *pa_if = user_data;
 
+	if(!pa_if->context) {
+		sphone_module_log(LL_ERR, "Can not set audio route as no pulse audio connection is avialable");
+		return;
+	}
+
 	pa_operation *operation = pa_context_get_server_info(pa_if->context, audio_route_set_cb, (void*)data);
 
 	if(!operation) {
@@ -234,6 +239,11 @@ static void call_mode_trigger(gconstpointer data, gpointer user_data)
 {
 	sphone_call_mode_t mode = GPOINTER_TO_INT(data);
 	struct sphone_pa_if *pa_if = user_data;
+
+	if(!pa_if->context) {
+		sphone_module_log(LL_ERR, "Can not set audio profile as no pulse audio connection is avialable");
+		return;
+	}
 
 	if(mode == SPHONE_MODE_NO_CALL) {
 		sphone_pa_audio_route_set_profile(pa_if, HIFI_NAME);
@@ -251,7 +261,7 @@ const gchar *sphone_module_init(void** data)
 	*data = pa_if;
 	if(sphone_pa_create_interface(pa_if) != 0)
 		return "Failed to create pulseaudio context";
-	
+
 	append_trigger_to_datapipe(&call_mode_pipe, call_mode_trigger, pa_if);
 	append_trigger_to_datapipe(&audio_route_pipe, audio_route_trigger, pa_if);
 	return NULL;
