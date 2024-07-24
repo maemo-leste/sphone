@@ -40,9 +40,11 @@ void MaemoProvider::registerBackend()
 	};
 
 	backend_id = id;
-	QString tmp = QString(backend_id).replace("/org/freedesktop/Telepathy/Account/", "");
+
+	QString tmp = QString(id).replace("/org/freedesktop/Telepathy/Account/", "");
 	backend_name = g_strdup(tmp.toStdString().c_str());
-	sphone_backend_id = sphone_comm_add_backend(backend_name, backend_id.toUtf8(), schemes, BACKEND_FLAG_CALL, fields, char_valid);
+	char* _backend_id = g_strdup(backend_name);
+	sphone_backend_id = sphone_comm_add_backend(backend_name, _backend_id, schemes, BACKEND_FLAG_CALL, fields, char_valid);
 
 	sphone_module_log(LL_DEBUG, "Registered backend: %s", backend_name);
 }
