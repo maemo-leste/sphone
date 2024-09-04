@@ -139,6 +139,7 @@ static const GDBusInterfaceVTable vtable = {
 
 struct sphone_options {
 	sphone_cmd command;
+	bool unsupervised;
 	gchar *number;
 };
 
@@ -396,7 +397,6 @@ static void method_call_callback(GDBusConnection* connection,
   
 static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
-	sphone_log(LL_CRIT, __func__);
 	(void)user_data;
 	guint registration_id;
 	(void)name;
@@ -418,7 +418,6 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
 
 static _Noreturn void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
-	sphone_log(LL_CRIT, __func__);
 	(void)user_data;
 	(void)name;
 
@@ -434,7 +433,6 @@ static _Noreturn void on_name_lost(GDBusConnection *connection, const gchar *nam
 
 static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
-	sphone_log(LL_CRIT, __func__);
 	(void)connection;
 	(void)name;
 
@@ -573,9 +571,8 @@ static int sphone_secondary(const struct sphone_options *options)
 	return 0;
 }
 
-static int sphone_main(struct sphone_options *options, int argc, char *argv[])
+static int sphone_main(struct sphone_options options, int argc, char *argv[])
 {
-	sphone_log(LL_CRIT, __func__);
 	guint owner_id;
 	GModule *loop_module = NULL;
 
@@ -624,7 +621,7 @@ static pid_t sphone_create_child(struct sphone_options *options, int argc, char 
 
 	if(pid == 0) {
 		sphone_log(LL_INFO, "Starting new instance");
-		int ret = sphone_main(options, argc, argv);
+		int ret = sphone_main(*options, argc, argv);
 		exit(ret);
 	}
 
@@ -665,14 +662,15 @@ int main(int argc, char *argv[])
 	textdomain (GETTEXT_PACKAGE);
 #endif
 
-	struct sphone_options options;
+	struct sphone_options options = {};
 	int c;
 	int verbosity = LL_DEFAULT;
 	
 	options.command = SPHONE_CMD_NONE;
 	options.number = NULL;
+	options.unsupervised = false;
 	
-	while ((c = getopt (argc, argv, ":hn:vc:")) != -1) {
+	while ((c = getopt (argc, argv, ":hsn:vc:")) != -1) {
 		switch (c) {
 			case '?':
 				if (optopt == 'n')
@@ -682,6 +680,7 @@ int main(int argc, char *argv[])
 				      "   -h\tDisplay this help\n"
 				      "   -v\tEnable debug\n"
 				      "   -n [number]\topen with number\n"
+				      "   -s  do not self superivse"
 				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, history-calls, sms-new, history-sms, options, insmod, rmmod\n"
 				      , argv[0]);
 				return 0;
@@ -701,6 +700,9 @@ int main(int argc, char *argv[])
 				else if(!g_strcmp0(optarg, "rmmod"))
 					options.command = SPHONE_CMD_RMMOD;
 				break;
+				break;
+			case 's':
+				options.unsupervised = true;
 				break;
 			case 'v':
 				verbosity = LL_DEBUG;
@@ -723,10 +725,18 @@ int main(int argc, char *argv[])
 	datapipes_init();
 
 	bool is_main = sphone_check_main();
-	sphone_log(LL_DEBUG, "Is main: %u", is_main);
+	sphone_log(LL_DEBUG, "%s", is_main ? "Main Process" : "Secondary Process");
 
-	if(is_main)
-		return sphone_supervise(&options, argc, argv);
-	else
+	if(is_main) {
+		if(options.unsupervised) {
+			sphone_log(LL_INFO, "Running without self-supervision");
+			return sphone_main(options, argc, argv);
+		}
+		else {
+			return sphone_supervise(&options, argc, argv);
+		}
+	}
+	else {
 		return sphone_secondary(&options);
+	}
 }
