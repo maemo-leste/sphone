@@ -69,7 +69,7 @@ void sphone_log(const loglevel_t loglevel, const char *const fmt, ...)
 				case LL_WARN:
 				default:
 					vsyslog(LOG_WARNING, fmt, args);
-													break;
+					break;
 			}
 		}
 	}

@@ -140,6 +140,7 @@ static const GDBusInterfaceVTable vtable = {
 struct sphone_options {
 	sphone_cmd command;
 	bool unsupervised;
+	bool syslog;
 	gchar *number;
 };
 
@@ -667,10 +668,8 @@ int main(int argc, char *argv[])
 	int verbosity = LL_DEFAULT;
 	
 	options.command = SPHONE_CMD_NONE;
-	options.number = NULL;
-	options.unsupervised = false;
 	
-	while ((c = getopt (argc, argv, ":hsn:vc:")) != -1) {
+	while ((c = getopt (argc, argv, ":hsyn:vc:")) != -1) {
 		switch (c) {
 			case '?':
 				if (optopt == 'n')
@@ -680,7 +679,8 @@ int main(int argc, char *argv[])
 				      "   -h\tDisplay this help\n"
 				      "   -v\tEnable debug\n"
 				      "   -n [number]\topen with number\n"
-				      "   -s  do not self superivse"
+				      "   -s  do not self superivse\n"
+				      "   -y  log to syslog\n"
 				      "   -c [cmd]\tExecute command. Accepted commands are: dialer-open, history-calls, sms-new, history-sms, options, insmod, rmmod\n"
 				      , argv[0]);
 				return 0;
@@ -704,6 +704,9 @@ int main(int argc, char *argv[])
 			case 's':
 				options.unsupervised = true;
 				break;
+			case 'y':
+				options.syslog = true;
+				break;
 			case 'v':
 				verbosity = LL_DEBUG;
 				break;
@@ -714,7 +717,7 @@ int main(int argc, char *argv[])
        }
 	}
 	
-	sphone_log_open(PRG_NAME, LOG_USER, SPHONE_LOG_STDERR);
+	sphone_log_open(PRG_NAME, LOG_USER, options.syslog ? SPHONE_LOG_SYSLOG : SPHONE_LOG_STDERR);
 	sphone_log_set_verbosity(verbosity);
 
 	if(!sphone_conf_init()) {
