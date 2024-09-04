@@ -1,3 +1,15 @@
+sphone (0.9.5) unstable; urgency=medium
+
+  * Support self-supervsision
+  * Seperate the backend display name from the uid used for logging
+  * Change how vcm events are logged
+  * allow logging to syslog
+  * Greately speed up self-summoning via dbus when the qt loop module is in use
+  * Fix one source of crashes on pa restart
+  * Various api changes for ui modules
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Wed, 04 Sep 2024 15:12:50 +0200
+
 sphone (0.9.4) unstable; urgency=medium
 
   * disable SPHONE_FIELD_IM_MATRIX to support ainchent libebook
