@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <gio/gio.h>
+#include <sys/wait.h>
+#include <time.h>
 
 /*
  * Standard gettext macros.
@@ -185,7 +187,7 @@ static void run_command(const struct sphone_options *options)
 	}
 }
 
-static void send_command(GDBusConnection *connection, struct sphone_options *options)
+static void send_command(GDBusConnection *connection, const struct sphone_options *options)
 {
 	GVariant *resp = NULL;
 	GVariant *params = NULL;
@@ -394,6 +396,7 @@ static void method_call_callback(GDBusConnection* connection,
   
 static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
+	sphone_log(LL_CRIT, __func__);
 	(void)user_data;
 	guint registration_id;
 	(void)name;
@@ -407,7 +410,7 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
 														NULL);
 	if(registration_id <= 0) {
 		sphone_log(LL_CRIT, "Can not register dbus object");
-		exit(-1);
+		exit(2);
 	}
 	
 	sphone_log(LL_DEBUG, "Registered dbus object");
@@ -415,14 +418,13 @@ static void on_bus_acquired(GDBusConnection *connection, const gchar *name, gpoi
 
 static _Noreturn void on_name_lost(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
-	struct sphone_options *options = user_data;
+	sphone_log(LL_CRIT, __func__);
+	(void)user_data;
 	(void)name;
 
 	if(!connection) {
 		sphone_log(LL_CRIT, "Can not connect to dbus");
-		exit(-1);
-	} else if(options->command != SPHONE_CMD_NONE) {
-		send_command(connection, options);
+		exit(1);
 	} else {
 		sphone_log(LL_WARN, "Sphone is allready running.");
 	}
@@ -432,10 +434,11 @@ static _Noreturn void on_name_lost(GDBusConnection *connection, const gchar *nam
 
 static void on_name_acquired(GDBusConnection *connection, const gchar *name, gpointer user_data)
 {
+	sphone_log(LL_CRIT, __func__);
 	(void)connection;
 	(void)name;
+
 	struct sphone_options *options = user_data;
-	sphone_log(LL_INFO, "Starting new instance");
 	sphone_modules_init();
 	sphone_log(LL_DEBUG, "Modules initalized");
 	run_command(options);
@@ -482,7 +485,179 @@ static void load_loop_module(GModule **loop_module)
 	exit_main_loop = fnp;
 }
 
-int main (int argc, char *argv[])
+static bool sphone_check_main(void)
+{
+	// GIO will implicitly create a private instance of g_main_loop for itself that you can not exit
+	// This is deliterious for sphone since sphone will fork() after this point which breaks this mainloop,
+	// Since it expects a 1 to 1 corrispondance of mainloop fds to processies. Additionally Sphone may want to use
+	// A qt main loop, which the implicitly created loop will interfere with again.
+	// To avoid this we perform the dbus operations in a child process that we can then exit, avoiding gio messing up our
+	// environment.
+	pid_t pid = fork();
+
+	if(pid < 0) {
+		sphone_log(LL_CRIT, "Unable to create dbus child");
+		exit(1);
+	}
+
+	if(pid == 0) {
+		GDBusConnection *dbus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+		if(!dbus) {
+			sphone_log(LL_CRIT, "Unable to connect to dbus");
+			exit(10);
+		}
+
+		GDBusProxy *proxy = g_dbus_proxy_new_sync(dbus,
+												G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS | G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+												NULL, "org.freedesktop.DBus", "/", "org.freedesktop.DBus", NULL, NULL);
+		if(!proxy) {
+			sphone_log(LL_CRIT, "Unable to aquire dbus proxy for /org/freedesktop/DBus");
+			exit(10);
+		}
+
+		GError *err = NULL;
+		GVariant* var = g_dbus_proxy_call_sync(proxy, "ListNames", NULL, G_DBUS_CALL_FLAGS_NONE, 1000, NULL, &err);
+		if(!var) {
+			sphone_log(LL_CRIT, "Unable to execute org.freedesktop.DBus.ListNames: %s", err->message);
+			g_error_free(err);
+			exit(10);
+		}
+
+		GVariantType *expected_type = g_variant_type_new("(as)");
+		if(!g_variant_is_of_type(var, expected_type)) {
+			sphone_log(LL_CRIT, "Dbus returned value of type %s but expected (as)", g_variant_type_dup_string(g_variant_get_type(var)));
+			exit(10);
+		}
+		g_variant_type_free(expected_type);
+		GVariant *array = g_variant_get_child_value(var, 0);
+
+		size_t length;
+		const char **services = g_variant_get_strv(array, &length);
+
+		bool found = false;
+		for(size_t i = 0; i < length; ++i) {
+			if(g_strcmp0(services[i], SPHONE_SERVICE) == 0) {
+				found = true;
+				break;
+			}
+		}
+
+		g_free(services);
+		g_variant_unref(var);
+		g_variant_unref(array);
+		g_object_unref(proxy);
+		g_object_unref(dbus);
+		exit(!found);
+	}
+	else {
+		int exit_code;
+		waitpid(pid, &exit_code, 0);
+		if(WEXITSTATUS(exit_code) > 1) {
+			sphone_log(LL_CRIT, "Child exited with %i", WEXITSTATUS(exit_code));
+			exit(exit_code);
+		}
+		return exit_code;
+	}
+}
+
+static int sphone_secondary(const struct sphone_options *options)
+{
+	GDBusConnection *dbus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, NULL);
+	if(!dbus) {
+		sphone_log(LL_CRIT, "Unable to connect to dbus");
+		return 1;
+	}
+
+	send_command(dbus, options);
+	g_object_unref(dbus);
+	return 0;
+}
+
+static int sphone_main(struct sphone_options *options, int argc, char *argv[])
+{
+	sphone_log(LL_CRIT, __func__);
+	guint owner_id;
+	GModule *loop_module = NULL;
+
+
+	load_loop_module(&loop_module);
+	main_loop_init(argc, argv);
+
+	dbus_introspection_data = g_dbus_node_info_new_for_xml(dbus_introspection_xml, NULL);
+	if(!dbus_introspection_data) {
+		sphone_log(LL_CRIT, "Creating dbus introspection data failed");
+		return -1;
+	}
+
+	owner_id = g_bus_own_name (G_BUS_TYPE_SESSION, SPHONE_SERVICE,
+								G_BUS_NAME_OWNER_FLAGS_NONE,
+								on_bus_acquired,
+								on_name_acquired,
+								on_name_lost,
+								&options,
+								NULL);
+
+	signal(SIGTERM, signal_handler);
+	signal(SIGINT, signal_handler);
+
+	main_loop(argc, argv);
+
+	sphone_log(LL_INFO, "shuting down");
+
+	append_filter_to_datapipe(&comm_backend_removed_pipe, drop, NULL);
+	sphone_modules_exit();
+	remove_filter_from_datapipe(&comm_backend_removed_pipe, drop, NULL);
+	datapipes_exit();
+
+	g_bus_unown_name(owner_id);
+
+	return 0;
+}
+
+static pid_t sphone_create_child(struct sphone_options *options, int argc, char *argv[])
+{
+	pid_t pid = fork();
+	if(pid < 0) {
+		sphone_log(LL_ERR, "Unable to create child process");
+		exit(1);
+	}
+
+	if(pid == 0) {
+		sphone_log(LL_INFO, "Starting new instance");
+		int ret = sphone_main(options, argc, argv);
+		exit(ret);
+	}
+
+	return pid;
+}
+
+static int sphone_supervise(struct sphone_options *options, int argc, char *argv[])
+{
+	while(true) {
+		time_t starttime = time(NULL);
+		pid_t pid = sphone_create_child(options, argc, argv);
+
+		options->command = SPHONE_CMD_NONE;
+
+		int exit_code;
+		sphone_log(LL_DEBUG, "Waiting for sphone child to exit");
+		waitpid(pid, &exit_code, 0);
+		if(exit_code != 0) {
+			sphone_log(LL_WARN, "--- Sphone has crashed ---");
+			if(time(NULL) - starttime < 5) {
+				sphone_log(LL_ERR, "Sphone is crashing to fast, aborting");
+				return exit_code;
+			}
+
+			sphone_log(LL_WARN, "Restarting Sphone");
+		}
+		else {
+			return 0;
+		}
+	}
+}
+
+int main(int argc, char *argv[])
 {
 #ifdef ENABLE_NLS
 	bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
@@ -493,8 +668,6 @@ int main (int argc, char *argv[])
 	struct sphone_options options;
 	int c;
 	int verbosity = LL_DEFAULT;
-	guint owner_id;
-	GModule *loop_module = NULL;
 	
 	options.command = SPHONE_CMD_NONE;
 	options.number = NULL;
@@ -549,37 +722,11 @@ int main (int argc, char *argv[])
 
 	datapipes_init();
 
-	load_loop_module(&loop_module);
-	main_loop_init(argc, argv);
+	bool is_main = sphone_check_main();
+	sphone_log(LL_DEBUG, "Is main: %u", is_main);
 
-	dbus_introspection_data = g_dbus_node_info_new_for_xml(dbus_introspection_xml, NULL);
-	if(!dbus_introspection_data) {
-		sphone_log(LL_CRIT, "Creating dbus introspection data failed");
-		return -1;
-	}
-
-	owner_id = g_bus_own_name (G_BUS_TYPE_SESSION, SPHONE_SERVICE,
-								G_BUS_NAME_OWNER_FLAGS_NONE,
-								on_bus_acquired,
-								on_name_acquired,
-								on_name_lost,
-								&options,
-								NULL);
-
-	signal(SIGTERM, signal_handler);
-	signal(SIGINT, signal_handler);
-
-	main_loop(argc, argv);
-	
-	sphone_log(LL_INFO, "shuting down");
-
-	append_filter_to_datapipe(&comm_backend_removed_pipe, drop, NULL);
-	sphone_modules_exit();
-	remove_filter_from_datapipe(&comm_backend_removed_pipe, drop, NULL);
-	datapipes_exit();
-	
-	if(owner_id > 0)
-		g_bus_unown_name(owner_id);
-	
-	return 0;
+	if(is_main)
+		return sphone_supervise(&options, argc, argv);
+	else
+		return sphone_secondary(&options);
 }
