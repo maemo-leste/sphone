@@ -23,7 +23,6 @@ public:
 	QString id;
 	QString type;
 	QString label;
-	char* backend_name;
 	QString backend_id;
 	int sphone_backend_id;
 
