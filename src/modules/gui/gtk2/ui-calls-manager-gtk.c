@@ -288,8 +288,11 @@ static void gui_calls_utils_delete_call(const CallProperties *call)
 
 	// Hide the window if no active calls
 	if(!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(g_calls_manager.dials_store), &iter)) {
-		if(g_calls_manager.end_call_timer == 0)
+		if(g_calls_manager.end_call_timer == 0) {
+			gtk_widget_set_sensitive(g_calls_manager.hangup_button, FALSE);
+			gtk_button_set_label(GTK_BUTTON(g_calls_manager.hangup_button), "\nDisconnecting...\n");
 			g_calls_manager.end_call_timer = g_timeout_add_seconds(5, gui_calls_close_window, NULL);
+		}
 	}
 	else {
 		GtkTreePath *path = gtk_tree_model_get_path(GTK_TREE_MODEL(g_calls_manager.dials_store),&iter);
@@ -323,6 +326,10 @@ static void gui_calls_utils_add_call(const CallProperties *call)
 	GtkTreeIter iter;
 	gchar *desc;
 	GdkPixbuf *photo = NULL;
+
+
+	gtk_widget_set_sensitive(g_calls_manager.hangup_button, TRUE);
+	gtk_button_set_label(GTK_BUTTON(g_calls_manager.hangup_button), "\nHangup\n");
 
 	if(g_calls_manager.end_call_timer != 0) {
 		g_source_remove(g_calls_manager.end_call_timer);
