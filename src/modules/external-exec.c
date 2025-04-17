@@ -18,7 +18,6 @@
 
 #include <glib.h>
 #include "sphone-modules.h"
-#include "sphone-log.h"
 #include "sphone-conf.h"
 #include "datapipes.h"
 #include "datapipe.h"
@@ -41,72 +40,83 @@ SPHONE_MODULE_EXPORT module_info_struct module_info = {
 	.priority = 10
 };
 
+
+struct exec_priv {
+	char *incoming_call_cmd;
+	char *outgoing_call_cmd;
+	char *call_answered_cmd;
+	char *call_missed_cmd;
+	char *message_sent_cmd;
+	char *message_received_cmd;
+};
+
 static void new_call_trigger(gconstpointer data, gpointer user_data)
 {
-	(void)user_data;
+	struct exec_priv *priv = user_data;
 	const CallProperties *call = data;
 	if(call->state == SPHONE_CALL_INCOMING) {
-		char *command = sphone_conf_get_string("ExternalExec", "IncomingCall", NULL, NULL);
-		if(command) {
-			char *argv[] = {command, call->line_identifier, sphone_comm_get_backend(call->backend)->name, NULL};
+		if(priv->incoming_call_cmd) {
+			char *argv[] = {priv->incoming_call_cmd, call->line_identifier, sphone_comm_get_backend(call->backend)->name, NULL};
 			g_spawn_async(NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL);
-			g_free(command);
 		}
 	}
 }
 
 static void call_properties_changed_trigger(gconstpointer data, gpointer user_data)
 {
-	(void)user_data;
+	struct exec_priv *priv = user_data;
 	const CallProperties *call = data;
 	char *command = NULL;
 	if(call->state == SPHONE_CALL_DIALING)
-		command = sphone_conf_get_string("ExternalExec", "OutgoingCall", NULL, NULL);
+		command = priv->outgoing_call_cmd;
 	else if(call->state == SPHONE_CALL_ACTIVE)
-		command = sphone_conf_get_string("ExternalExec", "CallAnswered", NULL, NULL);
+		command = priv->call_answered_cmd;
 	else if(call->state == SPHONE_CALL_DISCONNECTED && !call->answered)
-		command = sphone_conf_get_string("ExternalExec", "CallMissed", NULL, NULL);
+		command = priv->call_missed_cmd;
 
 	if(command) {
 		char *argv[] = {command, call->line_identifier, sphone_comm_get_backend(call->backend)->name, NULL};
 		g_spawn_async(NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL);
-		g_free(command);
 	}
 }
 
 static void message_send_trigger(gconstpointer data, gpointer user_data)
 {
-	(void)user_data;
+	struct exec_priv *priv = user_data;
 	const MessageProperties *msg = data;
-	char *command = sphone_conf_get_string("ExternalExec", "MessageSent", NULL, NULL);
-	if(command) {
-		char *argv[] = {command, msg->line_identifier, msg->text, sphone_comm_get_backend(msg->backend)->name, NULL};
+	if(priv->message_sent_cmd) {
+		char *argv[] = {priv->message_sent_cmd, msg->line_identifier, msg->text, sphone_comm_get_backend(msg->backend)->name, NULL};
 		g_spawn_async(NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL);
-		g_free(command);
 	}
 }
 
 static void message_received_trigger(gconstpointer data, gpointer user_data)
 {
-	(void)user_data;
+	struct exec_priv *priv = user_data;
 	const MessageProperties *msg = data;
-	char *command = sphone_conf_get_string("ExternalExec", "MessageReceived", NULL, NULL);
-	if(command) {
-		char *argv[] = {command, msg->line_identifier, msg->text, sphone_comm_get_backend(msg->backend)->name, NULL};
+	if(priv->message_received_cmd) {
+		char *argv[] = {priv->message_received_cmd, msg->line_identifier, msg->text, sphone_comm_get_backend(msg->backend)->name, NULL};
 		g_spawn_async(NULL, argv, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL, NULL, NULL, NULL, NULL);
-		g_free(command);
 	}
 }
 
 SPHONE_MODULE_EXPORT const gchar *sphone_module_init(void** data);
 const gchar *sphone_module_init(void** data)
 {
-	(void)data;
-	append_trigger_to_datapipe(&call_new_pipe, new_call_trigger, NULL);
-	append_trigger_to_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, NULL);
+	struct exec_priv *priv = calloc(1, sizeof(*priv));
+	*data = priv;
+	priv->incoming_call_cmd = sphone_conf_get_string("ExternalExec", "IncomingCall", NULL, NULL);
+	priv->outgoing_call_cmd = sphone_conf_get_string("ExternalExec", "OutgoingCall", NULL, NULL);
+	priv->call_answered_cmd = sphone_conf_get_string("ExternalExec", "CallAnswered", NULL, NULL);
+	priv->call_missed_cmd = sphone_conf_get_string("ExternalExec", "CallMissed", NULL, NULL);
+	priv->message_sent_cmd = sphone_conf_get_string("ExternalExec", "MessageSent", NULL, NULL);
+	priv->message_received_cmd = sphone_conf_get_string("ExternalExec", "MessageReceived", NULL, NULL);
+
+	append_trigger_to_datapipe(&call_new_pipe, new_call_trigger, priv);
+	append_trigger_to_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, priv);
 	
-	append_trigger_to_datapipe(&message_received_pipe, message_received_trigger, NULL);
-	append_trigger_to_datapipe(&message_send_pipe, message_send_trigger, NULL);
+	append_trigger_to_datapipe(&message_received_pipe, message_received_trigger, priv);
+	append_trigger_to_datapipe(&message_send_pipe, message_send_trigger, priv);
 
 	return NULL;
 }
@@ -114,11 +124,19 @@ const gchar *sphone_module_init(void** data)
 SPHONE_MODULE_EXPORT void sphone_module_exit(void* data);
 void sphone_module_exit(void* data)
 {
-	(void)data;
+	struct exec_priv *priv = data;
 
-	remove_trigger_from_datapipe(&call_new_pipe, new_call_trigger, NULL);
-	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, NULL);
+	remove_trigger_from_datapipe(&call_new_pipe, new_call_trigger, priv);
+	remove_trigger_from_datapipe(&call_properties_changed_pipe, call_properties_changed_trigger, priv);
 
-	remove_trigger_from_datapipe(&message_received_pipe, message_received_trigger, NULL);
-	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, NULL);
+	remove_trigger_from_datapipe(&message_received_pipe, message_received_trigger, priv);
+	remove_trigger_from_datapipe(&message_send_pipe, message_send_trigger, priv);
+
+	g_free(priv->incoming_call_cmd);
+	g_free(priv->outgoing_call_cmd);
+	g_free(priv->call_answered_cmd);
+	g_free(priv->call_missed_cmd);
+	g_free(priv->message_sent_cmd);
+	g_free(priv->message_received_cmd);
+	g_free(priv);
 }
