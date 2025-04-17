@@ -12,6 +12,7 @@ set(SPHONE_SRC_FILES 	sphone.c
 	)
 
 add_executable(sphone ${SPHONE_SRC_FILES})
+set_property(TARGET sphone PROPERTY ENABLE_EXPORTS 1)
 target_link_libraries(sphone ${COMMON_LIBRARIES})
 target_include_directories(sphone SYSTEM PRIVATE ${COMMON_INCLUDE_DIRS})
 target_include_directories(sphone PRIVATE . utils modapi)
