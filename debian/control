@@ -15,7 +15,7 @@ Section: comm
 Architecture: any
 Multi-Arch: same
 Depends: libc6, libgdk-pixbuf-2.0-0, libglib2.0-0, libgtk2.0-0, libhildon1, libnotify4, libpango-1.0-0
-Recommends: ofono, libebook-1.2-20, libebook-contacts-1.2-3, libedataserver-1.2-25, libgstreamer1.0-0, libpulse0, librtcom-eventlogger1
+Recommends: ofono, libebook-1.2-21, libebook-contacts-1.2-4, libedataserver-1.2-27, libgstreamer1.0-0, libpulse0, librtcom-eventlogger1
 Suggests: libnotify4, libosso-abook, libprofile0, voicecall-qt5
 Description: Maemo Leste phone framework and GUI
  Maemo Leste phone framework and GUI
