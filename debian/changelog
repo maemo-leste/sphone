@@ -1,3 +1,9 @@
+sphone (0.9.7) unstable; urgency=medium
+
+  * Allow moudles to request reloading from sphone
+
+ -- Carl Philipp Klemm <carl@uvos.xyz>  Sun, 27 Apr 2025 18:36:25 +0200
+
 sphone (0.9.6) unstable; urgency=medium
 
   * Make ui clearer when call has ended
