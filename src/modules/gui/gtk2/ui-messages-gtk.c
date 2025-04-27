@@ -40,7 +40,7 @@
 #include "sphone-modules.h"
 
 /** Module name */
-#define MODULE_NAME		"ui-sms-gtk"
+#define MODULE_NAME		"ui-messages-gtk"
 
 /** Functionality provided by this module */
 static const gchar *const provides[] = { MODULE_NAME, NULL };

@@ -48,11 +48,18 @@ typedef struct {
 	const int priority;
 } module_info_struct;
 
+typedef enum {
+	SPHONE_MODULE_RELOAD,
+	SPHONE_MODULE_FATAL
+} sphone_module_error_t;
+
 bool sphone_modules_init(void);
 void sphone_modules_exit(void);
 
 bool sphone_module_insmod(const char *path);
 bool sphone_module_unload(const char *name);
+
+void sphone_module_failed(module_info_struct *mod, sphone_module_error_t err);
 
 typedef const char* sphone_module_init_fn(void** data);
 typedef void sphone_module_exit_fn(void* data);

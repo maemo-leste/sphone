@@ -40,6 +40,11 @@ static module_info_struct *sphone_modules_get_info(struct sphone_module *module)
 	return (module_info_struct*)mip;
 }
 
+static char *sphone_modules_build_module_filename(const char *name)
+{
+	return g_strconcat("lib", name, ".", G_MODULE_SUFFIX, NULL);
+}
+
 static bool sphone_modules_check_provides(module_info_struct *new_module_info)
 {
 	for (GSList *module = modules; module; module = module->next) {
@@ -79,7 +84,6 @@ static bool sphone_modules_check_essential(void)
 	
 	return TRUE;
 }
-
 
 static bool sphone_module_exit(struct sphone_module* module)
 {
@@ -126,7 +130,7 @@ static bool sphone_modules_init_modules(void)
 	return true;
 }
 
-static struct sphone_module *sphone_module_load(const char *path)
+static struct sphone_module *sphone_module_load(const char *path, const char *name)
 {
 	struct sphone_module *module = g_malloc(sizeof(*module));
 	sphone_log(LL_DEBUG, "Loading module: %s", path);
@@ -140,14 +144,19 @@ static struct sphone_module *sphone_module_load(const char *path)
 			g_module_close(module->module);
 			g_free(module);
 			blockLoad = TRUE;
-		} else
-		{
+		} else {
 			if (!sphone_modules_check_provides(info)) {
 				g_module_close(module->module);
 				g_free(module);
 				blockLoad = TRUE;
-			}
-			else {
+			} else if (name && g_strcmp0(info->name, name) != 0) {
+				char *filename = sphone_modules_build_module_filename(info->name);
+				char *wrongfilename = sphone_modules_build_module_filename(name);
+				sphone_log(LL_WARN, "Loaded module %s should have the file name %s but it was loaded from %s",
+					info->name, filename, wrongfilename);
+				g_free(filename);
+				g_free(wrongfilename);
+			} else {
 				sphone_log(LL_INFO, "Loaded module %s", info->name);
 			}
 		}
@@ -173,10 +182,12 @@ static void sphone_modules_load(char **modlist)
 				   NULL);
 
 	for (i = 0; modlist[i]; i++) {
-		char *path = g_module_build_path(dir, modlist[i]);
+		char *filename = sphone_modules_build_module_filename(modlist[i]);
+		char *path = g_strconcat(dir, "/", filename, NULL);
 
-		sphone_module_load(path);
+		sphone_module_load(path, modlist[i]);
 
+		g_free(filename);
 		g_free(path);
 	}
 
@@ -185,7 +196,7 @@ static void sphone_modules_load(char **modlist)
 
 bool sphone_module_insmod(const char *path)
 {
-	struct sphone_module *module = sphone_module_load(path);
+	struct sphone_module *module = sphone_module_load(path, NULL);
 
 	if(!module)
 		return false;
@@ -217,6 +228,35 @@ bool sphone_module_unload(const char *name)
 
 	sphone_log(LL_INFO, "Could not unload: %s; Module not loaded", name);
 	return false;
+}
+
+static gboolean sphone_module_reload(void *data)
+{
+	module_info_struct *rminfo = data;
+
+	for (GSList *module = modules; module; module = module->next) {
+		module_info_struct *info = sphone_modules_get_info(module->data);
+		if(g_strcmp0(info->name, rminfo->name) == 0) {
+			struct sphone_module *smodule = module->data;
+			sphone_module_exit(smodule);
+			sphone_module_init(smodule);
+			sphone_log(LL_INFO, "Restarted module: %s", rminfo->name);
+			return true;
+		}
+	}
+
+	return FALSE;
+}
+
+void sphone_module_failed(module_info_struct *mod, sphone_module_error_t err)
+{
+	sphone_log(LL_ERR, "Module %s has encountered an error %s", mod->name, err == SPHONE_MODULE_FATAL ? "SPHONE_MODULE_FATAL" : "SPHONE_MODULE_RELOAD");
+
+	if (err == SPHONE_MODULE_FATAL) {
+		exit(101);
+	} else {
+		g_timeout_add(1000, sphone_module_reload, mod);
+	}
 }
 
 /**

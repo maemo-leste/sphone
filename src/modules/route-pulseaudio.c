@@ -87,6 +87,7 @@ static void sphone_pa_state_callback(pa_context *c, void *userdata)
 		case PA_CONTEXT_CONNECTING:
 		case PA_CONTEXT_AUTHORIZING:
 		case PA_CONTEXT_SETTING_NAME:
+		case PA_CONTEXT_UNCONNECTED:
 			break;
 		case PA_CONTEXT_READY:
 			sphone_module_log(LL_DEBUG, "Pulse audio context is ready");
@@ -100,12 +101,12 @@ static void sphone_pa_state_callback(pa_context *c, void *userdata)
 			break;
 		case PA_CONTEXT_TERMINATED:
 			sphone_module_log(LL_DEBUG, "Context terminated: %s", pa_strerror(pa_context_errno(c)));
-			sphone_pa_distroy_interface(iface);
+			sphone_module_failed(&module_info, SPHONE_MODULE_RELOAD);
 			break;
 		case PA_CONTEXT_FAILED:
 		default:
 			sphone_module_log(LL_ERR, "Connection failure: %s", pa_strerror(pa_context_errno(c)));
-			sphone_pa_distroy_interface(iface);
+			sphone_module_failed(&module_info, SPHONE_MODULE_FATAL);
 	}
 }
 
