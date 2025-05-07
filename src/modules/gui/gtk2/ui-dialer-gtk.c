@@ -54,6 +54,8 @@ SPHONE_MODULE_EXPORT module_info_struct module_info = {
 };
 
 struct{
+	GtkWidget *v1;
+	GtkWidget *h1;
 	GtkWidget *display;
 	GtkWidget *main_window;
 	GtkWidget *dials_view;
@@ -64,6 +66,7 @@ struct{
 	GtkWidget *spinner;
 	GtkWidget *contacts_button;
 	int gui_id;
+	bool landscape;
 } g_gui_calls;
 
 static bool gtk_gui_dialer_show(const CallProperties* call);
@@ -189,10 +192,31 @@ static void expose_event(GdkScreen *screen, gpointer user_data)
 	(void)user_data;
 	gint width, height;
 	gtk_window_get_size (GTK_WINDOW(g_gui_calls.main_window), &width, &height);
-	if(height < 500)
-		gtk_widget_hide(g_gui_calls.keypad);
-	else
-		gtk_widget_show(g_gui_calls.keypad);
+	if(height < width && height < 800) {
+		if(width < 600)
+			gtk_widget_hide(g_gui_calls.keypad);
+		else
+			gtk_widget_show(g_gui_calls.keypad);
+
+		if(!g_gui_calls.landscape) {
+			gtk_widget_set_size_request(g_gui_calls.keypad, 350, 100);
+			gtk_container_remove(GTK_CONTAINER(g_gui_calls.v1), g_gui_calls.keypad);
+			gtk_box_pack_start(GTK_BOX(g_gui_calls.h1), g_gui_calls.keypad, FALSE, FALSE, 0);
+			g_gui_calls.landscape = true;
+		}
+	}
+	else {
+		if(height < 500)
+			gtk_widget_hide(g_gui_calls.keypad);
+		else
+			gtk_widget_show(g_gui_calls.keypad);
+
+		if(g_gui_calls.landscape) {
+			gtk_container_remove(GTK_CONTAINER(g_gui_calls.h1), g_gui_calls.keypad);
+			gtk_box_pack_start(GTK_BOX(g_gui_calls.v1), g_gui_calls.keypad, TRUE, TRUE, 0);
+			g_gui_calls.landscape = false;
+		}
+	}
 }
 
 static void focus_out(GdkScreen *screen, gpointer user_data)
@@ -289,7 +313,8 @@ const gchar *sphone_module_init(void** data)
 	hildon_init();
 #endif
 	
-	GtkWidget *v1 = gtk_vbox_new(FALSE, 5);
+	g_gui_calls.v1 = gtk_vbox_new(FALSE, 5);
+	g_gui_calls.h1 = gtk_hbox_new(FALSE, 5);
 	GtkWidget *actions_bar = gtk_hbox_new(TRUE,0);
 	GtkWidget *contacts_bar = gtk_hbox_new(TRUE,0);
 	GtkWidget *display_back = gtk_button_new_with_label ("\n    <    \n");
@@ -335,19 +360,23 @@ const gchar *sphone_module_init(void** data)
 	gtk_container_add(GTK_CONTAINER(e), display);
 	gtk_box_pack_start(GTK_BOX(display_bar), e, TRUE, TRUE, 0);
 	gtk_box_pack_start(GTK_BOX(display_bar), display_back, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(v1),display_bar,FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(g_gui_calls.v1),display_bar,FALSE, FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(contacts_bar), g_gui_calls.spinner);
 	gtk_container_add(GTK_CONTAINER(contacts_bar), g_gui_calls.contacts_button);
 	gtk_container_add(GTK_CONTAINER(contacts_bar), recents_button);
-	gtk_box_pack_start(GTK_BOX(v1), contacts_bar, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(v1), g_gui_calls.backend_combo, FALSE, FALSE, 0);
-	gtk_box_pack_start(GTK_BOX(v1), g_gui_calls.keypad, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(g_gui_calls.v1), contacts_bar, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(g_gui_calls.v1), g_gui_calls.backend_combo, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(g_gui_calls.v1), g_gui_calls.keypad, TRUE, TRUE, 0);
 	gtk_container_add(GTK_CONTAINER(actions_bar), call_button);
 	gtk_container_add(GTK_CONTAINER(actions_bar), cancel_button);
-	gtk_box_pack_end(GTK_BOX(v1), actions_bar, FALSE, FALSE, 0);
-	gtk_container_add(GTK_CONTAINER(g_gui_calls.main_window), v1);
+	gtk_box_pack_end(GTK_BOX(g_gui_calls.v1), actions_bar, FALSE, FALSE, 0);
+	gtk_box_pack_start(GTK_BOX(g_gui_calls.h1), g_gui_calls.v1, TRUE, TRUE, 0);
 
-	gtk_widget_show_all(v1);
+	g_object_ref(g_gui_calls.keypad);
+
+	gtk_container_add(GTK_CONTAINER(g_gui_calls.main_window), g_gui_calls.h1);
+	gtk_widget_show_all(g_gui_calls.h1);
+
 	gtk_widget_hide(g_gui_calls.spinner);
 	gtk_widget_grab_focus(display);
 	
@@ -380,5 +409,6 @@ void sphone_module_exit(void* data)
 	(void)data;
 	remove_trigger_from_datapipe(&comm_backend_added_pipe, &gui_dialer_backend_added, NULL);
 	remove_trigger_from_datapipe(&comm_backend_removed_pipe, &gui_dialer_backend_removed, NULL);
+	g_object_unref(g_gui_calls.keypad);
 	gui_remove(g_gui_calls.gui_id);
 }
