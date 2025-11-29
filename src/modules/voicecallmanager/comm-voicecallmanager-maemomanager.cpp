@@ -162,6 +162,17 @@ void MaemoManager::hangupTrigger(const CallProperties* call)
 	}
 }
 
+void MaemoManager::sendDtmfTrigger(const CallProperties* call, QString &tone)
+{
+	QString call_handler = QString(call->backend_data);
+	sphone_module_log(LL_DEBUG, "dtmf call handler id: %s", call_handler.toStdString().c_str());
+
+	if (voicecalls.contains(call_handler)) {
+		MaemoCallHandler* mch = voicecalls[call_handler];
+		mch->sendDtmf(tone);
+	}
+}
+
 void MaemoManager::dialTrigger(const CallProperties* call)
 {
 	QHashIterator<QString, MaemoProvider*> i(maemo_providers);

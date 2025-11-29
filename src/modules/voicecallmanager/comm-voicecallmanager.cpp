@@ -62,6 +62,68 @@ extern "C" {
         maemo_mgr->hangupTrigger(call);
     }
 
+    static void call_dtmf_trigger(gconstpointer data, gpointer user_data, sphone_dtmf_t tone)
+    {
+        const CallProperties* call = (const CallProperties*)data;
+        MaemoManager* maemo_mgr = (MaemoManager*)user_data;
+
+        /* TODO: map tone value */
+
+        QString qtone;
+        switch (tone) {
+            case SPHONE_DTMF_1:
+                qtone = "1";
+                break;
+            case SPHONE_DTMF_2:
+                qtone = "2";
+                break;
+            case SPHONE_DTMF_3:
+                qtone = "3";
+                break;
+            case SPHONE_DTMF_4:
+                qtone = "4";
+                break;
+            case SPHONE_DTMF_5:
+                qtone = "5";
+                break;
+            case SPHONE_DTMF_6:
+                qtone = "6";
+                break;
+            case SPHONE_DTMF_7:
+                qtone = "7";
+                break;
+            case SPHONE_DTMF_8:
+                qtone = "8";
+                break;
+            case SPHONE_DTMF_9:
+                qtone = "9";
+                break;
+            case SPHONE_DTMF_HASH:
+                qtone = "#";
+                break;
+            case SPHONE_DTMF_STAR:
+                qtone = "*";
+                break;
+            case SPHONE_DTMF_A:
+                qtone = "A";
+                break;
+            case SPHONE_DTMF_B:
+                qtone = "B";
+                break;
+            case SPHONE_DTMF_C:
+                qtone = "C";
+                break;
+            case SPHONE_DTMF_D:
+                qtone = "C";
+                break;
+            default:
+                /* TODO: log some error */
+                qtone = "";
+        }
+
+        maemo_mgr->sendDtmfTrigger(call, qtone);
+    }
+
     G_MODULE_EXPORT const gchar* sphone_module_init(void** data);
     const gchar* sphone_module_init(void** data)
     {
@@ -75,6 +137,7 @@ extern "C" {
         append_trigger_to_datapipe(&call_accept_pipe, call_accept_trigger, maemo_mgr);
         append_trigger_to_datapipe(&call_hold_pipe, call_hold_trigger, maemo_mgr);
         append_trigger_to_datapipe(&call_hangup_pipe, call_hangup_trigger, maemo_mgr);
+        //append_trigger_to_datapipe(&call_dtmf_pipe, call_dtmf_trigger, maemo_mgr);
 
         return NULL;
     }

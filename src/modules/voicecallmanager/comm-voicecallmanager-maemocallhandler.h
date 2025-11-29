@@ -22,6 +22,7 @@ public:
 	void answer();
 	void hangup();
 	void hold(bool);
+	void sendDtmf(QString &tones);
 
 public slots:
 	//    void error(const QString &error);

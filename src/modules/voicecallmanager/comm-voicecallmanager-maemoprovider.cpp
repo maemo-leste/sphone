@@ -23,7 +23,7 @@ void MaemoProvider::registerBackend()
 {
 	const Scheme call_scheme = {
 		.scheme = (char*)"tel",
-		.flags = BACKEND_FLAG_CALL
+		.flags = (BackendFlag) (BACKEND_FLAG_CALL | BACKEND_FLAG_DTMF
 	};
 
 	// This is different for ring than it is for sip (where we can do both sip and tel?)
