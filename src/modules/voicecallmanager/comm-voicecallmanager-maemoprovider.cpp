@@ -23,7 +23,7 @@ void MaemoProvider::registerBackend()
 {
 	const Scheme call_scheme = {
 		.scheme = (char*)"tel",
-		.flags = BACKEND_FLAG_CALL
+		.flags = (BackendFlag) (BACKEND_FLAG_CALL | BACKEND_FLAG_DTMF)
 	};
 
 	// This is different for ring than it is for sip (where we can do both sip and tel?)
@@ -40,7 +40,7 @@ void MaemoProvider::registerBackend()
 	backend_id = id;
 
 	QString tmp = QString(id).replace("/org/freedesktop/Telepathy/Account/", "");
-	sphone_backend_id = sphone_comm_add_backend(tmp.toStdString().c_str(), tmp.toStdString().c_str(), schemes, BACKEND_FLAG_CALL, fields, char_valid);
+	sphone_backend_id = sphone_comm_add_backend(tmp.toStdString().c_str(), tmp.toStdString().c_str(), schemes, (BackendFlag) (BACKEND_FLAG_CALL | BACKEND_FLAG_DTMF), fields, char_valid);
 
 	sphone_module_log(LL_DEBUG, "Registered backend: %s", tmp.toStdString().c_str());
 }

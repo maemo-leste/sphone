@@ -24,6 +24,7 @@ public:
 	void hangupTrigger(const CallProperties*);
 	void holdTrigger(const CallProperties*);
 	void dialTrigger(const CallProperties*);
+	void sendDtmfTrigger(const CallProperties* call, QString &tone);
 
 public slots:
 	void voiceCallsChanged();

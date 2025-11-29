@@ -140,3 +140,8 @@ void MaemoCallHandler::hangup()
 
 	hangup_communicated = 1;
 }
+
+void MaemoCallHandler::sendDtmf(QString &tones) {
+	sphone_module_log(LL_DEBUG, "sendDtmf() tones: %s", tones.toStdString().c_str());
+	voicecall_handler->sendDtmf(tones);
+}
