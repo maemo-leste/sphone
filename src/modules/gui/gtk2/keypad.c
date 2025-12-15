@@ -17,7 +17,6 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <gtk/gtk.h>
 #include "keypad.h"
 #include "sphone-log.h"
 
@@ -48,29 +47,25 @@ static void key_press_callback(GtkWidget *button, GdkEvent *event, void *data)
 	*time = gdk_event_get_time(event);
 }
 
-static void key_release_callback(GtkWidget *button, GdkEvent *event, GtkWidget *target)
+static void key_release_callback(GtkWidget *button, GdkEvent *event, void (*callback)(const char *value, void *data))
 {
-	if(target) {
-		gtk_editable_set_position(GTK_EDITABLE(target),-1);
-		gint position = gtk_editable_get_position(GTK_EDITABLE(target));
+	if(callback) {
 		const gchar *value = g_object_get_data(G_OBJECT(button), "key_value");
+		void *data = g_object_get_data(G_OBJECT(button), "user_data");
 
 		if(*value == '0') {
 			guint32 *presstime = g_object_get_data(G_OBJECT(button), "press_time");
 			if(gdk_event_get_time(event) - *presstime > 500)
-				gtk_editable_insert_text(GTK_EDITABLE(target), "+",-1, &position);
+				callback("+", data);
 			else
-				gtk_editable_insert_text(GTK_EDITABLE(target), "0",-1, &position);
+				callback("0", data);
 		} else {
-			gtk_editable_insert_text(GTK_EDITABLE(target), value,-1, &position);
+			callback(value, data);
 		}
-
-		gtk_widget_grab_focus(target);
-		gtk_editable_set_position(GTK_EDITABLE(target),position);
 	}
 }
 
-GtkWidget *gui_keypad_setup(GtkWidget *target)
+GtkWidget *gui_keypad_setup(void (*callback)(const char* value, void *data), void *data)
 {
 	GtkWidget *ret;
 	unsigned int i = 0;
@@ -84,9 +79,10 @@ GtkWidget *gui_keypad_setup(GtkWidget *target)
 			gtk_container_add (GTK_CONTAINER(button),label);
 			gtk_widget_set_can_focus(button, FALSE);
 			gtk_table_attach_defaults(GTK_TABLE(ret),button,column,column+1,row,row+1);
-			g_signal_connect(G_OBJECT(button), "button-release-event", G_CALLBACK(key_release_callback), target);
+			g_signal_connect(G_OBJECT(button), "button-release-event", G_CALLBACK(key_release_callback), callback);
 			g_signal_connect(G_OBJECT(button), "button-press-event", G_CALLBACK(key_press_callback), NULL);
 			g_object_set_data(G_OBJECT(button),"key_value", (gpointer)keys[i].value);
+			g_object_set_data(G_OBJECT(button),"user_data", data);
 			g_object_set_data_full(G_OBJECT(button),"press_time", g_malloc0(sizeof(guint32)), g_free);
 			++i;
 		}

@@ -20,6 +20,8 @@
 #ifndef _KEYPAD_H_
 #define _KEYPAD_H_
 
-extern GtkWidget *gui_keypad_setup(GtkWidget *target);
+#include <gtk/gtk.h>
+
+extern GtkWidget *gui_keypad_setup(void (*callback)(const char *value, void *data), void *data);
 
 #endif

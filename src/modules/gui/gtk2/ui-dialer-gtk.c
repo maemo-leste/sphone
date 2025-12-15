@@ -186,6 +186,16 @@ static void gui_call_callback(GtkButton button)
 	}
 }
 
+static void gui_dialer_keypad_callback(const char *value, void *data)
+{
+	GtkEditable *target = GTK_EDITABLE(data);
+	gtk_editable_set_position(target, -1);
+	gint position = gtk_editable_get_position(target);
+	gtk_editable_insert_text(target, value, -1, &position);
+	gtk_widget_grab_focus(GTK_WIDGET(target));
+	gtk_editable_set_position(target, position);
+}
+
 static void expose_event(GdkScreen *screen, gpointer user_data)
 {
 	(void)screen;
@@ -320,7 +330,7 @@ const gchar *sphone_module_init(void** data)
 	GtkWidget *display_back = gtk_button_new_with_label ("\n    <    \n");
 	GtkWidget *display = gtk_entry_new();
 	GtkWidget *display_bar = gtk_hbox_new(FALSE,4);
-	g_gui_calls.keypad = gui_keypad_setup(display);
+	g_gui_calls.keypad = gui_keypad_setup(gui_dialer_keypad_callback, display);
 	GtkWidget *call_button = gtk_button_new_with_label("\nCall\n");
 	GtkWidget *cancel_button = gtk_button_new_with_label("\nCancel\n");
 	g_gui_calls.contacts_button = gtk_button_new_with_label("\nContacts\n");
