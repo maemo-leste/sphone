@@ -113,6 +113,72 @@ static void call_dial_trigger(const void *data, void *user_data)
 	}
 }
 
+static void call_dtmf_trigger(const void *data, void *user_data)
+{
+	(void)user_data;
+	const DtmfRequest *request = data;
+
+	const char *name;
+	switch(request->dtmf) {
+		case SPHONE_DTMF_STOP:
+			name = "stop";
+			break;
+		case SPHONE_DTMF_0:
+			name = "0";
+			break;
+		case SPHONE_DTMF_1:
+			name = "1";
+			break;
+		case SPHONE_DTMF_2:
+			name = "2";
+			break;
+		case SPHONE_DTMF_3:
+			name = "3";
+			break;
+		case SPHONE_DTMF_4:
+			name = "4";
+			break;
+		case SPHONE_DTMF_5:
+			name = "5";
+			break;
+		case SPHONE_DTMF_6:
+			name = "6";
+			break;
+		case SPHONE_DTMF_7:
+			name = "7";
+			break;
+		case SPHONE_DTMF_8:
+			name = "8";
+			break;
+		case SPHONE_DTMF_9:
+			name = "9";
+			break;
+		case SPHONE_DTMF_HASH:
+			name = "#";
+			break;
+		case SPHONE_DTMF_STAR:
+			name = "*";
+			break;
+		case SPHONE_DTMF_A:
+			name = "A";
+			break;
+		case SPHONE_DTMF_B:
+			name = "B";
+			break;
+		case SPHONE_DTMF_C:
+			name = "C";
+			break;
+		case SPHONE_DTMF_D:
+			name = "D";
+			break;
+		default:
+			name = "unkown";
+			break;
+	}
+
+	sphone_module_log(LL_DEBUG, "Got dtmf request for call %s: %s", request->call->line_identifier, name);
+}
+
 static void call_accept_trigger(const void *data, void *user_data)
 {
 	(void)user_data;
@@ -212,6 +278,7 @@ const gchar *sphone_module_init(void** data)
 	append_trigger_to_datapipe(&call_accept_pipe, call_accept_trigger, NULL);
 	append_trigger_to_datapipe(&call_hold_pipe, call_hold_trigger, NULL);
 	append_trigger_to_datapipe(&call_hangup_pipe, call_hangup_trigger, NULL);
+	append_trigger_to_datapipe(&call_dtmf_pipe, call_dtmf_trigger, NULL);
 	append_trigger_to_datapipe(&message_send_pipe, message_send_trigger, NULL);
 	return NULL;
 }
