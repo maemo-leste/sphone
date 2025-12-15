@@ -30,6 +30,7 @@ datapipe_struct call_hangup_pipe;
 datapipe_struct call_hold_pipe;
 datapipe_struct call_accept_pipe;
 datapipe_struct call_dial_pipe;
+datapipe_struct call_dtmf_pipe;
 datapipe_struct gui_error_pipe;
 datapipe_struct call_properties_changed_pipe;
 

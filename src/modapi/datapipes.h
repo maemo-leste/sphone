@@ -59,6 +59,9 @@ extern datapipe_struct call_dial_pipe;
 //input: CallProperties
 extern datapipe_struct call_hold_pipe;
 
+//input: DtmfRequest
+extern datapipe_struct call_dtmf_pipe;
+
 //input: string with error message
 extern datapipe_struct gui_error_pipe;
 

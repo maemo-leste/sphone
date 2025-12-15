@@ -81,7 +81,8 @@ typedef enum {
 
 
 typedef enum {
-	SPHONE_DTMF_STOP = 0,
+	SPHONE_DTMF_STOP = -1,
+	SPHONE_DTMF_0,
 	SPHONE_DTMF_1,
 	SPHONE_DTMF_2,
 	SPHONE_DTMF_3,
@@ -172,10 +173,8 @@ const Contact *contact_from_call(const CallProperties *call);
 
 typedef struct _DtmfRequest {
 	sphone_dtmf_t dtmf;
-	CallProperties *call;
+	const CallProperties *call;
 } DtmfRequest;
-
-void dtmf_request_free(DtmfRequest *request);
 
 #ifdef __cplusplus
 }
