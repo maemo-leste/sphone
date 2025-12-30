@@ -14,7 +14,7 @@ Package: sphone
 Section: comm
 Architecture: any
 Multi-Arch: same
-Depends:  ${shlibs:Depends}, ${misc:Depends}, libc6, libgdk-pixbuf-2.0-0, libglib2.0-0, libgtk2.0-0, libhildon1, libnotify4, libpango-1.0-0
+Depends:  ${shlibs:Depends}, ${misc:Depends}, libc6, libgdk-pixbuf-2.0-0
 Recommends: ofono, libgstreamer1.0-0, libpulse0, librtcom-eventlogger1
 Suggests: libnotify4, libosso-abook, libprofile0, voicecall-qt5
 Description: Maemo Leste phone framework and GUI
