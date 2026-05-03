@@ -83,27 +83,40 @@ static gboolean name_contains_ci(const char *haystack, const char *needle)
 	return r;
 }
 
+static port_role_t port_classify_by_name(const char *n, int direction)
+{
+	if (name_contains_ci(n, "speaker"))   return PORT_ROLE_SPEAKER;
+	if (name_contains_ci(n, "earpiece"))  return PORT_ROLE_EARPIECE;
+	if (name_contains_ci(n, "handset"))   return PORT_ROLE_EARPIECE;
+	if (name_contains_ci(n, "receiver"))  return PORT_ROLE_EARPIECE;
+	if (name_contains_ci(n, "headphone")) return PORT_ROLE_HEADPHONES;
+	if (name_contains_ci(n, "headset"))
+		return (direction & PA_DIRECTION_INPUT) ? PORT_ROLE_HEADSET_MIC : PORT_ROLE_HEADPHONES;
+	if (name_contains_ci(n, "mic"))       return PORT_ROLE_MIC;
+	return PORT_ROLE_NONE;
+}
+
 static port_role_t port_classify(const pa_card_port_info *p)
 {
+	/* For specific port types, trust pa_device_port_type_t. For generic /
+	 * unknown types, fall back to the name -- some UCM templates leave
+	 * port.type unset and only the name distinguishes (see N900: InternalMic
+	 * and ExternalMic are both type=Unknown but named clearly). */
 	switch (p->type) {
 		case PA_DEVICE_PORT_TYPE_SPEAKER:    return PORT_ROLE_SPEAKER;
 		case PA_DEVICE_PORT_TYPE_EARPIECE:   return PORT_ROLE_EARPIECE;
 		case PA_DEVICE_PORT_TYPE_HANDSET:    return PORT_ROLE_EARPIECE;
 		case PA_DEVICE_PORT_TYPE_HEADPHONES: return PORT_ROLE_HEADPHONES;
 		case PA_DEVICE_PORT_TYPE_MIC:        return PORT_ROLE_MIC;
-		case PA_DEVICE_PORT_TYPE_HEADSET:    return PORT_ROLE_HEADSET_MIC;
-		default: break;
+		case PA_DEVICE_PORT_TYPE_HEADSET:
+			return (p->direction & PA_DIRECTION_INPUT)
+				? PORT_ROLE_HEADSET_MIC : PORT_ROLE_HEADPHONES;
+		case PA_DEVICE_PORT_TYPE_UNKNOWN:
+		case PA_DEVICE_PORT_TYPE_AUX:
+		case PA_DEVICE_PORT_TYPE_LINE:
+		default:
+			return port_classify_by_name(p->name, p->direction);
 	}
-
-	const char *n = p->name;
-	if (name_contains_ci(n, "speaker"))   return PORT_ROLE_SPEAKER;
-	if (name_contains_ci(n, "earpiece"))  return PORT_ROLE_EARPIECE;
-	if (name_contains_ci(n, "handset"))   return PORT_ROLE_EARPIECE;
-	if (name_contains_ci(n, "headphone")) return PORT_ROLE_HEADPHONES;
-	if (name_contains_ci(n, "headset"))
-		return (p->direction & PA_DIRECTION_INPUT) ? PORT_ROLE_HEADSET_MIC : PORT_ROLE_HEADPHONES;
-	if (name_contains_ci(n, "mic"))       return PORT_ROLE_MIC;
-	return PORT_ROLE_NONE;
 }
 
 static gboolean port_lists_profile(const pa_card_port_info *port, const char *profile_name)
@@ -118,21 +131,34 @@ static gboolean port_lists_profile(const pa_card_port_info *port, const char *pr
 }
 
 /*
- * Pick the best profile on `card` that is reachable from a port of the
- * requested role on each side it produces (output and/or input).
+ * Pick the best profile on `card`, preferring (in this order):
+ *   tier 3: matches voice/hifi flavour AND output-port role AND input-port role
+ *   tier 2: matches voice/hifi flavour AND output-port role (input relaxed)
+ *   tier 1: matches voice/hifi flavour only (both ports relaxed)
  *
- * We don't filter by profile name. Instead we use each port's profiles2
- * cross-reference (the same data shown as "Part of profile(s)" in pactl) to
- * confirm a candidate profile actually routes through ports of the desired
- * role. Voice/HiFi preference is only a tiebreaker: under the new alsa-ucm
- * a profile name like "Voice Call (Earpiece)" still starts with "Voice Call",
- * but that's not load-bearing -- if the prefix scheme changes, we'll still
- * pick a working profile, just possibly the wrong "flavour".
+ * Within a tier, higher pa_card_profile_info2::priority wins. Profiles of the
+ * wrong flavour (Voice Call when we want HiFi, or vice versa) are excluded
+ * outright -- without that floor we could end up flipping to Voice Call when
+ * the user wants music playback.
  *
- * Caller frees the returned string.
+ * The relaxed tiers exist because some devices (e.g. Nokia N900) only carry
+ * Voice Call profiles for the earpiece port and have no HiFi-with-earpiece
+ * combo at all. After a call ends with route=HANDSET, the strict lookup for
+ * "HiFi with earpiece" returns nothing; tier 1 then picks the highest-priority
+ * available HiFi profile so we recover instead of staying on Voice Call.
+ *
+ * Port membership is derived from each port's profiles2 cross-reference (the
+ * same data shown as "Part of profile(s)" in pactl), not from profile names.
+ *
+ * Caller frees the returned string. Sets *out_tier to which tier matched (1-3)
+ * or 0 if nothing matched (best_name == NULL).
  */
-static char *choose_profile_for_card(const pa_card_info *card, const struct apply_request *req)
+static char *choose_profile_for_card(const pa_card_info *card,
+                                     const struct apply_request *req,
+                                     int *out_tier)
 {
+	if (out_tier)
+		*out_tier = 0;
 	if (!card || !card->profiles2)
 		return NULL;
 
@@ -141,9 +167,14 @@ static char *choose_profile_for_card(const pa_card_info *card, const struct appl
 
 	for (uint32_t i = 0; i < card->n_ports; i++) {
 		pa_card_port_info *p = card->ports[i];
-		if (!p || p->available == PA_PORT_AVAILABLE_NO)
+		if (!p)
 			continue;
 		port_role_t role = port_classify(p);
+		sphone_module_log(LL_DEBUG,
+			"  card %s port %s type=%u dir=%d avail=%d -> role=%d",
+			card->name, p->name, p->type, p->direction, p->available, role);
+		if (p->available == PA_PORT_AVAILABLE_NO)
+			continue;
 		if ((p->direction & PA_DIRECTION_OUTPUT) && role == req->want_output)
 			g_ptr_array_add(out_ports, p);
 		if ((p->direction & PA_DIRECTION_INPUT) && role == req->want_input)
@@ -151,7 +182,7 @@ static char *choose_profile_for_card(const pa_card_info *card, const struct appl
 	}
 
 	char *best_name = NULL;
-	int best_voice_score = -1;
+	int best_tier = 0;
 	uint32_t best_priority = 0;
 
 	for (uint32_t i = 0; card->profiles2[i]; i++) {
@@ -161,34 +192,44 @@ static char *choose_profile_for_card(const pa_card_info *card, const struct appl
 		if (g_strcmp0(prof->name, "off") == 0)
 			continue;
 
-		if (prof->n_sinks > 0) {
-			gboolean found = FALSE;
-			for (guint k = 0; k < out_ports->len && !found; k++)
-				found = port_lists_profile(out_ports->pdata[k], prof->name);
-			if (!found)
-				continue;
-		}
-		if (prof->n_sources > 0) {
-			gboolean found = FALSE;
-			for (guint k = 0; k < in_ports->len && !found; k++)
-				found = port_lists_profile(in_ports->pdata[k], prof->name);
-			if (!found)
-				continue;
-		}
-
 		gboolean is_voice = g_str_has_prefix(prof->name, "Voice Call");
 		gboolean is_hifi  = g_str_has_prefix(prof->name, "HiFi");
-		int voice_score = (req->want_voice ? is_voice : is_hifi) ? 1 : 0;
+		gboolean flavour_ok = req->want_voice ? is_voice : is_hifi;
+		if (!flavour_ok)
+			continue;
 
-		if (voice_score > best_voice_score ||
-		    (voice_score == best_voice_score && prof->priority > best_priority)) {
-			best_voice_score = voice_score;
+		gboolean out_ok = TRUE;
+		if (prof->n_sinks > 0) {
+			out_ok = FALSE;
+			for (guint k = 0; k < out_ports->len && !out_ok; k++)
+				out_ok = port_lists_profile(out_ports->pdata[k], prof->name);
+		}
+		gboolean in_ok = TRUE;
+		if (prof->n_sources > 0) {
+			in_ok = FALSE;
+			for (guint k = 0; k < in_ports->len && !in_ok; k++)
+				in_ok = port_lists_profile(in_ports->pdata[k], prof->name);
+		}
+
+		int tier;
+		if (out_ok && in_ok)
+			tier = 3;
+		else if (out_ok)
+			tier = 2;
+		else
+			tier = 1;
+
+		if (tier > best_tier ||
+		    (tier == best_tier && prof->priority > best_priority)) {
+			best_tier = tier;
 			best_priority = prof->priority;
 			g_free(best_name);
 			best_name = g_strdup(prof->name);
 		}
 	}
 
+	if (out_tier)
+		*out_tier = best_tier;
 	g_ptr_array_free(out_ports, TRUE);
 	g_ptr_array_free(in_ports, TRUE);
 	return best_name;
@@ -218,22 +259,30 @@ static void apply_card_cb(pa_context *c, const pa_card_info *card, int eol, void
 		return;
 	}
 
-	gchar *name = choose_profile_for_card(card, req);
+	int tier = 0;
+	gchar *name = choose_profile_for_card(card, req, &tier);
 	if (!name) {
-		sphone_module_log(LL_DEBUG, "no matching profile on card %s (voice=%d out=%d in=%d)",
+		sphone_module_log(LL_WARN,
+			"no matching profile on card %s for voice=%d out=%d in=%d",
 			card->name, req->want_voice, req->want_output, req->want_input);
 		return;
 	}
 
 	const char *active = card->active_profile2 ? card->active_profile2->name : NULL;
 	if (g_strcmp0(name, active) == 0) {
-		sphone_module_log(LL_DEBUG, "card %s already on profile %s", card->name, name);
+		sphone_module_log(LL_DEBUG, "card %s already on profile %s (tier=%d)",
+			card->name, name, tier);
 		g_free(name);
 		return;
 	}
 
-	gchar *log_msg = g_strdup_printf("set %s profile %s -> %s",
-		card->name, active ? active : "(none)", name);
+	if (tier < 3)
+		sphone_module_log(LL_WARN,
+			"card %s: no exact profile for voice=%d out=%d in=%d, falling back (tier=%d)",
+			card->name, req->want_voice, req->want_output, req->want_input, tier);
+
+	gchar *log_msg = g_strdup_printf("set %s profile %s -> %s (tier=%d)",
+		card->name, active ? active : "(none)", name, tier);
 	sphone_module_log(LL_INFO, "%s", log_msg);
 
 	pa_operation *op = pa_context_set_card_profile_by_index(
@@ -248,11 +297,10 @@ static void apply_card_cb(pa_context *c, const pa_card_info *card, int eol, void
 	g_free(name);
 }
 
-static void resolve_target(struct apply_request *req)
+static void resolve_target(struct apply_request *req,
+                           sphone_call_mode_t mode,
+                           sphone_audio_route_t route)
 {
-	sphone_call_mode_t mode = datapipe_get_last_data_int(&call_mode_pipe);
-	sphone_audio_route_t route = datapipe_get_last_data_int(&audio_route_pipe);
-
 	switch (route) {
 		case SPHONE_AUDIO_ROUTE_HANDSET:
 			req->want_output = PORT_ROLE_EARPIECE;
@@ -277,10 +325,6 @@ static void resolve_target(struct apply_request *req)
 	req->want_input = (route == SPHONE_AUDIO_ROUTE_HEADSET)
 		? PORT_ROLE_HEADSET_MIC : PORT_ROLE_MIC;
 
-	/* SPHONE_MODE_INCALL_NO_ROUTE is for calls we know are active but where
-	 * routing is owned by another component (e.g. external dialler); leave the
-	 * profile alone by treating it as non-voice and matching whatever HiFi
-	 * profile fits the current ports. */
 	req->want_voice = (mode == SPHONE_MODE_INCALL);
 }
 
@@ -291,11 +335,24 @@ static void apply_audio_state(struct sphone_pa_if *pa_if)
 		return;
 	}
 
-	struct apply_request *req = g_new0(struct apply_request, 1);
-	resolve_target(req);
+	sphone_call_mode_t mode = datapipe_get_last_data_int(&call_mode_pipe);
+	sphone_audio_route_t route = datapipe_get_last_data_int(&audio_route_pipe);
 
-	sphone_module_log(LL_DEBUG, "apply: voice=%d out=%d in=%d",
-		req->want_voice, req->want_output, req->want_input);
+	/* INCALL_NO_ROUTE means a call is active but another component owns audio
+	 * routing (e.g. an external dialler that programs PA itself). Touching the
+	 * profile from here would fight that component, so leave it alone. */
+	if (mode == SPHONE_MODE_INCALL_NO_ROUTE) {
+		sphone_module_log(LL_DEBUG,
+			"skipping apply: INCALL_NO_ROUTE, another component owns routing");
+		return;
+	}
+
+	struct apply_request *req = g_new0(struct apply_request, 1);
+	resolve_target(req, mode, route);
+
+	sphone_module_log(LL_INFO,
+		"apply: mode=%d route=%d -> voice=%d out=%d in=%d",
+		mode, route, req->want_voice, req->want_output, req->want_input);
 
 	pa_operation *op = pa_context_get_card_info_list(pa_if->context, apply_card_cb, req);
 	if (!op) {
