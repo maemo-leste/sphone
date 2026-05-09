@@ -142,6 +142,6 @@ void MaemoCallHandler::hangup()
 }
 
 void MaemoCallHandler::sendDtmf(QString &tones) {
-	sphone_module_log(LL_DEBUG, "sendDtmf() tones%d", tones.toStdString().c_str());
+	sphone_module_log(LL_DEBUG, "sendDtmf() tones: %s", tones.toStdString().c_str());
 	voicecall_handler->sendDtmf(tones);
 }

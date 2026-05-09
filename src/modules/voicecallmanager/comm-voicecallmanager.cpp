@@ -62,15 +62,19 @@ extern "C" {
         maemo_mgr->hangupTrigger(call);
     }
 
-    static void call_dtmf_trigger(gconstpointer data, gpointer user_data, sphone_dtmf_t tone)
+    static void call_dtmf_trigger(gconstpointer data, gpointer user_data)
     {
-        const CallProperties* call = (const CallProperties*)data;
+        const DtmfRequest* request = (const DtmfRequest*)data;
+        const CallProperties* call = request->call;
         MaemoManager* maemo_mgr = (MaemoManager*)user_data;
 
-        /* TODO: map tone value */
-
         QString qtone;
-        switch (tone) {
+        switch (request->dtmf) {
+            case SPHONE_DTMF_STOP:
+                return;
+            case SPHONE_DTMF_0:
+                qtone = "0";
+                break;
             case SPHONE_DTMF_1:
                 qtone = "1";
                 break;
@@ -114,11 +118,11 @@ extern "C" {
                 qtone = "C";
                 break;
             case SPHONE_DTMF_D:
-                qtone = "C";
+                qtone = "D";
                 break;
             default:
-                /* TODO: log some error */
-                qtone = "";
+                sphone_module_log(LL_WARN, "Unknown DTMF tone value: %d", request->dtmf);
+                return;
         }
 
         maemo_mgr->sendDtmfTrigger(call, qtone);
@@ -137,7 +141,7 @@ extern "C" {
         append_trigger_to_datapipe(&call_accept_pipe, call_accept_trigger, maemo_mgr);
         append_trigger_to_datapipe(&call_hold_pipe, call_hold_trigger, maemo_mgr);
         append_trigger_to_datapipe(&call_hangup_pipe, call_hangup_trigger, maemo_mgr);
-        //append_trigger_to_datapipe(&call_dtmf_pipe, call_dtmf_trigger, maemo_mgr);
+        append_trigger_to_datapipe(&call_dtmf_pipe, call_dtmf_trigger, maemo_mgr);
 
         return NULL;
     }
@@ -151,6 +155,7 @@ extern "C" {
         remove_trigger_from_datapipe(&call_accept_pipe, call_accept_trigger, maemo_mgr);
         remove_trigger_from_datapipe(&call_hold_pipe, call_hold_trigger, maemo_mgr);
         remove_trigger_from_datapipe(&call_hangup_pipe, call_hangup_trigger, maemo_mgr);
+        remove_trigger_from_datapipe(&call_dtmf_pipe, call_dtmf_trigger, maemo_mgr);
 
         delete maemo_mgr;
     }

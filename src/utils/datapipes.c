@@ -73,6 +73,7 @@ void datapipes_init(void)
 	setup_datapipe(&message_received_pipe);
 	setup_datapipe(&notification_raise_pipe);
 	setup_datapipe(&call_accept_pipe);
+	setup_datapipe(&call_dtmf_pipe);
 	setup_datapipe(&contact_fill_pipe);
 	setup_datapipe(&comm_backend_added_pipe);
 	setup_datapipe(&comm_backend_removed_pipe);
@@ -83,6 +84,7 @@ void datapipes_init(void)
 		append_filter_to_datapipe(&call_hold_pipe, drop, NULL);
 		append_filter_to_datapipe(&call_dial_pipe, drop, NULL);
 		append_filter_to_datapipe(&call_properties_changed_pipe, drop, NULL);
+		append_filter_to_datapipe(&call_dtmf_pipe, drop, NULL);
 	}
 
 	if(!(sphone_conf_get_features() & SPHONE_FEATURE_MESSAGES)) {
@@ -99,6 +101,7 @@ void datapipes_exit(void)
 		remove_filter_from_datapipe(&call_hold_pipe, drop, NULL);
 		remove_filter_from_datapipe(&call_dial_pipe, drop, NULL);
 		remove_filter_from_datapipe(&call_properties_changed_pipe, drop, NULL);
+		remove_filter_from_datapipe(&call_dtmf_pipe, drop, NULL);
 	}
 
 	if(!(sphone_conf_get_features() & SPHONE_FEATURE_MESSAGES)) {
@@ -123,6 +126,7 @@ void datapipes_exit(void)
 	free_datapipe(&message_received_pipe);
 	free_datapipe(&notification_raise_pipe);
 	free_datapipe(&call_accept_pipe);
+	free_datapipe(&call_dtmf_pipe);
 	free_datapipe(&contact_fill_pipe);
 	free_datapipe(&comm_backend_added_pipe);
 	free_datapipe(&comm_backend_removed_pipe);
