@@ -100,9 +100,14 @@ gconstpointer execute_datapipe(datapipe_struct *const datapipe, gpointer indata)
 	if(!data && indata)
 		return NULL;
 
-	execute_datapipe_output_triggers(datapipe, data);
-
+	/* Commit last_data *before* running the output triggers. A trigger may
+	 * read datapipe_get_last_data_int() for the very pipe it is triggered on
+	 * (e.g. route-pulseaudio and the GTK call UI read audio_route_pipe /
+	 * call_mode_pipe); updating after the triggers made those reads return the
+	 * previous value, so the trigger always acted one step behind. */
 	datapipe->last_data = data;
+
+	execute_datapipe_output_triggers(datapipe, data);
 
 	return data;
 }
