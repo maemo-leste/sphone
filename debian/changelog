@@ -1,3 +1,9 @@
+sphone (0.9.10) unstable; urgency=medium
+
+  * Fix stale data being passed into datapipe, should fix audio routing
+
+ -- Merlijn Wajer <merlijn@wizzup.org>  Sat, 20 Jun 2026 22:09:22 +0200
+
 sphone (0.9.9) unstable; urgency=medium
 
   * Add DTMF support
